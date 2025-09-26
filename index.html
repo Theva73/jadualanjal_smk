@@ -846,7 +846,6 @@
     }
     
     const appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.appId || 'default-shared-scheduler-app');
-window.appId = appId;
     if (typeof __app_id === 'undefined') {
         console.warn("Firebase Auth: __app_id is not defined. Using App ID from Firebase config or default.");
     }
@@ -881,8 +880,6 @@ window.appId = appId;
     let currentNameListSession = 'pagi';
     let namesPagiShared = [];
     let namesPetangShared = [];
-window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
-window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
     let isDraggingModal = false;
     let modalDragOffsetX, modalDragOffsetY;
     let autocompleteSuggestionsDiv = null;
@@ -916,9 +913,7 @@ window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetang
         if (!customMessageBox) {
             customMessageBox = document.getElementById('customMessageBox');
             if (!customMessageBox) { console.warn("showMessage: customMessageBox not found. Msg:", message); return; }
-        
-window.showMessage = showMessage;
-}
+        }
         customMessageBox.textContent = message;
         customMessageBox.className = `custom-message-box ${type}`;
         customMessageBox.style.display = 'block';
@@ -3806,7 +3801,7 @@ let selectedSubject = null;
 let currentSubjectSession = 'pagi';
 let unsubscribeSubjects = null;
 
-const subjectsDocRef = doc(getFirestore(), 'shared_subjects', appId);
+const subjectsDocRef = doc(getFirestore(), 'artifacts', appId, 'public', 'data', 'subjects', 'main');
 
 const normalize = s => (s||'').trim();
 function getNamesForSession(session){
@@ -4142,23 +4137,5 @@ if(typeof origBuildSummary === 'function'){
   };
 }
 </script>
-
-<script type="module">
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest && e.target.closest('#subjectListBtn');
-  if(!btn) return;
-  const modal = document.getElementById('subjectModal');
-  if(!modal) return;
-  modal.style.display = 'flex';
-  try {
-    const active = document.querySelector('.name-session-tabs button.active');
-    const sess = (active && active.dataset && active.dataset.session) ? active.dataset.session : 'pagi';
-    window.currentSubjectSession = sess;
-    if (typeof loadSubjectsOnce === 'function') loadSubjectsOnce();
-    if (typeof watchSubjects === 'function') watchSubjects();
-  } catch(err){ /* ignore */ }
-});
-</script>
-
 </body>
 </html>

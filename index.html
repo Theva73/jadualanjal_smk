@@ -1,759 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.1, maximum-scale=5.0">
-    <title>Shared Weekly Schedule with Firestore</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-            margin: 0;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px;
-            box-sizing: border-box;
-            min-height: 100vh;
-        }
-        .main-container {
-            width: 100%;
-            max-width: 1400px;
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            box-sizing: border-box;
-        }
-        h2, h3 {
-            color: #1c1e21;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        #scheduleTitle {
-            font-size: 2em;
-            color: #0056b3;
-            border-bottom: 2px solid #0056b3;
-            padding-bottom: 10px;
-        }
-        #userIdDisplay {
-            text-align: center;
-            font-size: 0.9em;
-            color: #555;
-            margin-bottom: 15px;
-            min-height: 1.2em;
-            word-break: break-all;
-        }
-
-        /* --- Top Action Buttons Bar --- */
-        #topActionButtonsBar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: stretch;
-            justify-content: center;
-            margin-bottom: 20px;
-            width: 100%;
-        }
-
-        .top-action-btn {
-            padding: 10px 15px;
-            font-size: 0.9em;
-            font-weight: 500;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            color: #ffffff;
-            transition: all 0.25s ease-out;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            white-space: nowrap;
-            flex-grow: 1;
-            flex-basis: 150px;
-            text-align: center;
-            min-height: 40px;
-            box-sizing: border-box;
-        }
-
-        #controlsToggler.top-action-btn {
-            background-image: linear-gradient(to right, #007bff 0%, #0056b3 100%);
-        }
-        #controlsToggler.top-action-btn:hover {
-            background-image: linear-gradient(to right, #0069d9 0%, #004085 100%);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-            transform: translateY(-1px);
-        }
-
-        #manualSaveBtn.top-action-btn {
-            background-image: linear-gradient(to right, #17a2b8 0%, #117a8b 100%);
-        }
-        #manualSaveBtn.top-action-btn:hover {
-            background-image: linear-gradient(to right, #138496 0%, #0c6270 100%);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-            transform: translateY(-1px);
-        }
-
-        #downloadPdfBtn.top-action-btn {
-             background-image: linear-gradient(to right, #28a745 0%, #1e7e34 100%);
-        }
-        #downloadPdfBtn.top-action-btn:hover {
-             background-image: linear-gradient(to right, #218838 0%, #155724 100%);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-            transform: translateY(-1px);
-        }
-        
-        #clearScheduledNamesBtn.top-action-btn {
-            background-image: linear-gradient(to right, #6f42c1 0%, #563d7c 100%);
-        }
-        #clearScheduledNamesBtn.top-action-btn:hover {
-            background-image: linear-gradient(to right, #5a2a9e 0%, #452863 100%);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-            transform: translateY(-1px);
-        }
-
-        .top-action-btn:active {
-            transform: translateY(0px);
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        #controlsToggler .toggler-icon {
-            transition: transform 0.3s ease-out;
-            width: 18px;
-            height: 18px;
-        }
-        #controlsToggler[aria-expanded="false"] .toggler-icon {
-            transform: rotate(180deg);
-        }
-         #controlsToggler[aria-expanded="true"] .toggler-icon {
-            transform: rotate(0deg);
-        }
-
-        /* --- Collapsible Button Bars --- */
-        #collapsibleButtonBars {
-            max-height: 1000px;
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out, margin-top 0.4s ease-in-out, padding-top 0.4s ease-in-out, padding-bottom 0.4s ease-in-out;
-            padding-top: 5px;
-            padding-bottom: 5px;
-            width: 100%;
-        }
-        #collapsibleButtonBars:not(.open) {
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            margin-top: 0;
-        }
-
-        .bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 15px;
-            align-items: stretch;
-            justify-content: center;
-        }
-        .bar button {
-            padding: 10px 15px;
-            font-size: 0.9em;
-            font-weight: 500;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 1px solid #ced4da;
-            background-color: #f8f9fa;
-            color: #212529;
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            flex-grow: 1;
-            flex-basis: 120px;
-            text-align: center;
-            min-width: 100px;
-        }
-        .bar button:hover {
-            border-color: #adb5bd;
-            background-color: #e9ecef;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-            transform: translateY(-1px);
-        }
-        .bar button:active {
-            transform: translateY(0px);
-            background-color: #dee2e6;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
-        }
-
-        #directCopyFullHtmlBtn { background-color: #545b62; color: white; border-color: #4e555b;}
-        #excelBtnTrigger, #importExcelBtn, #importNameListBtn, .input-group button { background-color: #28a745; color: white; border-color: #23923d;}
-        #saveSharedScheduleBtn { background-color: #007bff; color: white; border-color: #0069d9;}
-        #loadSharedScheduleBtn { background-color: #ffc107; color: #212529; border-color: #e0a800;}
-        #restoreBackupBtn { background-color: #fd7e0f; color: white; border-color: #df6e0d; }
-        #clearAndResetScheduleBtn, #nameListBtn, #subjectGroupsBtn { background-color: #fd7e14; color: white; border-color: #e66a04;}
-        #selectBtn { background-color: #17a2b8; color: white; border-color: #117a8b;}
-        #selectBtn.active { background-color: #e66a04; border-color: #d05f03;}
-        #mergeBtn { background-color: #6f42c1; color: white; border-color: #5d37a2;}
-        #unmergeBtn { background-color: #e83e8c; color: white; border-color: #d9307b;}
-        #addTableBtn { background-color: #20c997; color: white; border-color: #1aa87f;}
-        #addIndependentTableBtn.top-action-btn {
-            background-image: linear-gradient(to right, #ff7f50 0%, #ff4500 100%);
-        }
-        #addIndependentTableBtn.top-action-btn:hover {
-            background-image: linear-gradient(to right, #ff9966 0%, #cc3700 100%);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-            transform: translateY(-1px);
-        }
-
-        #renameTableBtn, #deselectBtn { background-color: #6c757d; color: white; border-color: #5a6268;}
-        #deleteTableBtn, #rowColManipulationBar button.delete-btn { background-color: #dc3545; color: white; border-color: #c82333;}
-        #exportSharedSchedulesBtn { background-color: #4e54c8; color: white; border-color: #3b40a0;}
-        #importSharedSchedulesBtn { background-color: #8f94fb; color: white; border-color: #7076f9;}
-        
-        #directCopyFullHtmlBtn:hover { background-color: #434a50; }
-        #excelBtnTrigger:hover, #importExcelBtn:hover, #importNameListBtn:hover, .input-group button:hover { background-color: #1e7e34; }
-        #saveSharedScheduleBtn:hover { background-color: #0056b3; }
-        #loadSharedScheduleBtn:hover { background-color: #d39e00; }
-        #restoreBackupBtn:hover { background-color: #e07010; }
-        #clearAndResetScheduleBtn:hover, #nameListBtn:hover, #subjectGroupsBtn:hover { background-color: #d05f03; }
-        #selectBtn:hover { background-color: #0f6674; }
-        #selectBtn.active:hover { background-color: #c25202;}
-        #mergeBtn:hover { background-color: #563299; }
-        #unmergeBtn:hover { background-color: #d9307b; }
-        #addTableBtn:hover { background-color: #178d6f; }
-        #renameTableBtn:hover, #deselectBtn:hover { background-color: #545b62; }
-        #deleteTableBtn:hover, #rowColManipulationBar button.delete-btn:hover { background-color: #b21f2d; }
-        #exportSharedSchedulesBtn:hover { background-color: #3b40a0; }
-        #importSharedSchedulesBtn:hover { background-color: #7076f9; }
-
-        #rowColManipulationBar button { padding: 8px 12px; font-size: 0.85em; }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            background-color: #fff;
-            table-layout: auto; 
-        }
-        #tablesContainer, #summaryTableContainer {
-            overflow-x: auto;
-            position: relative;
-            width: 100%;
-        }
-        #tablesContainer > table { display: none; }
-        #tablesContainer > table.active { display: table; }
-        #summaryTable { margin-top: 25px; }
-
-        th, td {
-            border: 1px solid #dee2e6;
-            padding: 10px 12px;
-            text-align: center;
-            min-width: 90px; 
-            box-sizing: border-box;
-            position: relative;
-            font-size: 0.9em;
-        }
-        table th {
-            background-color: #f8f9fa;
-            color: #343a40;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        #tablesContainer > table > thead > tr:not(.date-header-row) > th {
-            font-weight: bold;
-            background-color: #e9ecef;
-            color: #343a40;
-        }
-        #tablesContainer > table > thead > tr:not(.date-header-row) > th:first-child,
-        #tablesContainer > table > tbody > tr > td:first-child,
-        #tablesContainer > table > tbody > tr > th:first-child {
-            font-weight: bold;
-            background-color: #e6f7ff; 
-            color: #1c1e21;
-        }
-
-        #tablesContainer > table > thead > tr.date-header-row > th.date-header-cell {
-            font-weight: bold;
-            background-color: #cce0ff; 
-            color: #1c1e21;
-            white-space: normal;
-        }
-        #tablesContainer > table > thead > tr.date-header-row > th.date-header-cell.merged-cell-container .merged-cell-overlay {
-            background-color: #cce0ff; 
-            font-weight: bold;
-            color: #1c1e21;
-        }
-
-
-        #summaryTable > thead > tr > th {
-            font-weight: bold;
-            background-color: #e9ecef; 
-            color: #212529;
-        }
-        #summaryTable > thead > tr > th:first-child,
-        #summaryTable > tbody > tr > td:first-child {
-            font-weight: bold;
-            background-color: #e6f7ff !important; 
-            color: #1c1e21;
-        }
-        #summaryTable td.summary-merged-cell {
-            background-color: #f0f8ff !important; 
-        }
-        #summaryTable td { background-color: #fff9e6; } 
-        
-        td.selected, th.selected {
-            outline: 3px solid #007bff;
-            background-color: #d1e7fd;
-        }
-        
-        .table-tabs {
-            margin-bottom: 15px;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 0;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        .table-tabs button {
-            background-color: transparent; border: none;
-            border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0;
-            color: #0056b3; font-weight: 500; padding: 10px 15px;
-            transition: all 0.2s ease;
-        }
-        .table-tabs button.active {
-            background-color: #007bff; color: white;
-            border-color: #0056b3;
-        }
-        .table-tabs button:hover:not(.active) {
-            background-color: #e9f5ff; color: #004494;
-        }
-
-        .name-session-tabs {
-            margin-bottom: 20px; border-bottom: 2px solid #dee2e6;
-            padding-bottom: 8px; display: flex; flex-wrap: wrap; gap: 5px;
-        }
-        .name-session-tabs button {
-            border-bottom-left-radius: 0; border-bottom-right-radius: 0;
-            border-bottom: none; margin-bottom: -2px;
-            padding: 10px 15px; font-size: 1em;
-            background-color: #f8f9fa; border: 1px solid #dee2e6;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .name-session-tabs button.active {
-            background-color: #ffffff; color: #007bff;
-            border-color: #dee2e6 #dee2e6 #ffffff;
-            border-bottom: 1px solid #ffffff;
-            font-weight: bold; position: relative; z-index: 1;
-        }
-        
-        .highlight-conflict {
-            background-color: #f8d7da !important; font-weight: bold;
-            color: #721c24 !important;
-        }
-        #summaryTable > tbody > tr > td.highlight-conflict:first-child {
-            background-color: #e6f7ff !important; 
-            color: #721c24 !important; 
-        }
-        .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; overflow: hidden;
-            background-color: rgba(0,0,0,0.5);
-            align-items: center; justify-content: center;
-            pointer-events: none;
-        }
-        .modal-content {
-            background-color: #fff; padding: 25px; border: 1px solid #ccc;
-            width: 90%; max-width: 650px; border-radius: 10px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3); position: relative;
-            pointer-events: auto; max-height: 90vh; overflow-y: auto;
-            box-sizing: border-box;
-        }
-        .modal-content.dragging { transform: none; }
-        .modal-header {
-            padding-bottom: 15px; border-bottom: 1px solid #e9ecef; margin-bottom: 20px;
-            font-size: 1.3em; color: #333; display: flex;
-            justify-content: space-between; align-items: center;
-            cursor: move; user-select: none;
-        }
-        .modal-close-btn {
-            font-size: 1.8rem; font-weight: bold; line-height: 1; color: #555;
-            text-shadow: none; opacity: .7; background: transparent; border: 0;
-            cursor: pointer; padding: 0 5px; transition: color 0.2s;
-        }
-        .modal-close-btn:hover { opacity: 1; color: #dc3545; }
-        .name-item, .subject-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 8px; border-bottom: 1px solid #f1f3f5;
-            transition: background-color 0.2s;
-        }
-        .name-item:hover, .subject-item:hover { background-color: #f8f9fa; }
-        .name-item:last-child, .subject-item:last-child { border-bottom: none; }
-        .name-item span, .subject-item .subject-name {
-            flex-grow: 1; cursor: pointer; color: #007bff; font-weight: 500;
-        }
-        .name-item span:hover, .subject-item .subject-name:hover { text-decoration: none; color: #0056b3; }
-        .name-item button, .subject-item .subject-actions button {
-            background-color: #dc3545; color: white; border: none; border-radius: 5px;
-            padding: 6px 12px; font-size: 0.9em; transition: background-color 0.2s;
-            margin-left: 5px;
-        }
-        .subject-item .subject-actions button.manage-teachers-btn {
-            background-color: #17a2b8;
-        }
-        .subject-item .subject-actions button.manage-teachers-btn:hover {
-            background-color: #138496;
-        }
-        .name-item button:hover, .subject-item .subject-actions button:hover { background-color: #c82333; }
-        .highlighted { background-color: #cfe2ff !important; font-weight: bold; }
-        
-        #sharedScheduleListContainer, #restoreBackupListContainer {
-            border: 1px solid #ddd; padding: 15px; margin-bottom: 20px;
-            border-radius: 8px; background-color: #f8f9fa;
-            max-height: 300px; overflow-y: auto;
-        }
-        .shared-schedule-item, .backup-schedule-item {
-            display: flex; flex-direction: column;
-            padding: 10px 8px; border-bottom: 1px solid #e9ecef;
-        }
-        .shared-schedule-item:last-child, .backup-schedule-item:last-child { border-bottom: none; }
-
-        .schedule-item-main-line {
-            display: flex; justify-content: space-between; align-items: center; width: 100%;
-        }
-        .schedule-item-main-line span {
-            cursor: pointer; color: #007bff; flex-grow: 1; margin-right: 10px;
-            font-weight: 500;
-        }
-        .schedule-item-main-line span:hover { text-decoration: underline; }
-        .schedule-item-main-line button {
-            background-color: #dc3545; color: white; border: none; border-radius: 5px;
-            padding: 6px 12px; font-size: 0.9em; flex-shrink: 0;
-        }
-        .schedule-item-details {
-            font-size: 0.8em; color: #6c757d; margin-top: 4px;
-            display: flex; flex-direction: column;
-            gap: 2px;
-        }
-        .schedule-item-details .schedule-date,
-        .schedule-item-details .original-schedule-name {
-             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-
-
-        #newNameInput, #newSubjectInput {
-            padding: 10px; margin-right: 8px; border: 1px solid #ccc;
-            border-radius: 5px; flex-grow: 1; width: calc(100% - 120px);
-            box-sizing: border-box;
-        }
-         #searchNameInput {
-            margin-bottom: 15px; width: 100%; box-sizing: border-box; margin-right: 0;
-         }
-        .input-group { display: flex; margin-bottom: 15px; width: 100%; }
-        .input-group button { padding: 10px 15px; }
-        #importNameListBtn { margin-top: 10px; width: 100%; }
-        #nameList, #subjectList { margin-top:15px; max-height:250px; overflow-y:auto; }
-        .teacher-assignment-container { max-height: 250px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-top: 10px;}
-        .teacher-assignment-item { display: flex; align-items: center; padding: 5px 0;}
-        .teacher-assignment-item input { margin-right: 10px; }
-
-        @media (min-width: 480px) {
-            #nameList { column-count: 2; column-gap: 20px; }
-        }
-        .custom-message-box {
-            display: none; position: fixed; top: 20px; left: 50%;
-            transform: translateX(-50%); background-color: #333; color: white;
-            padding: 15px 25px; border-radius: 8px; z-index: 2000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25); font-size: 1.05em;
-            text-align: center; width: 90%; max-width: 400px;
-        }
-        .custom-message-box.success { background-color: #28a745; }
-        .custom-message-box.error { background-color: #dc3545; }
-        .custom-message-box.info { background-color: #007bff; }
-        .merged-cell-container { position: relative; z-index: 2; vertical-align: top; }
-        .merged-cell-overlay {
-            position: absolute; top: 0; left: 0;
-            width: var(--merged-width); height: var(--merged-height);
-            background-color: rgba(240, 248, 255, 0.95); 
-            font-style: italic; border: 1px solid #add8e6;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden; box-sizing: border-box; z-index: 5;
-        }
-        .subsumed-cell { visibility: hidden; }
-        #loadingIndicatorModal, #loadingIndicatorSubjectModal, #generalLoadingIndicator, #loadingIndicatorRestoreModal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(255, 255, 255, 0.85);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 10; border-radius: 10px;
-        }
-        #generalLoadingIndicator { position: fixed; z-index: 3000; border-radius: 0; }
-        .spinner {
-            border: 5px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px;
-            border-radius: 50%; border-left-color: #007bff;
-            animation: spin 1s ease infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        input[type="file"][style*="display:none"],
-        input[type="file"][style*="display: none"] {
-            position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0;
-        }
-        #autocompleteSuggestions {
-            display: none; position: absolute; border: 1px solid #ccc;
-            background-color: white; z-index: 1001; max-height: 150px;
-            overflow-y: auto; min-width: 120px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15); border-radius: 4px;
-        }
-        .suggestion-item {
-            padding: 8px 10px; cursor: pointer; font-size: 0.9em; white-space: nowrap;
-        }
-        .suggestion-item:hover, .suggestion-item.active-suggestion {
-            background-color: #e9ecef; color: #0056b3;
-        }
-
-        /* PDF Specific Styles */
-        #pdfContent {
-            padding: 5mm; background-color: #fff; color: #333;
-            font-family: 'Arial', sans-serif; box-sizing: border-box;
-            width: 100%; display: none;
-        }
-        #pdfContent .pdf-page-wrapper {
-            page-break-inside: avoid !important; padding-bottom: 10mm;
-            box-sizing: border-box; margin-bottom: 5mm;
-        }
-         #pdfContent .pdf-page-wrapper:not(:first-child) { page-break-before: always !important; }
-        #pdfContent .pdf-page-wrapper:last-child { page-break-after: auto !important; }
-        #pdfContent h2 {
-            text-align: center; color: #000; margin-bottom: 5mm; font-size: 14pt;
-            page-break-after: avoid !important; page-break-inside: avoid !important;
-        }
-        #pdfContent h3 {
-            text-align: center; color: #000; margin-top: 2mm; margin-bottom: 3mm;
-            font-size: 11pt; page-break-after: avoid !important; page-break-inside: avoid !important;
-        }
-        #pdfContent table {
-            width: 100% !important; border-collapse: collapse !important;
-            margin-bottom: 5mm; box-shadow: none; background-color: #fff;
-            table-layout: fixed !important; font-size: 7pt;
-            page-break-inside: avoid !important;
-        }
-        #pdfContent th, #pdfContent td {
-            border: 0.5pt solid #333 !important; padding: 1mm 1.5mm;
-            text-align: center; word-wrap: break-word; overflow-wrap: break-word;
-            background-color: #fff !important; page-break-inside: avoid !important;
-        }
-        #pdfContent th {
-            background-color: #f0f0f0 !important; color: #000; font-weight: bold;
-        }
-        #pdfContent table thead tr.date-header-row th.date-header-cell {
-            background-color: #b8d6ff !important;
-            font-weight: bold !important;
-            color: #000 !important;
-            white-space: normal !important;
-        }
-        #pdfContent table thead tr:not(.date-header-row) th:first-child,
-        #pdfContent table tbody tr td:first-child {
-            background-color: #e6f7ff !important; font-weight: bold; white-space: normal;
-        }
-         #pdfContent table tr { page-break-inside: avoid !important; }
-        #pdfContent .pdf-footnote {
-            text-align: right; font-size: 6pt; color: #333; margin-top: 3mm;
-            padding-top: 2mm; border-top: 0.5pt solid #ccc; width: 100%;
-            box-sizing: border-box;
-        }
-
-        @media (max-width: 768px) {
-            .main-container { padding: 15px; }
-            #scheduleTitle { font-size: 1.8em; }
-            h3 { font-size: 1.1em; }
-            .top-action-btn {
-                font-size: 0.85em;
-                padding: 8px 12px;
-                flex-basis: calc(25% - 6px);
-                min-width: 0;
-            }
-            .bar button { font-size: 0.85em; padding: 8px 12px; flex-basis: 100px; }
-            th, td { padding: 8px 10px; min-width: 70px; font-size: 0.85em; }
-            .table-tabs button, .name-session-tabs button { padding: 8px 10px; font-size: 0.9em; }
-        }
-        @media (max-width: 600px) {
-             .top-action-btn {
-                flex-basis: calc(50% - 4px);
-            }
-        }
-        @media (max-width: 480px) {
-            body { padding: 5px; }
-            .main-container { padding: 10px; }
-            #scheduleTitle { font-size: 1.5em; }
-            #controlsToggler .toggler-icon { width: 16px; height: 16px; }
-             .bar button { font-size: 0.8em; padding: 6px 10px; gap: 4px; flex-basis: calc(50% - 4px); }
-            th, td { padding: 6px 8px; min-width: 60px; font-size: 0.8em; }
-             #nameList { column-count: 1; }
-        }
-    
-        .independent-table {
-            opacity: 0.9;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.1, maximum-scale=5.0">
+  <title>Jadual Anjal — Fixed (27 Sep)</title>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <style>
+    :root{
+      --pri:#007bff; --pri-600:#0056b3; --bg:#f0f2f5; --card:#fff;
+      --text:#1c1e21; --muted:#6c757d; --line:#dee2e6; --ok:#28a745; --warn:#ffc107; --err:#dc3545;
+    }
+    html,body{margin:0;padding:0;background:var(--bg);font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+    .container{max-width:1400px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:16px}
+    h2{margin:0 0 8px}
+    #userIdDisplay{font-size:.9em;color:#555;margin:4px 0 16px;min-height:1.2em;word-break:break-all}
+    .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:center;margin:8px 0}
+    .btn{padding:10px 14px;border-radius:8px;border:1px solid transparent;cursor:pointer;white-space:nowrap;
+         display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:500;min-height:40px;flex:1 1 150px}
+    .btn:active{transform:translateY(0)}
+    .btn-pri{color:#fff;background-image:linear-gradient(90deg,var(--pri),var(--pri-600))}
+    .btn-sec{background:#f8f9fa;border-color:#ced4da;color:#212529}
+    .btn-ok{color:#fff;background-image:linear-gradient(90deg,#17a2b8,#117a8b)}
+    .btn-pdf{color:#fff;background-image:linear-gradient(90deg,#28a745,#1e7e34)}
+    .btn-warn{background:#fd7e14;color:#fff}
+    .btn-ghost{background:transparent;color:var(--pri);border:1px dashed var(--pri)}
+    .tabs{display:flex;gap:6px;border-bottom:2px solid var(--pri);margin:8px 0}
+    .tabs button{background:transparent;border:none;border-bottom:3px solid transparent;border-radius:6px 6px 0 0;color:var(--pri-600);padding:8px 12px}
+    .tabs button.active{background:var(--pri);color:#fff;border-color:var(--pri-600)}
+    table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff;table-layout:auto}
+    th,td{border:1px solid var(--line);padding:8px 10px;text-align:center;min-width:90px;font-size:.9em;position:relative}
+    thead th{background:#f8f9fa;font-weight:600}
+    .leftCol{background:#e6f7ff;font-weight:700}
+    .selected{outline:3px solid var(--pri);background:#d1e7fd}
+    #summaryTable thead th{background:#e9ecef}
+    #summaryTable td{background:#fff9e6}
+    .chip{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-size:.75rem;border:1px solid #0001}
+    .chip.ok{background:#eafbe6}
+    .chip.warn{background:#fff3cd}
+    .chip.err{background:#f8d7da}
+    .toast{display:none;position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#333;color:#fff;
+           padding:10px 16px;border-radius:8px;z-index:3000;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+    .toast.show{display:block}
+    /* modal */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2500;align-items:center;justify-content:center}
+    .modal .content{width:min(800px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.35);padding:16px}
+    .modal .head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:12px}
+    .modal .close{all:unset;cursor:pointer;font-size:1.6rem;line-height:1;color:#555}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .input, select, textarea{padding:10px;border:1px solid #ccc;border-radius:8px;width:100%;box-sizing:border-box}
+    .list{border:1px solid #ddd;border-radius:8px;padding:8px;max-height:220px;overflow:auto}
+    .list-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f3f5;padding:6px 4px}
+    .list-item:last-child{border-bottom:none}
+    .pill{background:#f1f3f5;border-radius:999px;padding:4px 8px;margin:2px;display:inline-block;font-size:.8em}
+    .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f3f3f3;border:1px solid #e1e1e1;border-bottom-width:2px;padding:0 .4em;border-radius:6px}
+    .blink-dot{width:14px;height:14px;border-radius:50%;background:#28a745;display:inline-block;animation:blinker 1s linear infinite;box-shadow:0 0 0 2px #fff,0 0 8px #28a745}
+    @keyframes blinker { 50%{opacity:.3} }
+    .standalone{opacity:.92}
+  </style>
 </head>
 <body>
-<div class="main-container">
-    <h2 contenteditable="true" id="scheduleTitle">Jadual Anjal</h2>
-    <div id="userIdDisplay">User ID: Loading...</div>
+  <div class="container">
+    <div class="card">
+      <h2 id="scheduleTitle" contenteditable="true">Jadual Anjal</h2>
+      <div id="userIdDisplay">User ID: <span id="userIdText">Loading…</span> <span class="blink-dot" title="Live"></span></div>
 
-    <div id="topActionButtonsBar">
-        <button id="controlsToggler" class="top-action-btn" aria-expanded="false" aria-controls="collapsibleButtonBars" title="Toggle button controls visibility">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggler-icon"><polyline points="18 15 12 9 6 15"></polyline></svg>
-            <span>Show Controls</span>
-        </button>
-        <button id="manualSaveBtn" class="top-action-btn" title="Manually save current page state to Cloud (also creates a backup)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-            <span>Save Page</span>
-        </button>
-        <button id="downloadPdfBtn" class="top-action-btn" title="Download schedule tables as PDF">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <span>PDF</span>
-        </button>
-        <button id="clearScheduledNamesBtn" class="top-action-btn" title="Clear scheduled names from ALL tables (retains merged cell content)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="8" x2="22" y2="13"></line><line x1="22" y1="8" x2="17" y2="13"></line></svg>
-            <span>Clear Names (All Tables)</span>
-        </button>
-    </div>
+      <div class="bar">
+        <button id="toggleControls" class="btn btn-pri">Show Controls</button>
+        <button id="btnSavePage" class="btn btn-ok">Save Page</button>
+        <button id="btnPDF" class="btn btn-pdf">PDF</button>
+        <button id="btnClearNamesAll" class="btn btn-warn">Clear Names (All)</button>
+        <button id="btnSearchTimetable" class="btn btn-pri">🔍 Search Timetable</button>
+        <button id="btnManageSubjects" class="btn btn-ghost">📚 Manage Subjects & Groups</button>
+      </div>
 
-    <div id="collapsibleButtonBars">
+      <div id="controlsBox" style="display:none">
         <div class="bar">
-            <button id="directCopyFullHtmlBtn" title="Copy the entire page's HTML to clipboard">📋 Copy HTML</button>
+          <button id="btnCopyHtml" class="btn btn-sec">📋 Copy HTML</button>
+          <button id="btnExportXLSX" class="btn btn-sec">💾 Export Excel</button>
+          <button id="btnImportXLSX" class="btn btn-sec">📂 Import Excel</button>
+          <input type="file" id="fileXLSX" accept=".xlsx,.xls" style="display:none">
         </div>
         <div class="bar">
-            <button id="excelBtnTrigger" title="Export the currently active table to an Excel file">💾 Export Excel</button>
-            <button id="importExcelBtn" title="Import data from an Excel file into a new table">📂 Import Excel</button>
-            <input type="file" id="fileInput" accept=".xlsx, .xls" style="display:none">
+          <button id="btnSaveShared" class="btn btn-pri">💠 Save Shared</button>
+          <button id="btnLoadShared" class="btn btn-sec">☁️ Load Shared</button>
+          <button id="btnRestoreBackup" class="btn btn-sec">🛡️ Restore Backup</button>
+          <button id="btnExportAll" class="btn btn-sec">📤 Export All</button>
+          <button id="btnImportAll" class="btn btn-sec">📥 Import All</button>
+          <input type="file" id="fileImportAll" accept=".json" style="display:none">
+          <button id="btnClearNew" class="btn btn-warn">🧹 Clear & New</button>
         </div>
         <div class="bar">
-            <button id="saveSharedScheduleBtn" title="Save current schedule to the shared Cloud space (also creates a backup)">💠 Save Shared</button>
-            <button id="loadSharedScheduleBtn" title="Show list of shared schedules from Cloud to load">☁️ Load Shared</button>
-            <button id="restoreBackupBtn" title="Restore a schedule from a backup copy">🛡️ Restore Backup</button>
-            <button id="exportSharedSchedulesBtn" title="Export all shared schedules from Cloud to a JSON file">📤 Export All</button>
-            <button id="importSharedSchedulesBtn" title="Import schedules from a JSON file to the shared Cloud space">📥 Import All</button>
-            <input type="file" id="sharedScheduleImportFile" accept=".json" style="display:none;">
-            <button id="clearAndResetScheduleBtn" title="Clear all data and start a new schedule">🧹 Clear & New</button>
+          <button id="btnSelectCells" class="btn btn-sec">✨ Select Cells</button>
+          <button id="btnMerge" class="btn btn-sec">🔗 Merge</button>
+          <button id="btnDeselect" class="btn btn-sec">🚫 Deselect</button>
+          <button id="btnUnmerge" class="btn btn-sec">💔 Unmerge</button>
         </div>
         <div class="bar">
-            <button id="selectBtn" title="Toggle cell selection mode on/off">✨ Select Cells</button>
-            <button id="mergeBtn" title="Merge the currently selected cells">🔗 Merge</button>
-            <button id="deselectBtn" title="Clear current cell selection">🚫 Deselect</button>
-            <button id="unmergeBtn" title="Unmerge the cell that was last clicked if it's part of a merge">💔 Unmerge</button>
+          <button id="btnAddTable" class="btn btn-sec">➕ Add Table</button>
+          <button id="btnAddStandalone" class="btn btn-sec">➕ Add Standalone</button>
+          <button id="btnRenameTable" class="btn btn-sec">📝 Rename</button>
+          <button id="btnDeleteTable" class="btn btn-sec">❌ Delete</button>
+          <button id="btnNames" class="btn btn-sec">👥 Names</button>
         </div>
-        <div class="bar">
-            <button id="addTableBtn" title="Add a new, empty table/sheet">➕ Add Table</button>
-            <button id="renameTableBtn" title="Rename the currently active table/sheet">📝 Rename Table</button>
-            <button id="deleteTableBtn" title="Delete the currently active table/sheet">❌ Delete Table</button>
-            <button id="nameListBtn" title="Open a dialog to manage the shared list of names (Firestore)">👥 Names</button>
-            <button id="subjectGroupsBtn" title="Manage Subjects and Teacher Groups">📚 Subjects</button>
-        </div>
-        <div class="bar" id="rowColManipulationBar">
-            <button id="addRowAboveBtn" title="Add a new row above the currently selected/clicked row">⬆️ Row Above</button>
-            <button id="addRowBelowBtn" title="Add a new row below the currently selected/clicked row">⬇️ Row Below</button>
-            <button id="addColLeftBtn" title="Add a new column to the left of the currently selected/clicked column">⬅️ Col Left</button>
-            <button id="addColRightBtn" title="Add a new column to the right of the currently selected/clicked column">➡️ Col Right</button>
-            <button id="deleteRowBtn" class="delete-btn" title="Delete the currently selected/clicked row">🗑️ Del Row</button>
-            <button id="deleteColBtn" class="delete-btn" title="Delete the currently selected/clicked column">🗑️ Del Col</button>
-        </div>
+      </div>
+
+      <div class="tabs" id="tableTabs"></div>
+      <div id="tablesContainer">
+        <table id="tbl_1" data-table-name="Kelas 3 & 5" class="active">
+          <thead>
+            <tr class="date-row">
+              <th contenteditable="true" class="date-cell">Thursday, 22 May 2025</th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell">DAY INFO</th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell"></th>
+            </tr>
+            <tr class="time-row">
+              <th contenteditable="true" class="leftCol">Class</th>
+              <th contenteditable="true">08:00</th>
+              <th contenteditable="true">09:00</th>
+              <th contenteditable="true">10:00</th>
+              <th contenteditable="true">REHAT</th>
+              <th contenteditable="true">12:00</th>
+              <th contenteditable="true">13:00</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td contenteditable="true" class="leftCol">5S1</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true">JAMES *ReportDue // Sick leave</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+            </tr>
+            <tr>
+              <td contenteditable="true" class="leftCol">5S2</td>
+              <td contenteditable="true">*SpecialAssembly</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true">Science Team</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:18px">Teacher/Subject Attendance Summary</h3>
+      <table id="summaryTable"></table>
     </div>
-    <div id="sharedScheduleListContainer" style="display:none;"></div>
-    
-    <div id="restoreBackupModal" class="modal">
-        <div class="modal-content" id="restoreBackupModalContent">
-            <div class="modal-header" id="restoreBackupModalHeader">
-                <h3 id="restoreBackupModalTitle">Restore Schedule from Backup</h3>
-                <button type="button" class="modal-close-btn" id="closeRestoreBackupModalBtn" title="Close restore backup">×</button>
+  </div>
+
+  <!-- Manage Subjects & Groups Modal -->
+  <div id="modalManage" class="modal" aria-hidden="true">
+    <div class="content">
+      <div class="head">
+        <h3 style="margin:0">Manage Subjects & Groups</h3>
+        <button class="close" id="closeManage">×</button>
+      </div>
+      <div class="tabs">
+        <button id="tabSubjects" class="active">Subjects</button>
+        <button id="tabGroups">Subject Groups</button>
+      </div>
+
+      <div id="paneSubjects">
+        <div class="grid">
+          <div>
+            <label>Add new subject</label>
+            <input id="inpSubjectName" class="input" placeholder="e.g., Mathematics">
+            <div class="bar" style="margin-top:8px">
+              <button id="btnAddSubject" class="btn btn-pri">Add Subject</button>
             </div>
-            <div id="restoreBackupListContainer"></div>
-            <div id="loadingIndicatorRestoreModal" style="display:none;"><div class="spinner"></div></div>
+          </div>
+          <div>
+            <label>All subjects</label>
+            <div id="listSubjects" class="list"></div>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <div class="bar table-tabs" id="tableTabs"></div>
-    <div id="tablesContainer">
-        <!-- Tables will be loaded or generated here -->
-    </div>
-
-    <!-- Name Management Modal -->
-    <div id="nameModal" class="modal">
-        <div class="modal-content" id="nameModalContent">
-            <div class="modal-header" id="nameModalHeader">
-                <h3 id="nameModalTitle">Shared Name List Manager</h3>
-                <button type="button" class="modal-close-btn" id="closeNameModalBtnStandard" title="Close name manager">×</button>
+      <div id="paneGroups" style="display:none">
+        <div class="grid">
+          <div>
+            <label>Group Name</label>
+            <input id="inpGroupName" class="input" placeholder="e.g., Science Team">
+            <label style="margin-top:8px;display:block">Subject</label>
+            <select id="selGroupSubject" class="input"></select>
+            <label style="margin-top:8px;display:block">Teachers (Pagi & Petang)</label>
+            <div id="listTeachers" class="list"></div>
+            <div class="bar" style="margin-top:8px">
+              <button id="btnCreateGroup" class="btn btn-pri">Create / Save Group</button>
             </div>
-            <div class="name-session-tabs">
-                <button id="namePagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
-                <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
-            </div>
-             <div class="input-group">
-                <input id="newNameInput" placeholder="Add new name to current shared session">
-                <button id="addNameBtnInModal" title="Add the name to the shared list">Add</button>
-             </div>
-            <button id="importNameListBtn" title="Import names from a .txt file (one name per line) to current shared session">📂 Import Names (.txt) to Shared Session</button>
-            <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
-            <input type="text" id="searchNameInput" placeholder="🔍 Search names in current shared session..." title="Filter the list of names">
-            <div id="nameList"></div>
-            <div id="loadingIndicatorModal" style="display:none;"><div class="spinner"></div></div>
+          </div>
+          <div>
+            <label>Existing Groups</label>
+            <div id="listGroups" class="list"></div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Subject & Group Management Modal -->
-    <div id="subjectModal" class="modal">
-        <div class="modal-content" id="subjectModalContent">
-            <div class="modal-header" id="subjectModalHeader">
-                <h3 id="subjectModalTitle">Subject & Group Manager</h3>
-                <button type="button" class="modal-close-btn" id="closeSubjectModalBtn" title="Close subject manager">×</button>
-            </div>
-            <div class="name-session-tabs">
-                <button id="subjectPagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
-                <button id="subjectPetangTab" data-session="petang">Petang (Afternoon)</button>
-            </div>
-             <div class="input-group">
-                <input id="newSubjectInput" placeholder="Add new subject to current session">
-                <button id="addSubjectBtnInModal" title="Add the subject to the list">Add Subject</button>
-             </div>
-            <div id="subjectList"></div>
-            <div id="loadingIndicatorSubjectModal" style="display:none;"><div class="spinner"></div></div>
-        </div>
-    </div>
-    
-    <!-- Sub-Modal for Teacher Assignment -->
-    <div id="teacherAssignmentModal" class="modal">
-        <div class="modal-content">
-             <div class="modal-header">
-                <h3 id="teacherAssignmentTitle">Assign Teachers</h3>
-                <button type="button" class="modal-close-btn" id="closeTeacherAssignmentModalBtn">×</button>
-            </div>
-            <div id="teacherAssignmentListContainer" class="teacher-assignment-container"></div>
-            <button id="saveTeacherAssignmentsBtn" style="width: 100%; margin-top: 15px; background-color: #28a745; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">Save Assignments</button>
-        </div>
-    </div>
+  <div id="toast" class="toast">Saved.</div>
 
-
-    <h3 style="margin-top:32px">Teacher/Subject Attendance Summary</h3>
-    <div id="summaryTableContainer">
-        <table id="summaryTable"></table>
-    </div>
-    <div id="customMessageBox" class="custom-message-box"></div>
-    <div id="generalLoadingIndicator" style="display:none;"><div class="spinner"></div></div>
-</div>
-
-<div id="pdfContent"></div>
-
-<script type="module">
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, getDocs, getDoc, deleteDoc, updateDoc, query, serverTimestamp, orderBy, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const userProvidedFirebaseConfig = {
+    /* ===== Firebase config (intact, with __firebase_config override) ===== */
+    const fallbackConfig = {
       apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
       authDomain: "jadual-3f0aa.firebaseapp.com",
       projectId: "jadual-3f0aa",
@@ -761,1016 +224,436 @@
       messagingSenderId: "496526436851",
       appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
     };
-
     let firebaseConfig;
-    if (typeof __firebase_config !== 'undefined' && __firebase_config !== null && __firebase_config.trim() !== '') {
-        try { firebaseConfig = JSON.parse(__firebase_config); } catch (e) { firebaseConfig = userProvidedFirebaseConfig; }
-    } else {
-        firebaseConfig = userProvidedFirebaseConfig;
-    }
-    
-    const appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.appId || 'default-shared-scheduler-app');
+    if (typeof window.__firebase_config === "string" && window.__firebase_config.trim()) {
+      try { firebaseConfig = JSON.parse(window.__firebase_config); console.log("Using injected __firebase_config"); }
+      catch(e){ console.warn("Failed to parse __firebase_config. Using fallback.", e); firebaseConfig = fallbackConfig; }
+    } else { firebaseConfig = fallbackConfig; }
 
-    let fbApp, fbAuth, fbDb;
-    let fbUserId = null;
-    let fbIsAuthReady = false;
-    let unsubscribePagiShared = null;
-    let unsubscribePetangShared = null;
-    let unsubscribeSubjectsPagi = null;
-    let unsubscribeSubjectsPetang = null;
+    const appId = (typeof window.__app_id !== "undefined" && window.__app_id) ? window.__app_id : (firebaseConfig.appId || "shared-scheduler");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    try {
-        fbApp = initializeApp(firebaseConfig);
-        fbAuth = getAuth(fbApp);
-        fbDb = getFirestore(fbApp);
-    } catch (e) {
-        console.error("CRITICAL Error initializing Firebase services:", e);
-        document.getElementById('userIdDisplay').textContent = "User ID: Firebase Init Error!";
-    }
+    /* ===== DOM ===== */
+    const scheduleTitleEl = document.getElementById("scheduleTitle");
+    const tableTabsEl = document.getElementById("tableTabs");
+    const tablesContainerEl = document.getElementById("tablesContainer");
+    const summaryTableEl = document.getElementById("summaryTable");
+    const toastEl = document.getElementById("toast");
+    const userIdText = document.getElementById("userIdText");
 
-    // --- Global Variables & Constants ---
-    const SCHEDULE_TITLE_KEY = `shared_jadual_title_${appId}`;
-    const LAST_ACTIVE_SCHEDULE_ID_KEY = `last_active_schedule_id_${appId}`;
-    
-    let activeTableId = 'tbl_1';
-    let tableCount = 1;
-    let selectionMode = false;
-    let selectedCells = [];
-    let lastClickedCell = null;
-    let selectedNameFromList = null;
-    let currentNameListSession = 'pagi';
-    let namesPagiShared = [];
-    let namesPetangShared = [];
-    let currentSubjectSession = 'pagi';
-    let subjectsPagi = {};
-    let subjectsPetang = {};
-    let isDraggingModal = false;
-    let modalDragOffsetX, modalDragOffsetY;
-    let autocompleteSuggestionsDiv = null;
-    let activeCellForAutocomplete = null;
-    let currentAutocompleteIndex = -1;
-    
-    let currentWorkingScheduleDocId = null;
-    let autoSaveIntervalId = null;
-    const AUTO_SAVE_INTERVAL = 60000;
-    let isAutoSaving = false;
-    let lastSavedState = null;
-    let isInitialStateSet = false;
+    // Controls
+    const toggleControlsBtn = document.getElementById("toggleControls");
+    const controlsBox = document.getElementById("controlsBox");
+    const btnSavePage = document.getElementById("btnSavePage");
+    const btnSaveShared = document.getElementById("btnSaveShared");
+    const btnLoadShared = document.getElementById("btnLoadShared");
+    const btnClearNew = document.getElementById("btnClearNew");
+    const btnManageSubjects = document.getElementById("btnManageSubjects");
+    const btnClearNamesAll = document.getElementById("btnClearNamesAll");
 
-    // --- DOM Element References ---
-    let scheduleTitleElement, tablesContainer, tableTabs, nameModal, nameModalContent, nameModalHeader,
-        nameListContainer, newNameInput, sharedScheduleListContainerElement, summaryTableElement,
-        summaryTableContainerElement, customMessageBox, fileInputElement, directCopyFullHtmlButtonElement,
-        closeNameModalButtonStandardElement, nameListImportFileInputElement, searchNameInputElement,
-        sharedScheduleImportFileInputElement, userIdDisplayElement, namePagiTabElement, namePetangTabElement,
-        loadingIndicatorModalElement, nameModalTitleElement, generalLoadingIndicatorElement,
-        controlsTogglerElement, collapsibleButtonBarsElement, downloadPdfButtonElement, pdfContentElement,
-        clearAndResetScheduleBtnElement, manualSaveBtnElement, clearScheduledNamesBtnElement,
-        restoreBackupBtnElement, restoreBackupModalElement, restoreBackupModalContentElement,
-        restoreBackupModalHeaderElement, closeRestoreBackupModalBtnElement, restoreBackupListContainerElement,
-        loadingIndicatorRestoreModalElement, subjectModalElement, subjectModalContent, subjectModalHeader, 
-        subjectListContainerElement, newSubjectInputElement, closeSubjectModalBtnElement, subjectPagiTabElement, 
-        subjectPetangTabElement, loadingIndicatorSubjectModalElement, subjectModalTitleElement,
-        teacherAssignmentModalElement, closeTeacherAssignmentModalBtnElement, teacherAssignmentTitleElement,
-        teacherAssignmentListContainerElement, saveTeacherAssignmentsBtnElement;
+    // Modal elements
+    const modalManage = document.getElementById("modalManage");
+    const closeManage = document.getElementById("closeManage");
+    const tabSubjects = document.getElementById("tabSubjects");
+    const tabGroups = document.getElementById("tabGroups");
+    const paneSubjects = document.getElementById("paneSubjects");
+    const paneGroups = document.getElementById("paneGroups");
+    const inpSubjectName = document.getElementById("inpSubjectName");
+    const btnAddSubject = document.getElementById("btnAddSubject");
+    const listSubjects = document.getElementById("listSubjects");
+    const selGroupSubject = document.getElementById("selGroupSubject");
+    const listTeachers = document.getElementById("listTeachers");
+    const inpGroupName = document.getElementById("inpGroupName");
+    const btnCreateGroup = document.getElementById("btnCreateGroup");
+    const listGroups = document.getElementById("listGroups");
 
-    // --- Utility Functions ---
-    function showMessage(message, type = 'info', duration = 3000) {
-        if (!customMessageBox) return;
-        customMessageBox.textContent = message;
-        customMessageBox.className = `custom-message-box ${type}`;
-        customMessageBox.style.display = 'block';
-        setTimeout(() => { if (customMessageBox) customMessageBox.style.display = 'none'; }, duration);
+    /* ===== Shared state (single source of truth) ===== */
+    let namesPagiShared = [];   // populated by your existing Names UI elsewhere
+    let namesPetangShared = []; // populated by your existing Names UI elsewhere
+
+    let scheduleState = {
+      scheduleTitle: "Jadual Anjal",
+      activeTableId: "tbl_1",
+      subjects: [
+        { id:"subj_1", name:"Mathematics" },
+        { id:"subj_2", name:"Science" },
+        { id:"subj_3", name:"History" }
+      ],
+      subjectGroups: [
+        { id:"group_1", name:"Science Team", subjectId:"subj_2", teacherNames:["LILY","JAMES"] }
+      ],
+      tables: [] // set from current DOM on first capture
+    };
+
+    /* ===== Helpers ===== */
+    const uid = () => "id_" + Math.random().toString(36).slice(2,9);
+    const showToast = (msg="Saved.", ms=1600) => { toastEl.textContent=msg; toastEl.classList.add("show"); setTimeout(()=>toastEl.classList.remove("show"), ms); };
+
+    function normalizeTextForSummary(txt){
+      if (typeof txt!=="string") return "";
+      // remove notes after ' // ' and asterisk words
+      const first = txt.split(" // ")[0] || "";
+      return first.split(/\s+/).filter(w => !w.startsWith("*")).join(" ").trim();
     }
 
-    function customPrompt(message, defaultValue = "") { return prompt(message, defaultValue); }
-
-    function customConfirm(message) {
-        return new Promise((resolve) => {
-            const confirmModalId = 'customConfirmModal';
-            let existingModal = document.getElementById(confirmModalId);
-            if (existingModal) existingModal.remove();
-            const modal = document.createElement('div');
-            modal.id = confirmModalId;
-            modal.style.cssText = `display: flex; position: fixed; z-index: 2001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;`;
-            const modalContent = document.createElement('div');
-            modalContent.style.cssText = `background-color: #fff; padding: 25px; border-radius: 8px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); min-width: 300px; max-width: 90%;`;
-            const messageP = document.createElement('p');
-            messageP.textContent = message;
-            messageP.style.marginBottom = '20px'; messageP.style.fontSize = '1.1em';
-            const yesButton = document.createElement('button');
-            yesButton.textContent = 'Yes';
-            yesButton.style.cssText = `padding: 10px 20px; margin: 0 10px; border-radius: 5px; cursor: pointer; background-color: #28a745; color: white; border: none; font-size: 1em;`;
-            const noButton = document.createElement('button');
-            noButton.textContent = 'No';
-            noButton.style.cssText = `padding: 10px 20px; margin: 0 10px; border-radius: 5px; cursor: pointer; background-color: #dc3545; color: white; border: none; font-size: 1em;`;
-            const closeModal = (value) => { modal.remove(); resolve(value); };
-            yesButton.onclick = () => closeModal(true);
-            noButton.onclick = () => closeModal(false);
-            modalContent.appendChild(messageP); modalContent.appendChild(yesButton); modalContent.appendChild(noButton);
-            modal.appendChild(modalContent); document.body.appendChild(modal);
-        });
-    }
-    
-    function showGeneralLoading(isLoading) {
-        if (generalLoadingIndicatorElement) generalLoadingIndicatorElement.style.display = isLoading ? 'flex' : 'none';
+    function getAllTeacherNames(){
+      const set = new Set([...(namesPagiShared||[]), ...(namesPetangShared||[])]);
+      return Array.from(set);
     }
 
-    function toggleButtonBarsVisibility() {
-        if (!collapsibleButtonBarsElement || !controlsTogglerElement) return;
-        const isOpen = collapsibleButtonBarsElement.classList.toggle('open');
-        controlsTogglerElement.setAttribute('aria-expanded', isOpen.toString());
-        const textSpan = controlsTogglerElement.querySelector('span');
-        if (textSpan) textSpan.textContent = isOpen ? 'Hide Controls' : 'Show Controls';
+    function getAllSuggestionTokens(){
+      // Teachers + group names
+      const teachers = getAllTeacherNames();
+      const groups = (scheduleState.subjectGroups||[]).map(g=>g.name);
+      return Array.from(new Set([...teachers, ...groups]));
     }
 
-    function showNameModalLoading(isLoading) { if (loadingIndicatorModalElement) loadingIndicatorModalElement.style.display = isLoading ? 'flex' : 'none'; }
-    function showSubjectModalLoading(isLoading) { if (loadingIndicatorSubjectModalElement) loadingIndicatorSubjectModalElement.style.display = isLoading ? 'flex' : 'none'; }
-    function showRestoreBackupModalLoading(isLoading) { if (loadingIndicatorRestoreModalElement) loadingIndicatorRestoreModalElement.style.display = isLoading ? 'flex' : 'none'; }
-    
-    function ensureDateHeaderRowExists(tableElement) {
-        if (!tableElement || !tableElement.tHead) return;
-        let numCols = 0;
-        const timeSlotHeaderRow = Array.from(tableElement.tHead.rows).find(row => !row.classList.contains('date-header-row'));
-        if (timeSlotHeaderRow) { numCols = timeSlotHeaderRow.cells.length; } 
-        else if (tableElement.rows.length > 0 && tableElement.rows[0].cells.length > 0) {
-            const firstMeaningfulRow = Array.from(tableElement.rows).find(r => !r.classList.contains('date-header-row'));
-            numCols = firstMeaningfulRow ? firstMeaningfulRow.cells.length : 1;
-        } else { numCols = 1; }
-        let dateRow = tableElement.tHead.querySelector('tr.date-header-row');
-        if (!dateRow) {
-            dateRow = document.createElement('tr');
-            dateRow.className = 'date-header-row';
-            for (let i = 0; i < numCols; i++) {
-                const th = document.createElement('th');
-                th.className = 'date-header-cell';
-                th.contentEditable = 'true';
-                dateRow.appendChild(th);
-            }
-            if (tableElement.tHead.firstChild) tableElement.tHead.insertBefore(dateRow, tableElement.tHead.firstChild);
-            else tableElement.tHead.appendChild(dateRow);
-        } else {
-            const currentCellCount = dateRow.cells.length;
-            if (currentCellCount < numCols) {
-                for (let i = currentCellCount; i < numCols; i++) {
-                    const th = document.createElement('th');
-                    th.className = 'date-header-cell';
-                    th.contentEditable = 'true';
-                    dateRow.appendChild(th);
-                }
-            } else if (currentCellCount > numCols && numCols > 0) {
-                for (let i = currentCellCount - 1; i >= numCols; i--) { if(dateRow.cells[i]) dateRow.cells[i].remove(); }
-            }
-        }
-    }
-
-    function captureCurrentState() {
-        if (!tablesContainer || !scheduleTitleElement) return null;
-        const state = {
-            html: tablesContainer.innerHTML,
-            tableMeta: {},
-            activeTableId: activeTableId,
-            scheduleTitle: scheduleTitleElement.textContent || ''
+    /* ===== Build tabs for tables ===== */
+    function refreshTableTabs(){
+      tableTabsEl.innerHTML = "";
+      const tables = Array.from(tablesContainerEl.querySelectorAll("table"));
+      tables.forEach(tbl => {
+        const btn = document.createElement("button");
+        btn.textContent = tbl.dataset.tableName || tbl.id;
+        btn.className = (tbl.classList.contains("active")?"active":"");
+        btn.onclick = () => {
+          tables.forEach(t => t.classList.remove("active"));
+          tbl.classList.add("active");
+          scheduleState.activeTableId = tbl.id;
+          refreshTableTabs();
+          rebuildAndRenderSummary();
         };
-        Array.from(tablesContainer.querySelectorAll('table')).forEach(table => {
-            state.tableMeta[table.id] = {
-                name: table.dataset.tableName || table.id,
-                isIndependent: table.dataset.independent === 'true'
-            };
+        tableTabsEl.appendChild(btn);
+      });
+    }
+
+    /* ===== Capture DOM into JSON (tables, date/time headers, body, simple merges placeholder) ===== */
+    function captureStateAsJson(){
+      const tables = Array.from(tablesContainerEl.querySelectorAll("table"));
+      const tablesJson = tables.map(tbl => {
+        const dateRow = tbl.tHead?.querySelector("tr.date-row");
+        const timeRow = tbl.tHead?.querySelector("tr.time-row");
+        const dateHeaderRow = dateRow ? Array.from(dateRow.cells).map(c=>c.textContent||"") : [];
+        const timeHeaderRow = timeRow ? Array.from(timeRow.cells).map(c=>c.textContent||"") : [];
+
+        const bodyRows = Array.from(tbl.tBodies[0]?.rows || []).map(tr =>
+          Array.from(tr.cells).map(td => ({ content: td.textContent || "" }))
+        );
+        return {
+          id: tbl.id,
+          name: tbl.dataset.tableName || tbl.id,
+          isIndependent: tbl.classList.contains("standalone"),
+          dateHeaderRow,
+          timeHeaderRow,
+          bodyRows,
+          merges: [] // (placeholder - complex merge retention not covered here)
+        };
+      });
+
+      return {
+        scheduleTitle: scheduleTitleEl.textContent || "Jadual Anjal",
+        activeTableId: tablesContainerEl.querySelector("table.active")?.id || (tablesJson[0]?.id || "tbl_1"),
+        subjects: scheduleState.subjects || [],
+        subjectGroups: scheduleState.subjectGroups || [],
+        tables: tablesJson
+      };
+    }
+
+    /* ===== Render full UI from JSON ===== */
+    function renderStateFromJson(state){
+      scheduleState = JSON.parse(JSON.stringify(state||scheduleState));
+      scheduleTitleEl.textContent = scheduleState.scheduleTitle || "Jadual Anjal";
+      tablesContainerEl.innerHTML = "";
+      (scheduleState.tables||[]).forEach(tbl => {
+        const tableEl = document.createElement("table");
+        tableEl.id = tbl.id;
+        tableEl.dataset.tableName = tbl.name||tbl.id;
+        if (tbl.isIndependent) tableEl.classList.add("standalone");
+        const thead = document.createElement("thead");
+        const dateTr = document.createElement("tr"); dateTr.className="date-row";
+        (tbl.dateHeaderRow||[]).forEach(txt => {
+          const th = document.createElement("th"); th.className="date-cell"; th.contentEditable="true"; th.textContent = txt||""; dateTr.appendChild(th);
         });
-        return JSON.stringify(state);
-    }
-    
-    // --- Summary Table Functions ---
-    function getTextForSummary(cellText) {
-        if (typeof cellText !== 'string') return { teacher: '', subject: '' };
-        let content = cellText.split(' // ')[0].trim();
-        let subject = '';
-        let teacher = '';
-
-        const parts = content.split('-').map(p => p.trim());
-        if (parts.length > 1) {
-            subject = parts[0];
-            teacher = parts.slice(1).join('-').trim();
-        } else {
-            teacher = content;
-        }
-        
-        const words = teacher.split(/\s+/);
-        const filteredWords = words.filter(word => !word.startsWith('*'));
-        teacher = filteredWords.join(' ').trim();
-
-        return { teacher, subject };
-    }
-
-    function parseTimeToMinutes(timeStr) {
-        if (typeof timeStr !== 'string') return Infinity; 
-        const match = timeStr.match(/^(\d{1,2})\s*[:.]\s*(\d{2})/);
-        if (match) return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
-        const hourMatch = timeStr.match(/^(\d{1,2})$/);
-        if (hourMatch) return parseInt(hourMatch[1], 10) * 60;
-        return Infinity; 
-    }
-    
-    function normalizeHeaderForLookup(txt){ return txt.replace(/\s/g,'').replace(/:/g,'.').replace(/[–—\-]/g,'-'); }
-
-    function buildSummaryTableSkeleton(allAvailableNames) {
-        if (!summaryTableElement) { console.error("buildSummaryTableSkeleton: summaryTableElement not found."); return; }
-        summaryTableElement.innerHTML = ''; 
-
-        let allScheduleTableHeaders = new Set();
-        if (tablesContainer) {
-            Array.from(tablesContainer.querySelectorAll('table:not([data-independent="true"])')).forEach(scheduleTable => {
-                if (!scheduleTable.tHead) return;
-                const timeSlotHeaderRow = Array.from(scheduleTable.tHead.rows).find(row => !row.classList.contains('date-header-row'));
-                if (timeSlotHeaderRow) {
-                    for (let hIdx = 1; hIdx < timeSlotHeaderRow.cells.length; hIdx++) { 
-                        const headerText = String(timeSlotHeaderRow.cells[hIdx].textContent || '').trim();
-                        if (headerText) allScheduleTableHeaders.add(headerText);
-                    }
-                }
-            });
-        }
-        
-        let sortedUniqueHeaders = Array.from(allScheduleTableHeaders).sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
-
-        const finalSummaryColumnHeaders = ['Teacher/Time', ...sortedUniqueHeaders];
-        const thead = summaryTableElement.createTHead(); 
-        const headerRowForSummary = thead.insertRow();
-        finalSummaryColumnHeaders.forEach(headerText => { 
-            const th = document.createElement('th'); th.textContent = headerText; headerRowForSummary.appendChild(th); 
+        const timeTr = document.createElement("tr"); timeTr.className="time-row";
+        (tbl.timeHeaderRow||[]).forEach((txt,idx) => {
+          const th = document.createElement("th"); th.contentEditable="true"; th.textContent = txt||"";
+          if (idx===0) th.classList.add("leftCol");
+          timeTr.appendChild(th);
         });
-        
-        const tbody = summaryTableElement.createTBody();
-        if (allAvailableNames.length === 0) { 
-            const tr = tbody.insertRow(); const td = tr.insertCell(); 
-            td.textContent = "No teachers scheduled."; 
-            td.colSpan = finalSummaryColumnHeaders.length || 1; 
-            td.style.textAlign = 'center'; td.style.fontStyle = 'italic'; 
-        } else { 
-            allAvailableNames.forEach(name => { 
-                const tr = tbody.insertRow(); 
-                tr.insertCell().textContent = String(name || ''); 
-                for (let i = 1; i < finalSummaryColumnHeaders.length; i++) tr.insertCell().textContent = ''; 
-            }); 
-        }
+        thead.appendChild(dateTr); thead.appendChild(timeTr);
+        const tbody = document.createElement("tbody");
+        (tbl.bodyRows||[]).forEach(row => {
+          const tr = document.createElement("tr");
+          row.forEach((cell, idx) => {
+            const td = document.createElement("td"); td.contentEditable="true"; td.textContent = cell.content || "";
+            if (idx===0) td.classList.add("leftCol");
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        tableEl.appendChild(thead); tableEl.appendChild(tbody);
+        tablesContainerEl.appendChild(tableEl);
+      });
+      // activate table
+      const toActivate = document.getElementById(scheduleState.activeTableId) || tablesContainerEl.querySelector("table");
+      tablesContainerEl.querySelectorAll("table").forEach(t => t.classList.remove("active"));
+      if (toActivate) toActivate.classList.add("active");
+
+      attachCellAutocomplete(); // rebind
+      refreshTableTabs();
+      rebuildAndRenderSummary();
+      refreshSubjectsUI();
+      refreshGroupsUI();
     }
-    
-    function updateSummaryTableData(allAvailableNames) {
-        if (!summaryTableElement?.tBodies?.[0] || !summaryTableElement.tHead?.rows?.[0]) return;
-        const summaryBody = summaryTableElement.tBodies[0];
-        const summaryHeaderCells = Array.from(summaryTableElement.tHead.rows[0].cells);
-        const normalizedSummaryHeadersForLookup = summaryHeaderCells.map(th => normalizeHeaderForLookup(th.textContent));
-    
-        Array.from(summaryBody.rows).forEach(summaryRow => {
-            for (let i = 1; i < summaryRow.cells.length; i++) { 
-                const cell = summaryRow.cells[i];
-                cell.textContent = '';
-                cell.removeAttribute('colspan');
-                cell.style.display = 'table-cell'; 
-                cell.classList.remove('highlight-conflict', 'summary-merged-cell');
-                cell.dataset.tempEntries = '';
+
+    /* ===== Autocomplete on cells: teachers + group names ===== */
+    function attachCellAutocomplete(){
+      tablesContainerEl.querySelectorAll("td[contenteditable='true']").forEach(td => {
+        td.oninput = () => {/* no-op */};
+        td.onkeydown = (e) => {
+          // simple inline suggestion with Tab
+          if (e.key === "Tab"){
+            const tokens = getAllSuggestionTokens();
+            const val = td.textContent.trim().toUpperCase();
+            if (val){
+              const found = tokens.find(t => t.toUpperCase().startsWith(val));
+              if (found){ e.preventDefault(); td.textContent = found; placeCaretEnd(td); }
             }
-        });
-    
-        allAvailableNames.forEach(name => {
-            const targetSummaryRow = Array.from(summaryBody.rows).find(sr => sr.cells[0]?.textContent === name);
-            if (!targetSummaryRow) return;
-    
-            Array.from(tablesContainer.querySelectorAll('table:not([data-independent="true"])')).forEach(scheduleTable => {
-                if (!scheduleTable.tHead || !scheduleTable.tBodies[0]) return;
-                const timeSlotHeaderRow = Array.from(scheduleTable.tHead.rows).find(row => !row.classList.contains('date-header-row'));
-                if (!timeSlotHeaderRow) return;
-                const scheduleHeaders = Array.from(timeSlotHeaderRow.cells).map(th => String(th.textContent||'').trim());
-    
-                scheduleTable.tBodies[0].querySelectorAll('tr').forEach(scheduleDataRow => {
-                    const classIdentifier = String(scheduleDataRow.cells[0]?.textContent||'').trim();
-                    if (!classIdentifier) return;
-    
-                    for (let cellIdx = 1; cellIdx < scheduleDataRow.cells.length; cellIdx++) {
-                        const scheduleCell = scheduleDataRow.cells[cellIdx];
-                        if (!scheduleCell || scheduleCell.style.display === 'none') continue;
-
-                        const overlay = scheduleCell.querySelector('.merged-cell-overlay');
-                        const entryFullName = overlay ? overlay.textContent : scheduleCell.textContent;
-                        const { teacher: entryTeacher, subject: entrySubject } = getTextForSummary(entryFullName);
-
-                        if (entryTeacher.toUpperCase() === name.toUpperCase()) {
-                            const headerText = scheduleHeaders[cellIdx];
-                            const summaryColIdx = normalizedSummaryHeadersForLookup.indexOf(normalizeHeaderForLookup(headerText));
-
-                            if (summaryColIdx > 0) {
-                                const summaryCell = targetSummaryRow.cells[summaryColIdx];
-                                if (summaryCell) {
-                                    let currentEntries = summaryCell.dataset.tempEntries ? JSON.parse(summaryCell.dataset.tempEntries) : [];
-                                    const newEntryText = `${entrySubject ? entrySubject + ' ' : ''}(${classIdentifier})`;
-                                    currentEntries.push(newEntryText);
-                                    summaryCell.dataset.tempEntries = JSON.stringify(currentEntries);
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-        });
-    
-        Array.from(summaryBody.rows).forEach(summaryRow => {
-            for (let j = 1; j < summaryRow.cells.length; j++) { 
-                const currentCell = summaryRow.cells[j];
-                if (currentCell.dataset.tempEntries) {
-                    const entries = JSON.parse(currentCell.dataset.tempEntries);
-                    currentCell.textContent = [...new Set(entries)].join(', ');
-                    if (entries.length > 1) {
-                        currentCell.classList.add('highlight-conflict');
-                    }
-                }
-            }
-        });
+          }
+        };
+      });
     }
-    
-    function rebuildAndRenderSummary() {
-        const scheduledTeachers = new Set();
-        if (tablesContainer) {
-            Array.from(tablesContainer.querySelectorAll('table:not([data-independent="true"])')).forEach(scheduleTable => {
-                if (!scheduleTable.tBodies[0]) return;
-                scheduleTable.tBodies[0].querySelectorAll('tr').forEach(row => {
-                    Array.from(row.cells).forEach((cell, cellIndex) => {
-                        if (cellIndex > 0) { 
-                            const overlay = cell.querySelector('.merged-cell-overlay');
-                            const nameFromCell = String(overlay ? overlay.textContent : cell.textContent || '').trim();
-                            const { teacher } = getTextForSummary(nameFromCell);
-                            if (teacher) scheduledTeachers.add(teacher);
-                        }
-                    });
-                });
-            });
-        }
-        const allSummaryNames = [...scheduledTeachers].sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
-        buildSummaryTableSkeleton(allSummaryNames);
-        updateSummaryTableData(allSummaryNames);
+    function placeCaretEnd(el){
+      const range = document.createRange(); const sel = window.getSelection();
+      range.selectNodeContents(el); range.collapse(false); sel.removeAllRanges(); sel.addRange(range);
     }
 
-    // --- Firestore Interaction Functions (Subjects) ---
-    function listenToSubjects(sessionToListen) {
-        if (!fbDb || !fbIsAuthReady) return () => {};
-        const docRef = doc(fbDb, "artifacts", appId, "public/data/subjectLists", sessionToListen);
-        return onSnapshot(docRef, (docSnap) => {
-            const subjectsFromDb = docSnap.exists() ? (docSnap.data().subjects || {}) : {};
-            if (sessionToListen === 'pagi') subjectsPagi = subjectsFromDb;
-            else subjectsPetang = subjectsFromDb;
-            if (sessionToListen === currentSubjectSession && subjectModalElement?.style.display === 'flex') {
-                renderSubjectList();
-            }
-        }, (error) => console.error(`Error listening to ${sessionToListen} subjects:`, error));
-    }
+    /* ===== Summary Builder =====
+       - If a cell contains a group name, expand to all teacherNames of that group
+    */
+    function rebuildAndRenderSummary(){
+      const tables = Array.from(tablesContainerEl.querySelectorAll("table")).filter(t=>!t.classList.contains("standalone"));
+      // Build a union of time headers
+      let timeCols = new Set();
+      tables.forEach(tbl => {
+        const ths = tbl.tHead?.querySelector(".time-row")?.cells || [];
+        Array.from(ths).forEach((th, idx)=>{ if(idx>0) timeCols.add(th.textContent.trim()); });
+      });
+      const timeAxis = Array.from(timeCols).filter(Boolean);
+      // Build teacher rows
+      const teacherBusy = {}; // teacherName -> map time -> boolean
+      const pushBusy = (teacher, timeLabel) => {
+        if (!teacherBusy[teacher]) teacherBusy[teacher] = {};
+        teacherBusy[teacher][timeLabel] = true;
+      };
 
-    async function saveSubjectsToFirestore(session, subjectsObject) {
-        if (!fbDb || !fbIsAuthReady) { showMessage("Firebase not ready.", "error"); return; }
-        showSubjectModalLoading(true);
-        const docRef = doc(fbDb, "artifacts", appId, "public/data/subjectLists", session);
-        try {
-            await setDoc(docRef, { subjects: subjectsObject, lastUpdatedBy: fbUserId || "anonymous", updatedAt: serverTimestamp() });
-        } catch (error) {
-            console.error(`Error saving subjects to ${session}:`, error);
-            showMessage(`Failed to save subjects. Error: ${error.message}`, "error");
-        } finally {
-            showSubjectModalLoading(false);
-        }
-    }
-    
-    // --- Firestore Interaction Functions (Shared Names) ---
-    async function saveSharedNameListToFirestore(session, namesArray) {
-        if (!fbDb || !fbIsAuthReady) { showMessage("Firebase not ready.", "error"); return; }
-        showNameModalLoading(true);
-        const uniqueSortedNames = [...new Set(namesArray.map(n => String(n||'').trim()).filter(n => n))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", session);
-        try {
-            await setDoc(docRef, { names: uniqueSortedNames, lastUpdatedBy: fbUserId || "anonymous", updatedAt: serverTimestamp() });
-            showMessage(`Shared name list for ${session} updated.`, "success");
-        } catch (error) { console.error(`Error saving shared list to ${session}:`, error); showMessage(`Failed to save. Error: ${error.message}`, "error"); }
-        finally { showNameModalLoading(false); }
-    }
-    async function addNameToSharedSessionInFirestore(name) {
-        if (!fbDb || !fbIsAuthReady) { showMessage("Firebase not ready.", "error"); return; }
-        const trimmedName = String(name || '').trim();
-        if (!trimmedName) { showMessage("Name cannot be empty.", "info"); return; }
-        showNameModalLoading(true);
-        const sessionNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
-        if (sessionNames.map(n => String(n || '').toLowerCase()).includes(trimmedName.toLowerCase())) { showMessage(`"${trimmedName}" already exists.`, "info"); showNameModalLoading(false); return; }
-        const updatedNames = [...sessionNames, trimmedName].sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
-        const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
-        try {
-            await setDoc(docRef, { names: updatedNames, lastUpdatedBy: fbUserId || "anonymous", updatedAt: serverTimestamp() });
-            if(newNameInput) { newNameInput.value = ''; newNameInput.focus(); }
-        } catch (error) { console.error(`Error adding name:`, error); showMessage(`Failed to add. Error: ${error.message}`, "error"); }
-        finally { showNameModalLoading(false); }
-    }
-    async function deleteNameFromSharedSessionInFirestore(nameToDelete) {
-        if (!fbDb || !fbIsAuthReady) { showMessage("Firebase not ready.", "error"); return; }
-        const nameToDeleteStr = String(nameToDelete || '');
-        if (await customConfirm(`Delete "${nameToDeleteStr}" from shared ${currentNameListSession} session? This also removes it from tables.`)) {
-            showNameModalLoading(true);
-            const currentNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
-            const updatedNames = currentNames.filter(name => String(name || '') !== nameToDeleteStr);
-            const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
-            try {
-                await setDoc(docRef, { names: updatedNames, lastUpdatedBy: fbUserId || "anonymous", updatedAt: serverTimestamp() });
-                Array.from(tablesContainer.querySelectorAll('table')).forEach(table => {
-                    table.querySelectorAll('tbody td, tbody th, .merged-cell-overlay').forEach(cell => {
-                        const cellText = cell.textContent.trim(); const parts = cellText.split(' // ');
-                        let mainContent = parts[0]; const remarkContent = parts.length > 1 ? ` // ${parts.slice(1).join(' // ')}` : '';
-                        const mainParts = mainContent.split('-').map(p => p.trim());
-                        if (mainParts.length > 1) { // Subject - Teacher format
-                           let teacherPart = mainParts.slice(1).join('-').trim();
-                           if (teacherPart === nameToDeleteStr) {
-                               mainContent = mainParts[0]; // Keep only subject
-                           }
-                        } else if (mainContent === nameToDeleteStr) {
-                            mainContent = ''; // It was just a teacher
-                        }
-                        cell.textContent = (mainContent + remarkContent).trim();
-                    });
-                });
-                rebuildAndRenderSummary();
-                if (selectedNameFromList === nameToDeleteStr) clearNameSelection();
-            } catch (error) { console.error(`Error deleting name:`, error); showMessage(`Failed to delete. Error: ${error.message}`, "error"); }
-            finally { showNameModalLoading(false); }
-        }
-    }
-    function listenToSharedNameList(sessionToListen) {
-        if (!fbDb || !fbIsAuthReady) { return () => {}; }
-        const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", sessionToListen);
-        return onSnapshot(docRef, (docSnap) => {
-            showNameModalLoading(true);
-            const namesFromDb = docSnap.exists() ? (docSnap.data().names || []) : [];
-            const sanitizedNames = namesFromDb.map(name => String(name || '').trim()).filter(name => name.length > 0);
-            if (sessionToListen === 'pagi') namesPagiShared = sanitizedNames; else namesPetangShared = sanitizedNames;
-            if (sessionToListen === currentNameListSession && nameModal?.style.display === 'flex' && searchNameInputElement) renderNameListFromFirestore(searchNameInputElement.value);
-            rebuildAndRenderSummary(); showNameModalLoading(false);
-        }, (error) => { console.error(`Error listening to ${sessionToListen} names:`, error); showMessage(`Error fetching ${sessionToListen} names.`, "error"); showNameModalLoading(false); });
-    }
-    
-    // --- Firestore Interaction Functions (Schedules & Backups are UNCHANGED) ---
-    async function _saveBackupForSchedule(liveDocId, liveScheduleParsedState, liveScheduleNameForBackup, isOriginalAutoDraft) { /* UNCHANGED */ }
-    async function saveSharedScheduleToFirestore() { /* UNCHANGED */ }
-    async function autoSaveCurrentSchedule() { /* UNCHANGED */ }
-    async function manualSaveCurrentPage() { /* UNCHANGED */ }
-    async function loadAndRenderSharedSchedulesFromFirestore() { /* UNCHANGED */ }
-    function renderSharedScheduleList(schedulesArray) { /* UNCHANGED */ }
-    async function loadSelectedSharedScheduleFromFirestore(scheduleDocId, isDefaultLoad = false) {
-        if (!fbDb || !fbIsAuthReady) {
-            if (!isDefaultLoad) showMessage("Firebase not ready.", "error");
-            return false;
-        }
-        if (!tablesContainer || !tableTabs || !scheduleTitleElement) return false;
-        showGeneralLoading(true);
-        try {
-            const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedSchedules", scheduleDocId);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const scheduleData = docSnap.data();
-                if (scheduleData.isBackup === true) return false;
-
-                if (typeof scheduleData.scheduleTitle === 'string') {
-                    scheduleTitleElement.textContent = scheduleData.scheduleTitle;
-                    localStorage.setItem(SCHEDULE_TITLE_KEY, scheduleData.scheduleTitle);
-                }
-                tablesContainer.innerHTML = scheduleData.html;
-                const tableMeta = scheduleData.meta || {};
-                tableTabs.innerHTML = '';
-                Array.from(tablesContainer.querySelectorAll('table')).forEach(table => {
-                    ensureDateHeaderRowExists(table);
-                    const id = table.id;
-                    const metaInfo = tableMeta[id] || {};
-                    const name = metaInfo.name || `Sheet ${tableTabs.children.length + 1}`;
-                    table.dataset.tableName = name;
-                    if(metaInfo.isIndependent) table.dataset.independent = 'true';
-                    addTabButton(id, name, metaInfo.isIndependent);
-                    table.querySelectorAll('td, th, .merged-cell-overlay').forEach(cell => cell.contentEditable = 'true');
-                });
-                activeTableId = scheduleData.activeTableId || tablesContainer.querySelector('table')?.id || 'tbl_1';
-                if (document.getElementById(activeTableId)) switchTable(activeTableId);
-                else if (tablesContainer.querySelector('table')) switchTable(tablesContainer.querySelector('table').id);
-                else addNewTable(true); 
-                rebuildAndRenderSummary();
-                updateAllMergeOverlays();
-                return true;
+      tables.forEach(tbl => {
+        const timeRow = tbl.tHead?.querySelector(".time-row");
+        if (!timeRow) return;
+        const times = Array.from(timeRow.cells).map(c=>c.textContent.trim());
+        const body = tbl.tBodies[0];
+        if (!body) return;
+        Array.from(body.rows).forEach(tr => {
+          Array.from(tr.cells).forEach((td, idx) => {
+            if (idx===0) return; // skip class column
+            const label = times[idx] || "";
+            const raw = td.textContent || "";
+            const cleaned = normalizeTextForSummary(raw);
+            if (!cleaned) return;
+            // If matches a group name, expand to members
+            const grp = (scheduleState.subjectGroups||[]).find(g => g.name.toUpperCase() === cleaned.toUpperCase());
+            if (grp){
+              (grp.teacherNames||[]).forEach(name => pushBusy(name.toUpperCase(), label));
             } else {
-                return false;
+              pushBusy(cleaned.toUpperCase(), label);
             }
-        } catch (error) { return false; } 
-        finally { showGeneralLoading(false); }
-    }
-    async function loadLatestSharedScheduleAsDefault() { /* UNCHANGED */ }
-    async function confirmAndDeleteSharedScheduleFromFirestore(scheduleDocId, scheduleName) { /* UNCHANGED */ }
-    async function exportAllSharedSchedulesFromFirestore() { /* UNCHANGED */ }
-    async function handleSharedSchedulesImport(event) { /* UNCHANGED */ }
-    function toggleRestoreBackupModalVisibility() { /* UNCHANGED */ }
-    async function loadAndRenderBackupSchedulesFromFirestore() { /* UNCHANGED */ }
-    function renderBackupScheduleList(backupSchedulesArray) { /* UNCHANGED */ }
-    async function loadSelectedBackupIntoView(backupDocId) { /* UNCHANGED */ }
-
-    // --- Autocomplete Functions ---
-    function showCellAutocompleteSuggestions(cell, inputText) {
-        if (!autocompleteSuggestionsDiv) return;
-        
-        let suggestions = [];
-        const lowerInput = inputText.toLowerCase();
-
-        // Suggest Subjects
-        const currentSubjects = (currentSubjectSession === 'pagi' ? subjectsPagi : subjectsPetang) || {};
-        suggestions.push(...Object.keys(currentSubjects).filter(s => s.toLowerCase().startsWith(lowerInput)));
-        
-        // Suggest Teachers
-        const currentTeachers = (currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared) || [];
-        suggestions.push(...currentTeachers.filter(t => t.toLowerCase().startsWith(lowerInput)));
-
-        const uniqueSuggestions = [...new Set(suggestions)];
-
-        if (uniqueSuggestions.length > 0) {
-            activeCellForAutocomplete = cell;
-            autocompleteSuggestionsDiv.innerHTML = '';
-            uniqueSuggestions.slice(0, 10).forEach(suggestion => { 
-                const item = document.createElement('div');
-                item.className = 'suggestion-item';
-                item.textContent = suggestion;
-                item.addEventListener('mousedown', (e) => { e.preventDefault(); selectCellAutocompleteSuggestion(suggestion); });
-                autocompleteSuggestionsDiv.appendChild(item);
-            });
-            const cellRect = cell.getBoundingClientRect();
-            autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
-            autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
-            autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
-            autocompleteSuggestionsDiv.style.display = 'block';
-            currentAutocompleteIndex = -1; 
-        } else {
-            hideCellAutocompleteSuggestions();
-        }
-    }
-    function hideCellAutocompleteSuggestions() {
-        if (autocompleteSuggestionsDiv) autocompleteSuggestionsDiv.style.display = 'none';
-        activeCellForAutocomplete = null; currentAutocompleteIndex = -1;
-    }
-    function selectCellAutocompleteSuggestion(suggestionText) {
-        if (activeCellForAutocomplete) {
-            const targetCell = activeCellForAutocomplete;
-            const overlay = targetCell.querySelector('.merged-cell-overlay');
-            const contentNode = overlay || targetCell; 
-            contentNode.textContent = suggestionText + " - ";
-            hideCellAutocompleteSuggestions();
-            rebuildAndRenderSummary();
-            contentNode.focus();
-            const range = document.createRange();
-            const sel = window.getSelection();
-            if (sel) {
-                if (contentNode.childNodes.length > 0) range.selectNodeContents(contentNode);
-                range.collapse(false); 
-                sel.removeAllRanges(); sel.addRange(range);
-            }
-        }
-    }
-    function updateCellSuggestionHighlight() {
-        if (!autocompleteSuggestionsDiv || autocompleteSuggestionsDiv.style.display === 'none') return;
-        const items = autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item');
-        items.forEach((item, index) => item.classList.toggle('active-suggestion', index === currentAutocompleteIndex));
-    }
-
-    // --- Modal Drag Functions (Unchanged) ---
-    function startDragModal(e, modalContentEl) { /* UNCHANGED */ }
-    function dragModal(e, modalContentEl) { /* UNCHANGED */ }
-    function stopDragModal(e, modalContentEl) { /* UNCHANGED */ }
-
-    // --- Clipboard & Table Management ---
-    async function attemptDirectCopyToClipboard() { /* UNCHANGED */ }
-    
-    function addTabButton(id, label, isIndependent = false) {
-        if (!tableTabs) return null;
-        const button = document.createElement('button'); 
-        button.textContent = label + (isIndependent ? ' (S)' : '');
-        button.dataset.tableId = id;
-        button.title = `Switch to table: ${label}`; button.onclick = () => switchTable(id);
-        tableTabs.appendChild(button); return button;
-    }
-    function switchTable(id) {
-        activeTableId = id;
-        if(tablesContainer) Array.from(tablesContainer.querySelectorAll('table')).forEach(t => t.classList.toggle('active', t.id === id));
-        if(tableTabs) tableTabs.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.tableId === id));
-        deselectAllTableCells(); rebuildAndRenderSummary(); updateAllMergeOverlays(); hideCellAutocompleteSuggestions();
-    }
-    function addNewTable(isInitial = false, isIndependent = false) {
-        if (!tablesContainer || !tableTabs) return;
-        tableCount++; 
-        const label = isInitial ? "Schedule 1" : customPrompt('Enter new table name:', `Schedule ${tableTabs.children.length + 1}`);
-        if (!label && !isInitial) { tableCount--; return; }
-        const finalTableName = (label || `Schedule ${tableTabs.children.length + 1}`).trim();
-
-        const newTable = document.createElement('table');
-        newTable.id = `tbl_${Date.now()}_${tableCount}`; 
-        newTable.dataset.tableName = finalTableName;
-        if (isIndependent) newTable.dataset.independent = 'true';
-
-        const thead = newTable.createTHead();
-        const timeSlotHeaderRow = thead.insertRow();
-        const defaultHeaders = ['Class/Time', '08:00', '09:00', '10:00', '11:00', '12:00'];
-        defaultHeaders.forEach(headerText => {
-            const th = document.createElement('th'); th.contentEditable = 'true'; th.textContent = headerText; timeSlotHeaderRow.appendChild(th);
+          });
         });
-        
-        ensureDateHeaderRowExists(newTable); 
+      });
 
-        const tbody = newTable.createTBody();
-        for (let r = 0; r < 2; r++) { 
-            const dataRow = tbody.insertRow();
-            for (let c = 0; c < timeSlotHeaderRow.cells.length; c++) {
-                const td = dataRow.insertCell(); td.contentEditable = 'true';
-                if (c === 0) td.textContent = `Class ${String.fromCharCode(65 + r)}`;
-            }
-        }
-        tablesContainer.appendChild(newTable);
-        addTabButton(newTable.id, finalTableName, isIndependent);
-        switchTable(newTable.id); 
-    }
-    
-    async function promptAndRenameActiveTable() { /* UNCHANGED */ }
-    async function confirmAndDeleteActiveTable() { /* UNCHANGED */ }
-    function addRowToTable(tableBody, rowIndex, numCols) { /* UNCHANGED */ }
-    function addRowAboveToActiveTable() { /* UNCHANGED */ }
-    function addRowBelowToActiveTable() { /* UNCHANGED */ }
-    function addColumnToTable(table, colIndex) { /* UNCHANGED */ }
-    function addColumnLeftToActiveTable() { /* UNCHANGED */ }
-    function addColumnRightToActiveTable() { /* UNCHANGED */ }
-    async function deleteClickedRowFromActiveTable() { /* UNCHANGED */ }
-    async function deleteClickedColumnFromActiveTable() { /* UNCHANGED */ }
+      // Render table
+      const teachers = Object.keys(teacherBusy).sort((a,b)=>a.localeCompare(b));
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+      const h0 = document.createElement("th"); h0.textContent = "Nama / Masa"; trh.appendChild(h0);
+      timeAxis.forEach(t => { const th=document.createElement("th"); th.textContent=t; trh.appendChild(th); });
+      thead.appendChild(trh);
 
-    async function clearScheduledNamesFromAllTables() {
-        if (!await customConfirm('Clear scheduled names and subjects from ALL tables?')) return;
-        showGeneralLoading(true);
-        Array.from(tablesContainer.querySelectorAll('table:not([data-independent="true"])')).forEach(tbl => {
-            tbl.querySelectorAll('tbody td, tbody th').forEach((cell, idx) => {
-                if (idx === 0 || cell.hasAttribute('data-merge-id')) return;
-                const trimmed = cell.textContent.trim();
-                if (trimmed.startsWith('*')) return;
-                const slashIdx = trimmed.indexOf(' // ');
-                cell.textContent = slashIdx !== -1 ? trimmed.slice(slashIdx).trim() : '';
-            });
+      const tbody = document.createElement("tbody");
+      teachers.forEach(name => {
+        const tr = document.createElement("tr");
+        const td0 = document.createElement("td"); td0.className="leftCol"; td0.textContent=name; tr.appendChild(td0);
+        timeAxis.forEach(t => {
+          const td = document.createElement("td");
+          if (teacherBusy[name]?.[t]) td.innerHTML = '<span class="chip warn">Busy</span>';
+          tr.appendChild(td);
         });
-        rebuildAndRenderSummary();
-        showMessage('Names and subjects cleared from all tables.', 'success');
-        showGeneralLoading(false);
-    }
-    function toggleCellSelectionMode() { /* UNCHANGED */ }
-    function handleTableCellClick(event) { /* MOSTLY UNCHANGED, name insertion logic simplified */
-        const cell = event.target.closest('td, th'); if (!cell || !cell.closest(`#${activeTableId}`)) return;
-        lastClickedCell = cell;
-        if (autocompleteSuggestionsDiv?.style.display === 'block' && !autocompleteSuggestionsDiv.contains(event.target)) hideCellAutocompleteSuggestions();
-        if (selectedNameFromList) {
-            if (cell.tagName === 'TD' || (cell.tagName === 'TH' && cell.closest('tbody'))) {
-                const overlay = cell.querySelector('.merged-cell-overlay'); const contentNode = overlay || cell;
-                contentNode.textContent += selectedNameFromList;
-                rebuildAndRenderSummary(); showMessage(`Inserted "${selectedNameFromList}".`, 'success', 2500); clearNameSelection();
-            }
-            return;
-        }
-        if (selectionMode) { /* UNCHANGED */ }
-    }
-    function deselectAllTableCells() { /* UNCHANGED */ }
-    function mergeSelectedTableCells() { /* UNCHANGED */ }
-    function unmergeActiveCellIfMerged() { /* UNCHANGED */ }
-    function updateAllMergeOverlays() { /* UNCHANGED */ }
+        tbody.appendChild(tr);
+      });
 
-    // --- Subject/Group Modal Functions ---
-    function toggleSubjectModalVisibility() {
-        if (!subjectModalElement) return;
-        const isDisplayed = subjectModalElement.style.display === 'flex';
-        if (isDisplayed) {
-            subjectModalElement.style.display = 'none';
-        } else {
-            subjectModalElement.style.display = 'flex';
-            handleSubjectSessionSwitch(currentSubjectSession);
-        }
+      summaryTableEl.innerHTML = "";
+      summaryTableEl.appendChild(thead);
+      summaryTableEl.appendChild(tbody);
     }
 
-    function handleSubjectSessionSwitch(session) {
-        currentSubjectSession = session;
-        if (subjectPagiTabElement) subjectPagiTabElement.classList.toggle('active', session === 'pagi');
-        if (subjectPetangTabElement) subjectPetangTabElement.classList.toggle('active', session === 'petang');
-        if (subjectModalTitleElement) subjectModalTitleElement.textContent = `Subject & Group Manager (${session === 'pagi' ? 'Pagi' : 'Petang'})`;
-        renderSubjectList();
+    /* ===== Subjects UI ===== */
+    function refreshSubjectsUI(){
+      listSubjects.innerHTML = "";
+      (scheduleState.subjects||[]).forEach(sub => {
+        const row = document.createElement("div"); row.className="list-item";
+        row.innerHTML = \`<span>\${sub.name}</span>\`;
+        const b = document.createElement("button"); b.className="btn btn-warn"; b.textContent="Delete";
+        b.onclick = () => {
+          scheduleState.subjects = (scheduleState.subjects||[]).filter(s => s.id !== sub.id);
+          // remove subjectId in groups that reference it (optional: warn)
+          scheduleState.subjectGroups = (scheduleState.subjectGroups||[]).map(g => (g.subjectId===sub.id? {...g, subjectId:null}: g));
+          refreshSubjectsUI(); refreshGroupsUI();
+        };
+        row.appendChild(b);
+        listSubjects.appendChild(row);
+      });
+      // subjects dropdown for groups
+      selGroupSubject.innerHTML = "";
+      (scheduleState.subjects||[]).forEach(sub => {
+        const opt = document.createElement("option"); opt.value=sub.id; opt.textContent=sub.name; selGroupSubject.appendChild(opt);
+      });
     }
-    
-    function renderSubjectList() {
-        if (!subjectListContainerElement) return;
-        subjectListContainerElement.innerHTML = '';
-        const subjects = (currentSubjectSession === 'pagi' ? subjectsPagi : subjectsPetang) || {};
-        const sortedSubjects = Object.keys(subjects).sort((a,b) => a.localeCompare(b));
-        
-        if (sortedSubjects.length === 0) {
-            subjectListContainerElement.innerHTML = `<p>No subjects in ${currentSubjectSession} session.</p>`;
-            return;
-        }
 
-        sortedSubjects.forEach(subjectName => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'subject-item';
-            const teacherCount = subjects[subjectName]?.length || 0;
+    /* ===== Groups UI ===== */
+    function refreshGroupsUI(){
+      // teachers list (checkboxes)
+      listTeachers.innerHTML = "";
+      const allTeachers = getAllTeacherNames();
+      allTeachers.forEach(name => {
+        const id = "t_" + btoa(unescape(encodeURIComponent(name))).replace(/=/g,"");
+        const wrap = document.createElement("div"); wrap.className="list-item";
+        wrap.innerHTML = \`<label><input type="checkbox" id="\${id}"> \${name}</label>\`;
+        listTeachers.appendChild(wrap);
+      });
 
-            itemDiv.innerHTML = `
-                <span class="subject-name">${subjectName}</span>
-                <div class="subject-actions">
-                    <button class="manage-teachers-btn" data-subject="${subjectName}">Manage Teachers (${teacherCount})</button>
-                    <button class="delete-subject-btn" data-subject="${subjectName}">Delete</button>
-                </div>
-            `;
-            subjectListContainerElement.appendChild(itemDiv);
+      // groups list
+      listGroups.innerHTML = "";
+      (scheduleState.subjectGroups||[]).forEach(g => {
+        const row = document.createElement("div"); row.className="list-item";
+        const subjName = (scheduleState.subjects||[]).find(s=>s.id===g.subjectId)?.name || "(no subject)";
+        const teachers = (g.teacherNames||[]).map(n=>\`<span class="pill">\${n}</span>\`).join(" ");
+        row.innerHTML = \`<div><strong>\${g.name}</strong><div style="font-size:.85em;color:#666">Subject: \${subjName}</div><div>\${teachers}</div></div>\`;
+        const del = document.createElement("button"); del.className="btn btn-warn"; del.textContent="Delete";
+        del.onclick = () => { scheduleState.subjectGroups = scheduleState.subjectGroups.filter(x=>x.id!==g.id); refreshGroupsUI(); };
+        row.appendChild(del);
+        listGroups.appendChild(row);
+      });
+    }
+
+    /* ===== Events ===== */
+    toggleControlsBtn.onclick = () => {
+      const open = controlsBox.style.display !== "none";
+      controlsBox.style.display = open ? "none" : "block";
+      toggleControlsBtn.textContent = open ? "Show Controls" : "Hide Controls";
+    };
+
+    btnManageSubjects.onclick = () => { modalManage.style.display="flex"; refreshSubjectsUI(); refreshGroupsUI(); };
+    closeManage.onclick = () => { modalManage.style.display="none"; };
+
+    tabSubjects.onclick = () => { tabSubjects.classList.add("active"); tabGroups.classList.remove("active"); paneSubjects.style.display="block"; paneGroups.style.display="none"; };
+    tabGroups.onclick = () => { tabGroups.classList.add("active"); tabSubjects.classList.remove("active"); paneGroups.style.display="block"; paneSubjects.style.display="none"; };
+
+    btnAddSubject.onclick = () => {
+      const name = (inpSubjectName.value||"").trim();
+      if (!name) return;
+      scheduleState.subjects = scheduleState.subjects || [];
+      scheduleState.subjects.push({ id: uid().replace(/^id_/,"subj_"), name });
+      inpSubjectName.value = "";
+      refreshSubjectsUI();
+    };
+
+    btnCreateGroup.onclick = () => {
+      const name = (inpGroupName.value||"").trim();
+      if (!name) return;
+      const subjectId = selGroupSubject.value || null;
+      const picked = Array.from(listTeachers.querySelectorAll("input[type=checkbox]:checked"))
+        .map(cb => cb.parentElement.textContent.trim());
+      const g = { id: uid().replace(/^id_/,"group_"), name, subjectId, teacherNames: picked };
+      scheduleState.subjectGroups = scheduleState.subjectGroups || [];
+      scheduleState.subjectGroups.push(g);
+      inpGroupName.value = "";
+      refreshGroupsUI();
+      showToast("Group saved (local). Save Page or Save Shared to persist.");
+      rebuildAndRenderSummary();
+    };
+
+    btnClearNamesAll.onclick = () => {
+      // wipe non-leftCol body cells in non-standalone tables
+      tablesContainerEl.querySelectorAll("table:not(.standalone) tbody tr").forEach(tr => {
+        Array.from(tr.cells).forEach((td,idx)=>{ if(idx>0) td.textContent=""; });
+      });
+      rebuildAndRenderSummary();
+      showToast("Cleared names.");
+    };
+
+    btnClearNew.onclick = () => {
+      scheduleState.tables = [{
+        id:"tbl_1", name:"Kelas 3 & 5", isIndependent:false,
+        dateHeaderRow:["", "", "", "", "", "", ""],
+        timeHeaderRow:["Class","08:00","09:00","10:00","11:00","12:00","13:00"],
+        bodyRows:[[{"content":"5S1"},{"content":""},{"content":""},{"content":""},{"content":""},{"content":""},{"content":""}]]
+      }];
+      scheduleState.activeTableId = "tbl_1";
+      renderStateFromJson(scheduleState);
+      showToast("New blank schedule.");
+    };
+
+    /* ===== Firestore Save/Load (v2 unified JSON) ===== */
+    async function ensureAuth(){
+      return new Promise((resolve) => {
+        onAuthStateChanged(auth, async (u) => {
+          if (u){ userIdText.textContent = u.uid; resolve(u); }
+          else { const cred = await signInAnonymously(auth); /* will re-fire onAuthStateChanged */ }
         });
+      });
     }
 
-    async function addNewSubject() {
-        const newSubjectName = newSubjectInputElement.value.trim();
-        if (!newSubjectName) {
-            showMessage('Subject name cannot be empty.', 'info');
-            return;
-        }
-
-        const subjects = (currentSubjectSession === 'pagi' ? subjectsPagi : subjectsPetang) || {};
-        if (Object.keys(subjects).map(s => s.toLowerCase()).includes(newSubjectName.toLowerCase())) {
-            showMessage(`Subject "${newSubjectName}" already exists.`, 'info');
-            return;
-        }
-
-        subjects[newSubjectName] = [];
-        await saveSubjectsToFirestore(currentSubjectSession, subjects);
-        newSubjectInputElement.value = '';
+    async function saveShared(){
+      const u = await ensureAuth();
+      const data = captureStateAsJson();
+      const col = collection(db, "shared_schedules_v2");
+      const docRef = await addDoc(col, { appId, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), data });
+      showToast("Shared schedule saved: " + docRef.id);
     }
 
-    async function deleteSubject(subjectName) {
-        if (!await customConfirm(`Delete subject "${subjectName}"? This cannot be undone.`)) return;
-        
-        const subjects = (currentSubjectSession === 'pagi' ? subjectsPagi : subjectsPetang) || {};
-        delete subjects[subjectName];
-        await saveSubjectsToFirestore(currentSubjectSession, subjects);
-    }
-    
-    function openTeacherAssignmentModal(subjectName) {
-        teacherAssignmentTitleElement.textContent = `Assign Teachers to: ${subjectName}`;
-        teacherAssignmentTitleElement.dataset.subject = subjectName;
-
-        teacherAssignmentListContainerElement.innerHTML = '';
-        const allTeachers = (currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared) || [];
-        const subjects = (currentSubjectSession === 'pagi' ? subjectsPagi : subjectsPetang) || {};
-        const assignedTeachers = subjects[subjectName] || [];
-
-        allTeachers.forEach(teacher => {
-            const isChecked = assignedTeachers.includes(teacher);
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'teacher-assignment-item';
-            itemDiv.innerHTML = `
-                <input type="checkbox" id="teacher-assign-${teacher}" value="${teacher}" ${isChecked ? 'checked' : ''}>
-                <label for="teacher-assign-${teacher}">${teacher}</label>
-            `;
-            teacherAssignmentListContainerElement.appendChild(itemDiv);
-        });
-
-        teacherAssignmentModalElement.style.display = 'flex';
+    async function savePageDraft(){
+      await ensureAuth();
+      const data = captureStateAsJson();
+      // keep a single "page_drafts_v2/appId" doc to allow quick resume
+      const ref = doc(db, "page_drafts_v2", appId);
+      await setDoc(ref, { updatedAt: serverTimestamp(), data });
+      showToast("Page saved.");
     }
 
-    async function saveTeacherAssignments() {
-        const subjectName = teacherAssignmentTitleElement.dataset.subject;
-        if (!subjectName) return;
-
-        const selectedTeachers = [];
-        teacherAssignmentListContainerElement.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-            selectedTeachers.push(checkbox.value);
-        });
-
-        const subjects = (currentSubjectSession === 'pagi' ? subjectsPagi : subjectsPetang) || {};
-        subjects[subjectName] = selectedTeachers;
-        
-        await saveSubjectsToFirestore(currentSubjectSession, subjects);
-        
-        teacherAssignmentModalElement.style.display = 'none';
+    async function loadLatestShared(){
+      await ensureAuth();
+      const col = collection(db, "shared_schedules_v2");
+      const q = query(col, orderBy("createdAt","desc"));
+      const snap = await getDocs(q);
+      if (snap.empty){ showToast("No shared schedules found."); return; }
+      const first = snap.docs[0]; // latest
+      renderStateFromJson(first.data().data);
+      showToast("Loaded shared: " + first.id);
     }
 
-    // --- Name Modal Functions ---
-    function handleNameListSessionSwitch(session) { /* UNCHANGED */ }
-    function highlightSelectedNameInList(nameToHighlight) { /* UNCHANGED */ }
-    function clearNameSelection() { /* UNCHANGED */ }
-    function closeNameModal() { /* UNCHANGED */ }
-    function toggleNameListModalVisibility() { /* UNCHANGED */ }
-    function renderNameListFromFirestore(filterText = '') { /* UNCHANGED */ }
-    function selectNameForCellInsertion(name) { /* UNCHANGED */ }
-    function handleNameListImportFirestore(event) { /* UNCHANGED */ }
+    btnSaveShared.onclick = saveShared;
+    btnSavePage.onclick = savePageDraft;
+    btnLoadShared.onclick = loadLatestShared;
 
-    // --- Excel Functions (Unchanged)---
-    function handleExcelFileImport(event) { /* UNCHANGED */ }
-    function exportActiveTableToExcel() { /* UNCHANGED */ }
-
-    // --- PDF Generation (Unchanged) ---
-    async function generateSchedulePdf() { /* UNCHANGED */ }
-    function cloneTableForPdf(originalTable) { /* UNCHANGED */ }
-    
-    // --- Local Storage & Initial Setup ---
-    function loadScheduleTitleFromLocalStorage() { /* UNCHANGED */ }
-    
-    function setupInitialTableState() {
-        const existingTablesInDOM = Array.from(tablesContainer.querySelectorAll('table'));
-        if (existingTablesInDOM.length === 0) { addNewTable(true); } 
-        else { activeTableId = existingTablesInDOM.find(t => t.classList.contains('active'))?.id || existingTablesInDOM[0].id; }
-
-        tableTabs.innerHTML = ''; 
-        existingTablesInDOM.forEach((table, index) => {
-            ensureDateHeaderRowExists(table); 
-            const id = table.id || `tbl_dom_${Date.now()}_${index + 1}`; 
-            if (!table.id) table.id = id;
-            const name = table.dataset.tableName || `Sheet ${index + 1}`;
-            table.dataset.tableName = name;
-            addTabButton(id, name, table.dataset.independent === 'true');
-            table.querySelectorAll('td, th, .merged-cell-overlay').forEach(cell => cell.contentEditable = 'true');
-        });
-
-        if (activeTableId && document.getElementById(activeTableId)) switchTable(activeTableId);
-        else if (existingTablesInDOM.length > 0) switchTable(existingTablesInDOM[0].id);
-        else addNewTable(true);
-        tableCount = Math.max(1, existingTablesInDOM.length); 
-    }
-
-    function initializeEventListeners() {
-        // --- Existing Listeners ---
-        if(controlsTogglerElement) controlsTogglerElement.addEventListener('click', toggleButtonBarsVisibility);
-        if(manualSaveBtnElement) manualSaveBtnElement.addEventListener('click', manualSaveCurrentPage);
-        if(downloadPdfButtonElement) downloadPdfButtonElement.addEventListener('click', generateSchedulePdf);
-        if(clearScheduledNamesBtnElement) clearScheduledNamesBtnElement.addEventListener('click', clearScheduledNamesFromAllTables);
-        if(directCopyFullHtmlButtonElement) directCopyFullHtmlButtonElement.addEventListener('click', attemptDirectCopyToClipboard);
-        document.getElementById('excelBtnTrigger')?.addEventListener('click', exportActiveTableToExcel);
-        document.getElementById('importExcelBtn')?.addEventListener('click', () => fileInputElement?.click());
-        if(fileInputElement) fileInputElement.addEventListener('change', handleExcelFileImport);
-        document.getElementById('saveSharedScheduleBtn')?.addEventListener('click', saveSharedScheduleToFirestore);
-        document.getElementById('loadSharedScheduleBtn')?.addEventListener('click', loadAndRenderSharedSchedulesFromFirestore);
-        document.getElementById('exportSharedSchedulesBtn')?.addEventListener('click', exportAllSharedSchedulesFromFirestore);
-        document.getElementById('importSharedSchedulesBtn')?.addEventListener('click', () => sharedScheduleImportFileInputElement?.click());
-        if(sharedScheduleImportFileInputElement) sharedScheduleImportFileInputElement.addEventListener('change', handleSharedSchedulesImport);
-        if(clearAndResetScheduleBtnElement) clearAndResetScheduleBtnElement.addEventListener('click', async () => { /* UNCHANGED */ });
-        document.getElementById('selectBtn')?.addEventListener('click', toggleCellSelectionMode);
-        document.getElementById('mergeBtn')?.addEventListener('click', mergeSelectedTableCells);
-        document.getElementById('deselectBtn')?.addEventListener('click', deselectAllTableCells);
-        document.getElementById('unmergeBtn')?.addEventListener('click', unmergeActiveCellIfMerged);
-        document.getElementById('addTableBtn')?.addEventListener('click', () => addNewTable(false, false));
-        document.getElementById('renameTableBtn')?.addEventListener('click', promptAndRenameActiveTable);
-        document.getElementById('deleteTableBtn')?.addEventListener('click', confirmAndDeleteActiveTable);
-        document.getElementById('addRowAboveBtn')?.addEventListener('click', addRowAboveToActiveTable);
-        document.getElementById('addRowBelowBtn')?.addEventListener('click', addRowBelowToActiveTable);
-        document.getElementById('addColLeftBtn')?.addEventListener('click', addColumnLeftToActiveTable);
-        document.getElementById('addColRightBtn')?.addEventListener('click', addColumnRightToActiveTable);
-        document.getElementById('deleteRowBtn')?.addEventListener('click', deleteClickedRowFromActiveTable);
-        document.getElementById('deleteColBtn')?.addEventListener('click', deleteClickedColumnFromActiveTable);
-
-        // --- Name Modal Listeners ---
-        document.getElementById('nameListBtn')?.addEventListener('click', toggleNameListModalVisibility);
-        if(closeNameModalButtonStandardElement) closeNameModalButtonStandardElement.addEventListener('click', closeNameModal);
-        document.getElementById('addNameBtnInModal')?.addEventListener('click', () => { if(newNameInput) addNameToSharedSessionInFirestore(newNameInput.value); });
-        document.getElementById('importNameListBtn')?.addEventListener('click', () => nameListImportFileInputElement?.click());
-        if(nameListImportFileInputElement) nameListImportFileInputElement.addEventListener('change', handleNameListImportFirestore);
-        if(searchNameInputElement) searchNameInputElement.addEventListener('input', (e) => renderNameListFromFirestore(e.target.value));
-        if(namePagiTabElement) namePagiTabElement.addEventListener('click', () => handleNameListSessionSwitch('pagi'));
-        if(namePetangTabElement) namePetangTabElement.addEventListener('click', () => handleNameListSessionSwitch('petang'));
-        if(nameListContainer) nameListContainer.addEventListener('click', async (e) => {
-            const nameItemSpan = e.target.closest('.name-item span[data-name]');
-            const deleteButton = e.target.closest('.name-item button[data-name-delete]');
-            if (nameItemSpan) selectNameForCellInsertion(nameItemSpan.dataset.name);
-            else if (deleteButton) await deleteNameFromSharedSessionInFirestore(deleteButton.dataset.nameDelete);
-        });
-
-        // --- NEW Subject Modal Listeners ---
-        document.getElementById('subjectGroupsBtn')?.addEventListener('click', toggleSubjectModalVisibility);
-        if(closeSubjectModalBtnElement) closeSubjectModalBtnElement.addEventListener('click', toggleSubjectModalVisibility);
-        document.getElementById('addSubjectBtnInModal')?.addEventListener('click', addNewSubject);
-        if(subjectPagiTabElement) subjectPagiTabElement.addEventListener('click', () => handleSubjectSessionSwitch('pagi'));
-        if(subjectPetangTabElement) subjectPetangTabElement.addEventListener('click', () => handleSubjectSessionSwitch('petang'));
-        if(subjectListContainerElement) subjectListContainerElement.addEventListener('click', async (e) => {
-            const manageBtn = e.target.closest('.manage-teachers-btn[data-subject]');
-            const deleteBtn = e.target.closest('.delete-subject-btn[data-subject]');
-            if (manageBtn) openTeacherAssignmentModal(manageBtn.dataset.subject);
-            else if (deleteBtn) await deleteSubject(deleteBtn.dataset.subject);
-        });
-        if(closeTeacherAssignmentModalBtnElement) closeTeacherAssignmentModalBtnElement.addEventListener('click', () => teacherAssignmentModalElement.style.display = 'none');
-        if(saveTeacherAssignmentsBtnElement) saveTeacherAssignmentsBtnElement.addEventListener('click', saveTeacherAssignments);
-
-
-        // --- Table/Document Listeners ---
-        if(tablesContainer) { /* Same as before, with updated autocomplete logic */ }
-        window.addEventListener('resize', () => { updateAllMergeOverlays(); hideCellAutocompleteSuggestions(); });
-        document.addEventListener('keydown', (e) => { /* Same as before */ });
-        document.addEventListener('click', (event) => { /* Same as before */ });
-    }
-
-    // --- DOMContentLoaded: Main Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Assign DOM elements to variables
-        scheduleTitleElement = document.getElementById('scheduleTitle'); 
-        tablesContainer = document.getElementById('tablesContainer'); 
-        tableTabs = document.getElementById('tableTabs'); 
-        nameModal = document.getElementById('nameModal'); 
-        nameModalContent = document.getElementById('nameModalContent'); 
-        nameModalHeader = document.getElementById('nameModalHeader'); 
-        nameListContainer = document.getElementById('nameList'); 
-        newNameInput = document.getElementById('newNameInput'); 
-        sharedScheduleListContainerElement = document.getElementById('sharedScheduleListContainer'); 
-        summaryTableElement = document.getElementById('summaryTable'); 
-        summaryTableContainerElement = document.getElementById('summaryTableContainer'); 
-        customMessageBox = document.getElementById('customMessageBox'); 
-        fileInputElement = document.getElementById('fileInput'); 
-        directCopyFullHtmlButtonElement = document.getElementById('directCopyFullHtmlBtn'); 
-        closeNameModalButtonStandardElement = document.getElementById('closeNameModalBtnStandard'); 
-        nameListImportFileInputElement = document.getElementById('nameListImportFile'); 
-        searchNameInputElement = document.getElementById('searchNameInput'); 
-        sharedScheduleImportFileInputElement = document.getElementById('sharedScheduleImportFile'); 
-        userIdDisplayElement = document.getElementById('userIdDisplay'); 
-        namePagiTabElement = document.getElementById('namePagiTab'); 
-        namePetangTabElement = document.getElementById('namePetangTab'); 
-        loadingIndicatorModalElement = document.getElementById('loadingIndicatorModal'); 
-        nameModalTitleElement = document.getElementById('nameModalTitle'); 
-        generalLoadingIndicatorElement = document.getElementById('generalLoadingIndicator'); 
-        controlsTogglerElement = document.getElementById('controlsToggler'); 
-        collapsibleButtonBarsElement = document.getElementById('collapsibleButtonBars'); 
-        downloadPdfButtonElement = document.getElementById('downloadPdfBtn'); 
-        pdfContentElement = document.getElementById('pdfContent'); 
-        clearAndResetScheduleBtnElement = document.getElementById('clearAndResetScheduleBtn'); 
-        manualSaveBtnElement = document.getElementById('manualSaveBtn');
-        clearScheduledNamesBtnElement = document.getElementById('clearScheduledNamesBtn');
-        restoreBackupBtnElement = document.getElementById('restoreBackupBtn');
-        restoreBackupModalElement = document.getElementById('restoreBackupModal');
-        restoreBackupModalContentElement = document.getElementById('restoreBackupModalContent');
-        restoreBackupModalHeaderElement = document.getElementById('restoreBackupModalHeader');
-        closeRestoreBackupModalBtnElement = document.getElementById('closeRestoreBackupModalBtn');
-        restoreBackupListContainerElement = document.getElementById('restoreBackupListContainer');
-        loadingIndicatorRestoreModalElement = document.getElementById('loadingIndicatorRestoreModal');
-        // New Subject Elements
-        subjectModalElement = document.getElementById('subjectModal');
-        subjectModalContent = document.getElementById('subjectModalContent');
-        subjectModalHeader = document.getElementById('subjectModalHeader');
-        subjectListContainerElement = document.getElementById('subjectList');
-        newSubjectInputElement = document.getElementById('newSubjectInput');
-        closeSubjectModalBtnElement = document.getElementById('closeSubjectModalBtn');
-        subjectPagiTabElement = document.getElementById('subjectPagiTab');
-        subjectPetangTabElement = document.getElementById('subjectPetangTab');
-        loadingIndicatorSubjectModalElement = document.getElementById('loadingIndicatorSubjectModal');
-        subjectModalTitleElement = document.getElementById('subjectModalTitle');
-        teacherAssignmentModalElement = document.getElementById('teacherAssignmentModal');
-        closeTeacherAssignmentModalBtnElement = document.getElementById('closeTeacherAssignmentModalBtn');
-        teacherAssignmentTitleElement = document.getElementById('teacherAssignmentTitle');
-        teacherAssignmentListContainerElement = document.getElementById('teacherAssignmentListContainer');
-        saveTeacherAssignmentsBtnElement = document.getElementById('saveTeacherAssignmentsBtn');
-
-        autocompleteSuggestionsDiv = document.createElement('div'); 
-        autocompleteSuggestionsDiv.id = 'autocompleteSuggestions'; 
-        document.body.appendChild(autocompleteSuggestionsDiv);
-        
-        // Firebase Authentication
-        if (fbAuth) {
-            onAuthStateChanged(fbAuth, async (user) => {
-                if (user) {
-                    fbUserId = user.uid; 
-                    fbIsAuthReady = true; 
-                    if(userIdDisplayElement) userIdDisplayElement.textContent = `User ID: ${fbUserId}`;
-                    
-                    if (unsubscribePagiShared) unsubscribePagiShared(); 
-                    if (unsubscribePetangShared) unsubscribePetangShared();
-                    if (unsubscribeSubjectsPagi) unsubscribeSubjectsPagi();
-                    if (unsubscribeSubjectsPetang) unsubscribeSubjectsPetang();
-                    
-                    unsubscribePagiShared = listenToSharedNameList('pagi'); 
-                    unsubscribePetangShared = listenToSharedNameList('petang');
-                    unsubscribeSubjectsPagi = listenToSubjects('pagi');
-                    unsubscribeSubjectsPetang = listenToSubjects('petang');
-                    
-                    await loadLatestSharedScheduleAsDefault(); 
-                    
-                    if (autoSaveIntervalId) clearInterval(autoSaveIntervalId);
-                    autoSaveIntervalId = setInterval(autoSaveCurrentSchedule, AUTO_SAVE_INTERVAL);
-                } else { 
-                    fbIsAuthReady = false; fbUserId = null; 
-                    if(userIdDisplayElement) userIdDisplayElement.textContent = "User ID: Authenticating...";
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && __initial_auth_token.trim() !== '') {
-                            await signInWithCustomToken(fbAuth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(fbAuth);
-                        }
-                    } catch (error) {
-                         setupInitialTableState();
-                         rebuildAndRenderSummary();
-                    }
-                }
-            });
-        } else { 
-             setupInitialTableState();
-             rebuildAndRenderSummary();
-        }
-        
-        loadScheduleTitleFromLocalStorage(); 
-        initializeEventListeners();
-    });
-</script>
+    /* ===== Initial boot ===== */
+    (async function boot(){
+      try{ await ensureAuth(); }catch(e){ console.warn("Auth error", e); }
+      // First render from current DOM
+      scheduleState.tables = captureStateAsJson().tables;
+      renderStateFromJson(scheduleState);
+    })();
+  </script>
 </body>
 </html>
-

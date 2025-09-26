@@ -634,21 +634,18 @@
 }
 </style>
 
+<!-- ===== Subjects styles (NEW) ===== -->
 <style>
-/* Subject highlight */
 .subject-highlight {
   outline: 3px solid #8bc34a !important;
   box-shadow: inset 0 0 0 9999px rgba(139,195,74,0.15);
 }
-/* Dual chip in cells (Subject ▸ Teacher) */
-.cell-chip {
-  display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;
-}
+.cell-chip { display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .chip-subject, .chip-teacher {
-  display:inline-block;padding:2px 6px;border-radius:10px;font-size:.85em;
-  background:#eef5ff;border:1px solid #cfe2ff;color:#0056b3;white-space:nowrap;
+  display:inline-block; padding:2px 6px; border-radius:10px; font-size:.85em;
+  background:#eef5ff; border:1px solid #cfe2ff; color:#0056b3; white-space:nowrap;
 }
-.chip-teacher { background:#eef9f1;border-color:#cdeedc;color:#1e7e34; }
+.chip-teacher { background:#eef9f1; border-color:#cdeedc; color:#1e7e34; }
 </style>
 </head>
 <body>
@@ -706,7 +703,7 @@
             <button id="renameTableBtn" title="Rename the currently active table/sheet">📝 Rename Table</button>
             <button id="deleteTableBtn" title="Delete the currently active table/sheet">❌ Delete Table</button>
             <button id="nameListBtn" title="Open a dialog to manage the shared list of names (Firestore)">👥 Names</button>
-            <button id="subjectListBtn" type="button" title="Open a dialog to manage subjects and their teacher groups">📚 Subjects</button>
+            <button id="subjectListBtn" title="Open a dialog to manage subjects and their teacher groups">📚 Subjects</button>
         </div>
         <div class="bar" id="rowColManipulationBar">
             <button id="addRowAboveBtn" title="Add a new row above the currently selected/clicked row">⬆️ Row Above</button>
@@ -793,65 +790,7 @@
             </div>
              <div class="input-group">
                 <input id="newNameInput" placeholder="Add new name to current shared session">
-                <button id="addNameBtn
-    <div id="subjectModal" class="modal">
-      <div class="modal-content" id="subjectModalContent">
-        <div class="modal-header" id="subjectModalHeader">
-          <h3 id="subjectModalTitle">Subjects Manager</h3>
-          <button type="button" class="modal-close-btn" id="closeSubjectModalBtn" title="Close subjects manager">×</button>
-        </div>
-
-        <div class="name-session-tabs">
-          <button id="subjectPagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
-          <button id="subjectPetangTab" data-session="petang">Petang (Afternoon)</button>
-        </div>
-
-        <div class="input-group">
-          <input id="newSubjectInput" placeholder="Add new subject to current session">
-          <button id="addSubjectBtn" title="Add the subject to the current session">Add Subject</button>
-        </div>
-        <div class="input-group">
-          <input id="renameSubjectInput" placeholder="Rename selected subject">
-          <button id="renameSubjectBtn" title="Rename selected subject">Rename</button>
-        </div>
-        <button id="deleteSubjectBtn" style="background:#dc3545;color:#fff;border:none;border-radius:6px;padding:8px 12px;margin-bottom:10px;">Delete Selected Subject</button>
-
-        <div class="input-group">
-          <select id="subjectSelect" title="Pick a subject to manage"></select>
-        </div>
-        <div class="input-group">
-          <input id="attachTeacherInput" placeholder="Type a teacher and press Attach (or choose from list below)">
-          <button id="attachTeacherBtn" title="Attach typed teacher to selected subject">Attach</button>
-        </div>
-
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <div style="flex:1;">
-            <h4 style="margin:6px 0;">Teachers in current session</h4>
-            <div id="teachersFromNamesList" style="border:1px solid #ddd;border-radius:8px;max-height:220px;overflow:auto;padding:8px;"></div>
-          </div>
-          <div style="flex:1;">
-            <h4 style="margin:6px 0;">Teachers in selected subject</h4>
-            <div id="teachersInSubject" style="border:1px solid #ddd;border-radius:8px;max-height:220px;overflow:auto;padding:8px;"></div>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
-          <button id="detachTeacherBtn" title="Detach highlighted teacher from selected subject">Detach Teacher</button>
-          <button id="exportSubjectsBtn" title="Export all subjects for both sessions">Export</button>
-          <button id="importSubjectsBtn" title="Import subjects JSON">Import</button>
-          <input type="file" id="subjectsImportFile" accept=".json" style="display:none;">
-        </div>
-
-        <div style="margin-top:16px;border-top:1px solid #eee;padding-top:10px;display:flex;gap:8px;align-items:center;">
-          <strong>Quick subject filter:</strong>
-          <select id="subjectFilterSelect" title="Highlight all cells matching a subject"></select>
-          <button id="clearSubjectFilterBtn">Clear Filter</button>
-        </div>
-
-        <div id="loadingIndicatorSubjects" style="display:none;margin-top:10px;"><div class="spinner"></div></div>
-      </div>
-    </div>
-InModal" title="Add the name to the shared list">Add</button>
+                <button id="addNameBtnInModal" title="Add the name to the shared list">Add</button>
              </div>
             <button id="importNameListBtn" title="Import names from a .txt file (one name per line) to current shared session">📂 Import Names (.txt) to Shared Session</button>
             <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
@@ -907,6 +846,7 @@ InModal" title="Add the name to the shared list">Add</button>
     }
     
     const appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.appId || 'default-shared-scheduler-app');
+window.appId = appId;
     if (typeof __app_id === 'undefined') {
         console.warn("Firebase Auth: __app_id is not defined. Using App ID from Firebase config or default.");
     }
@@ -941,6 +881,8 @@ InModal" title="Add the name to the shared list">Add</button>
     let currentNameListSession = 'pagi';
     let namesPagiShared = [];
     let namesPetangShared = [];
+window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
+window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
     let isDraggingModal = false;
     let modalDragOffsetX, modalDragOffsetY;
     let autocompleteSuggestionsDiv = null;
@@ -974,7 +916,9 @@ InModal" title="Add the name to the shared list">Add</button>
         if (!customMessageBox) {
             customMessageBox = document.getElementById('customMessageBox');
             if (!customMessageBox) { console.warn("showMessage: customMessageBox not found. Msg:", message); return; }
-        }
+        
+window.showMessage = showMessage;
+}
         customMessageBox.textContent = message;
         customMessageBox.className = `custom-message-box ${type}`;
         customMessageBox.style.display = 'block';
@@ -3763,31 +3707,100 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<!-- ===== Subjects Modal (NEW) ===== -->
+<div id="subjectModal" class="modal">
+  <div class="modal-content" id="subjectModalContent">
+    <div class="modal-header" id="subjectModalHeader">
+      <h3 id="subjectModalTitle">Subjects Manager</h3>
+      <button type="button" class="modal-close-btn" id="closeSubjectModalBtn" title="Close subjects manager">×</button>
+    </div>
+
+    <div class="name-session-tabs">
+      <button id="subjectPagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
+      <button id="subjectPetangTab" data-session="petang">Petang (Afternoon)</button>
+    </div>
+
+    <div class="input-group">
+      <input id="newSubjectInput" placeholder="Add new subject to current session">
+      <button id="addSubjectBtn" title="Add the subject to the current session">Add Subject</button>
+    </div>
+    <div class="input-group">
+      <input id="renameSubjectInput" placeholder="Rename selected subject">
+      <button id="renameSubjectBtn" title="Rename selected subject">Rename</button>
+    </div>
+    <button id="deleteSubjectBtn" style="background:#dc3545;color:#fff;border:none;border-radius:6px;padding:8px 12px;margin-bottom:10px;">Delete Selected Subject</button>
+
+    <div class="input-group">
+      <select id="subjectSelect" title="Pick a subject to manage"></select>
+    </div>
+    <div class="input-group">
+      <input id="attachTeacherInput" placeholder="Type a teacher and press Attach (or choose from list below)">
+      <button id="attachTeacherBtn" title="Attach typed teacher to selected subject">Attach</button>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1;">
+        <h4 style="margin:6px 0;">Teachers in current session</h4>
+        <div id="teachersFromNamesList" style="border:1px solid #ddd;border-radius:8px;max-height:220px;overflow:auto;padding:8px;"></div>
+      </div>
+      <div style="flex:1;">
+        <h4 style="margin:6px 0;">Teachers in selected subject</h4>
+        <div id="teachersInSubject" style="border:1px solid #ddd;border-radius:8px;max-height:220px;overflow:auto;padding:8px;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
+      <button id="detachTeacherBtn" title="Detach highlighted teacher from selected subject">Detach Teacher</button>
+      <button id="exportSubjectsBtn" title="Export all subjects for both sessions">Export</button>
+      <button id="importSubjectsBtn" title="Import subjects JSON">Import</button>
+      <input type="file" id="subjectsImportFile" accept=".json" style="display:none;">
+    </div>
+
+    <div style="margin-top:16px;border-top:1px solid #eee;padding-top:10px;display:flex;gap:8px;align-items:center;">
+      <strong>Quick subject filter:</strong>
+      <select id="subjectFilterSelect" title="Highlight all cells matching a subject"></select>
+      <button id="clearSubjectFilterBtn">Clear Filter</button>
+    </div>
+
+    <div id="loadingIndicatorSubjects" style="display:none;margin-top:10px;"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ===== Subjects Manager Script (NEW) ===== -->
 <script type="module">
 import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Reuse global appId and showMessage, names lists, tables container, summary
 const subjectsModal = document.getElementById('subjectModal');
+const subjectListBtn = document.getElementById('subjectListBtn');
+const closeSubjectModalBtn = document.getElementById('closeSubjectModalBtn');
+
 const subjectPagiTab = document.getElementById('subjectPagiTab');
 const subjectPetangTab = document.getElementById('subjectPetangTab');
+
 const newSubjectInput = document.getElementById('newSubjectInput');
 const addSubjectBtn = document.getElementById('addSubjectBtn');
 const renameSubjectInput = document.getElementById('renameSubjectInput');
 const renameSubjectBtn = document.getElementById('renameSubjectBtn');
 const deleteSubjectBtn = document.getElementById('deleteSubjectBtn');
+
 const subjectSelect = document.getElementById('subjectSelect');
 const attachTeacherInput = document.getElementById('attachTeacherInput');
 const attachTeacherBtn = document.getElementById('attachTeacherBtn');
+
 const teachersFromNamesListDiv = document.getElementById('teachersFromNamesList');
 const teachersInSubjectDiv = document.getElementById('teachersInSubject');
 const detachTeacherBtn = document.getElementById('detachTeacherBtn');
+
 const exportSubjectsBtn = document.getElementById('exportSubjectsBtn');
 const importSubjectsBtn = document.getElementById('importSubjectsBtn');
 const subjectsImportFile = document.getElementById('subjectsImportFile');
+
 const subjectFilterSelect = document.getElementById('subjectFilterSelect');
 const clearSubjectFilterBtn = document.getElementById('clearSubjectFilterBtn');
+
 const loadingIndicatorSubjects = document.getElementById('loadingIndicatorSubjects');
 
+// uses existing globals defined in your base file
 let subjectsState = { pagi:{}, petang:{} };
 let selectedSubject = null;
 let currentSubjectSession = 'pagi';
@@ -3797,50 +3810,52 @@ const subjectsDocRef = doc(getFirestore(), 'shared_subjects', appId);
 
 const normalize = s => (s||'').trim();
 function getNamesForSession(session){
-  return session === 'petang' ? Array.from(window.namesPetangShared||[]) : Array.from(window.namesPagiShared||[]);
+  return session === 'petang' ? (Array.from(namesPetangShared||[])) : (Array.from(namesPagiShared||[]));
 }
-function ensureSubjectsSessionMap(sess){ if(!subjectsState[sess]) subjectsState[sess] = {}; }
-
+function ensureSubjectsSessionMap(sess){
+  if(!subjectsState[sess]) subjectsState[sess] = {};
+}
+function renderSubjectsUI(){
+  const sessMap = subjectsState[currentSubjectSession] || {};
+  const allSubjects = Object.keys(sessMap).sort((a,b)=>a.localeCompare(b));
+  subjectSelect.innerHTML = '';
+  subjectFilterSelect.innerHTML = '<option value="">— Select subject to highlight —</option>';
+  allSubjects.forEach(s=>{
+    const opt1 = document.createElement('option'); opt1.value = s; opt1.textContent = s; subjectSelect.appendChild(opt1);
+    const opt2 = document.createElement('option'); opt2.value = s; opt2.textContent = s; subjectFilterSelect.appendChild(opt2);
+  });
+  if(allSubjects.length){
+    if(!selectedSubject || !sessMap[selectedSubject]) selectedSubject = allSubjects[0];
+    subjectSelect.value = selectedSubject;
+  } else {
+    selectedSubject = null;
+  }
+  renderTeachersLists();
+}
 function renderTeachersLists(){
   const names = getNamesForSession(currentSubjectSession);
   teachersFromNamesListDiv.innerHTML = '';
   names.forEach(n=>{
-    const item = document.createElement('div'); item.className='name-item';
-    const span = document.createElement('span'); span.textContent=n;
-    span.onclick = ()=>{ attachTeacherInput.value = n; };
+    const item = document.createElement('div');
+    item.className = 'name-item';
+    const span = document.createElement('span'); span.textContent = n; span.onclick = ()=>{ attachTeacherInput.value = n; };
     item.appendChild(span);
     teachersFromNamesListDiv.appendChild(item);
   });
-  teachersInSubjectDiv.innerHTML='';
-  const arr = (subjectsState[currentSubjectSession]?.[selectedSubject]||[]);
-  arr.forEach(n=>{
-    const row = document.createElement('div'); row.className='name-item';
-    const span = document.createElement('span'); span.textContent=n;
+  teachersInSubjectDiv.innerHTML = '';
+  const inSubject = (subjectsState[currentSubjectSession]?.[selectedSubject] || []);
+  inSubject.forEach(n=>{
+    const row = document.createElement('div'); row.className = 'name-item';
+    const span = document.createElement('span'); span.textContent = n;
     span.onclick = ()=>{
       Array.from(teachersInSubjectDiv.querySelectorAll('.highlighted')).forEach(x=>x.classList.remove('highlighted'));
       row.classList.add('highlighted');
       detachTeacherBtn.dataset.teacher = n;
     };
-    const del = document.createElement('button'); del.textContent='Remove';
-    del.onclick = async ()=>{ await detachTeacher(n); };
+    const del = document.createElement('button'); del.textContent = 'Remove'; del.onclick = async ()=>{ await detachTeacher(n); };
     row.appendChild(span); row.appendChild(del);
     teachersInSubjectDiv.appendChild(row);
   });
-}
-function renderSubjectsUI(){
-  const sessMap = subjectsState[currentSubjectSession] || {};
-  const allSubjects = Object.keys(sessMap).sort((a,b)=>a.localeCompare(b));
-  subjectSelect.innerHTML='';
-  subjectFilterSelect.innerHTML='<option value="">— Select subject to highlight —</option>';
-  allSubjects.forEach(s=>{
-    const o=document.createElement('option'); o.value=s; o.textContent=s; subjectSelect.appendChild(o);
-    const o2=document.createElement('option'); o2.value=s; o2.textContent=s; subjectFilterSelect.appendChild(o2);
-  });
-  if(allSubjects.length){
-    if(!selectedSubject || !sessMap[selectedSubject]) selectedSubject = allSubjects[0];
-    subjectSelect.value = selectedSubject;
-  } else selectedSubject = null;
-  renderTeachersLists();
 }
 function showSubjectsLoading(b){ loadingIndicatorSubjects.style.display = b?'flex':'none'; }
 
@@ -3849,14 +3864,19 @@ async function loadSubjectsOnce(){
   try{
     const snap = await getDoc(subjectsDocRef);
     if(snap.exists()){
-      const data=snap.data()||{};
-      subjectsState = { pagi:data.pagi||{}, petang:data.petang||{} };
+      const data = snap.data()||{};
+      subjectsState = { pagi: data.pagi||{}, petang: data.petang||{} };
     } else {
       subjectsState = { pagi:{}, petang:{} };
       await setDoc(subjectsDocRef, { pagi:{}, petang:{}, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     }
-  }catch(e){ console.error(e); window.showMessage?.('Failed to load subjects','error'); }
-  finally{ showSubjectsLoading(false); renderSubjectsUI(); }
+  } catch(e){
+    console.error('Load subjects error:', e);
+    showMessage && showMessage('Failed to load subjects', 'error');
+  } finally {
+    showSubjectsLoading(false);
+    renderSubjectsUI();
+  }
 }
 function watchSubjects(){
   if(unsubscribeSubjects) unsubscribeSubjects();
@@ -3864,74 +3884,101 @@ function watchSubjects(){
     if(snap.exists()){
       const data=snap.data()||{};
       subjectsState = { pagi:data.pagi||{}, petang:data.petang||{} };
-      renderSubjectsUI(); refreshAutocompleteSubjects();
+      renderSubjectsUI();
+      refreshAutocompleteSubjects();
     }
   });
 }
 async function saveSubjectsState(){
   try{
     await updateDoc(subjectsDocRef, { pagi: subjectsState.pagi, petang: subjectsState.petang, updatedAt: serverTimestamp() });
-  }catch(e){
+  } catch(e){
     await setDoc(subjectsDocRef, { pagi: subjectsState.pagi, petang: subjectsState.petang, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   }
 }
 async function addSubject(){
-  const s = normalize(newSubjectInput.value); if(!s) return window.showMessage?.('Enter a subject','info');
+  const s = normalize(newSubjectInput.value);
+  if(!s) return showMessage && showMessage('Enter a subject name', 'info');
   ensureSubjectsSessionMap(currentSubjectSession);
-  const sessMap=subjectsState[currentSubjectSession];
-  if(sessMap[s]) return window.showMessage?.('Subject already exists','info');
-  sessMap[s]=[]; await saveSubjectsState(); newSubjectInput.value=''; selectedSubject=s; renderSubjectsUI();
-  window.showMessage?.('Subject added','success');
+  const sessMap = subjectsState[currentSubjectSession];
+  if(sessMap[s]) return showMessage && showMessage('Subject already exists', 'info');
+  sessMap[s] = [];
+  await saveSubjectsState();
+  newSubjectInput.value='';
+  selectedSubject=s;
+  renderSubjectsUI();
+  showMessage && showMessage(`Subject "${s}" added`, 'success');
 }
 async function renameSubject(){
-  if(!selectedSubject) return window.showMessage?.('Select a subject','info');
-  const newName=normalize(renameSubjectInput.value); if(!newName) return;
+  const newName = normalize(renameSubjectInput.value);
+  if(!selectedSubject) return showMessage && showMessage('Select a subject to rename', 'info');
+  if(!newName) return showMessage && showMessage('Enter a new name', 'info');
+  if(newName===selectedSubject) return;
   ensureSubjectsSessionMap(currentSubjectSession);
-  const sessMap=subjectsState[currentSubjectSession];
-  if(sessMap[newName]) return window.showMessage?.('Name exists','error');
-  sessMap[newName]=sessMap[selectedSubject]||[]; delete sessMap[selectedSubject];
-  await saveSubjectsState(); renameSubjectInput.value=''; selectedSubject=newName; renderSubjectsUI();
+  const sessMap = subjectsState[currentSubjectSession];
+  if(sessMap[newName]) return showMessage && showMessage('Subject with that name already exists', 'error');
+  sessMap[newName] = sessMap[selectedSubject] || [];
+  delete sessMap[selectedSubject];
+  await saveSubjectsState();
+  renameSubjectInput.value='';
+  selectedSubject=newName;
+  renderSubjectsUI();
+  showMessage && showMessage('Subject renamed', 'success');
 }
 async function deleteSubject(){
-  if(!selectedSubject) return;
+  if(!selectedSubject) return showMessage && showMessage('Select a subject to delete', 'info');
   ensureSubjectsSessionMap(currentSubjectSession);
   delete subjectsState[currentSubjectSession][selectedSubject];
-  selectedSubject=null; await saveSubjectsState(); renderSubjectsUI();
+  selectedSubject=null;
+  await saveSubjectsState();
+  renderSubjectsUI();
+  showMessage && showMessage('Subject deleted', 'success');
 }
 async function attachTeacher(name){
-  name=normalize(name); if(!name||!selectedSubject) return;
+  name = normalize(name);
+  if(!name) return showMessage && showMessage('Type or pick a teacher', 'info');
+  if(!selectedSubject) return showMessage && showMessage('Select a subject first', 'info');
   ensureSubjectsSessionMap(currentSubjectSession);
   const arr = subjectsState[currentSubjectSession][selectedSubject] || [];
   if(!arr.includes(name)) arr.push(name);
   subjectsState[currentSubjectSession][selectedSubject] = arr.sort((a,b)=>a.localeCompare(b));
-  await saveSubjectsState(); attachTeacherInput.value=''; renderTeachersLists();
+  await saveSubjectsState();
+  attachTeacherInput.value='';
+  renderTeachersLists();
 }
 async function detachTeacher(name){
   if(!selectedSubject) return;
   ensureSubjectsSessionMap(currentSubjectSession);
   const arr = subjectsState[currentSubjectSession][selectedSubject] || [];
   subjectsState[currentSubjectSession][selectedSubject] = arr.filter(n=>n!==name);
-  await saveSubjectsState(); renderTeachersLists();
+  await saveSubjectsState();
+  renderTeachersLists();
 }
 
 function clearSubjectHighlights(){
-  const container = document.getElementById('tablesContainer'); if(!container) return;
-  container.querySelectorAll('td, .merged-cell-overlay').forEach(el=>el.classList.remove('subject-highlight'));
+  if(!tablesContainer) return;
+  tablesContainer.querySelectorAll('td, .merged-cell-overlay').forEach(el=>{ el.classList.remove('subject-highlight'); });
 }
 function highlightSubjectAcrossActiveTable(subject){
-  clearSubjectHighlights(); if(!subject) return;
-  const container = document.getElementById('tablesContainer'); if(!container) return;
-  const activeTable = container.querySelector('table.active'); if(!activeTable) return;
+  clearSubjectHighlights();
+  if(!subject) return;
+  if(!tablesContainer) return;
+  const activeTable = tablesContainer.querySelector('table.active');
+  if(!activeTable) return;
   const cells = activeTable.querySelectorAll('td');
   cells.forEach(td=>{
-    let el = td.querySelector('.merged-cell-overlay') || td;
+    let text = '';
+    const overlay = td.querySelector('.merged-cell-overlay');
+    if(overlay) text = overlay.textContent.trim();
+    else text = td.textContent.trim();
     const hasChip = td.querySelector('.chip-subject');
     const subjectFromChip = hasChip ? td.querySelector('.chip-subject')?.textContent : null;
-    const text = el.textContent.trim();
-    if(subjectFromChip && subjectFromChip.toUpperCase()===subject.toUpperCase()){
-      el.classList.add('subject-highlight');
-    } else if (text.toUpperCase().startsWith((subject+' >').toUpperCase())) {
-      el.classList.add('subject-highlight');
+    if(subjectFromChip && subjectFromChip.toUpperCase() === subject.toUpperCase()){
+      (overlay||td).classList.add('subject-highlight');
+    } else {
+      if(text.toUpperCase().startsWith((subject+' >').toUpperCase())){
+        (overlay||td).classList.add('subject-highlight');
+      }
     }
   });
 }
@@ -3940,7 +3987,7 @@ let subjectAutocomplete = [];
 function refreshAutocompleteSubjects(){
   const sessMap = subjectsState[currentSubjectSession]||{};
   const pairs = [];
-  Object.keys(sessMap).forEach(sub=> (sessMap[sub]||[]).forEach(t=> pairs.push(`${sub} > ${t}`)));
+  Object.keys(sessMap).forEach(sub=>{ (sessMap[sub]||[]).forEach(t=>{ pairs.push(`${sub} > ${t}`); }); });
   subjectAutocomplete = pairs.sort((a,b)=>a.localeCompare(b));
 }
 
@@ -3955,102 +4002,163 @@ window.renderCellChipsIfNeeded = function(cell){
   if(match){
     const subject = match[1].trim();
     const teacher = match[2].trim();
-    const wrapper = document.createElement('span'); wrapper.className='cell-chip';
-    const s = document.createElement('span'); s.className='chip-subject'; s.textContent=subject;
-    const t = document.createElement('span'); t.className='chip-teacher'; t.textContent=teacher;
+    const wrapper = document.createElement('span'); wrapper.className = 'cell-chip';
+    const s = document.createElement('span'); s.className = 'chip-subject'; s.textContent = subject;
+    const t = document.createElement('span'); t.className = 'chip-teacher'; t.textContent = teacher;
     wrapper.appendChild(s); wrapper.appendChild(t);
-    el.textContent=''; el.appendChild(wrapper);
-    if(notes){ el.appendChild(document.createTextNode(' // '+notes)); }
+    el.textContent = ''; el.appendChild(wrapper);
+    if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
   }
 };
 
-// Event delegation to open modal (works even if button injected after controls render)
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest('#subjectListBtn'); if(!btn) return;
-  try{
-    subjectsModal.style.display='flex';
-    const activeSessionBtn = document.querySelector('.name-session-tabs button.active');
-    currentSubjectSession = activeSessionBtn?.dataset?.session || 'pagi';
-    if(currentSubjectSession==='pagi'){ subjectPagiTab.classList.add('active'); subjectPetangTab.classList.remove('active'); }
-    else { subjectPetangTab.classList.add('active'); subjectPagiTab.classList.remove('active'); }
-    loadSubjectsOnce(); watchSubjects();
-  }catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
-});
-
-// Ensure button not disabled
-(function ensureSubjectBtnEnabled(){
-  const enable = ()=>{
-    const b=document.getElementById('subjectListBtn'); if(!b) return;
-    b.disabled=false; b.classList.remove('disabled','is-disabled'); b.style.pointerEvents='auto'; b.style.opacity='';
-  };
-  enable();
-  const ctrl = document.getElementById('rowColManipulationBar')||document;
-  new MutationObserver(enable).observe(ctrl,{childList:true,subtree:true,attributes:true});
+(function monkeyPatchAutocomplete(){
+  const box = document.getElementById('autocompleteSuggestions');
+  document.addEventListener('focusin', (e)=>{
+    const td = e.target?.closest?.('td'); if(!td) return;
+    refreshAutocompleteSubjects();
+  });
+  document.addEventListener('click', (e)=>{
+    setTimeout(()=>{
+      const active = document.activeElement?.closest?.('td');
+      if(active) window.renderCellChipsIfNeeded(active);
+    }, 0);
+  });
+  document.addEventListener('focusout',(e)=>{
+    const td = e.target?.closest?.('td');
+    if(td) window.renderCellChipsIfNeeded(td);
+  });
 })();
 
-// Tab switch
-subjectPagiTab?.addEventListener('click', ()=>{ subjectPagiTab.classList.add('active'); subjectPetangTab.classList.remove('active'); currentSubjectSession='pagi'; renderSubjectsUI(); });
-subjectPetangTab?.addEventListener('click', ()=>{ subjectPetangTab.classList.add('active'); subjectPagiTab.classList.remove('active'); currentSubjectSession='petang'; renderSubjectsUI(); });
-
-addSubjectBtn?.addEventListener('click', addSubject);
-renameSubjectBtn?.addEventListener('click', renameSubject);
-deleteSubjectBtn?.addEventListener('click', deleteSubject);
-subjectSelect?.addEventListener('change', (e)=>{ selectedSubject=e.target.value||null; renderTeachersLists(); });
-attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInput.value));
-detachTeacherBtn?.addEventListener('click', async ()=>{ const t=detachTeacherBtn.dataset.teacher; if(t) await detachTeacher(t); });
-exportSubjectsBtn?.addEventListener('click', ()=>{
-  const payload = JSON.stringify(subjectsState, null, 2);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([payload],{type:'application/json'}));
-  a.download = `subjects_${appId}_${new Date().toISOString().slice(0,10)}.json`; a.click();
-});
-importSubjectsBtn?.addEventListener('click', ()=> subjectsImportFile.click());
-subjectsImportFile?.addEventListener('change', async (e)=>{
-  const file=e.target.files?.[0]; if(!file) return; const text=await file.text();
-  try{
-    const obj=JSON.parse(text)||{}; subjectsState={ pagi:obj.pagi||{}, petang:obj.petang||{} };
-    await saveSubjectsState(); window.showMessage?.('Subjects imported','success');
-  }catch(err){ window.showMessage?.('Import failed','error'); }
-  finally{ subjectsImportFile.value=''; }
-});
-subjectFilterSelect?.addEventListener('change', (e)=>{ highlightSubjectAcrossActiveTable(e.target.value||''); enhanceSummaryWithSubjects(); });
-clearSubjectFilterBtn?.addEventListener('click', ()=>{ subjectFilterSelect.value=''; clearSubjectHighlights(); enhanceSummaryWithSubjects(); });
-
-// Convert on Enter/blur
-document.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){ const td=document.activeElement?.closest?.('td'); if(td) setTimeout(()=>window.renderCellChipsIfNeeded(td),0); }
-});
-document.addEventListener('focusout', (e)=>{
-  const td=e.target?.closest?.('td'); if(td) window.renderCellChipsIfNeeded(td);
-});
-
 function enhanceSummaryWithSubjects(){
-  const summaryTableElement = document.getElementById('summaryTable');
   if(!summaryTableElement || !summaryTableElement.tBodies[0]) return;
-  const rows = Array.from(summaryTableElement.tBodies[0].rows||[]); if(!rows.length) return;
+  const rows = Array.from(summaryTableElement.tBodies[0].rows);
+  if(!rows.length) return;
   const activeTable = document.querySelector('#tablesContainer table.active');
   const teacherToSubject = {};
   if(activeTable){
     const tds = activeTable.querySelectorAll('td');
     tds.forEach(td=>{
-      const subEl=td.querySelector('.chip-subject'); const tEl=td.querySelector('.chip-teacher');
+      const subEl = td.querySelector('.chip-subject');
+      const tEl   = td.querySelector('.chip-teacher');
       if(subEl && tEl){
-        const sub=subEl.textContent.trim(); const tch=tEl.textContent.trim();
-        if(sub && tch){ (teacherToSubject[tch] = teacherToSubject[tch]||new Set()).add(sub); }
+        const sub = subEl.textContent.trim();
+        const tch = tEl.textContent.trim();
+        if(sub && tch){
+          teacherToSubject[tch] = teacherToSubject[tch] || new Set();
+          teacherToSubject[tch].add(sub);
+        }
       }
     });
   }
   rows.forEach(row=>{
-    const nameCell=row.cells?.[0]; if(!nameCell) return;
-    const rawName=(nameCell.textContent||'').trim();
-    const subs=Array.from(teacherToSubject[rawName]||[]);
-    if(subs.length){ nameCell.textContent = `${rawName} (${subs.join(', ')})`; }
+    const nameCell = row.cells?.[0];
+    if(!nameCell) return;
+    const rawName = (nameCell.textContent||'').trim();
+    const subjectsSeen = Array.from(teacherToSubject[rawName]||[]);
+    if(subjectsSeen.length){
+      nameCell.textContent = `${rawName} (${subjectsSeen.join(', ')})`;
+    }
   });
 }
 
-// expose a couple for debugging
-window.loadSubjectsOnce = loadSubjectsOnce;
-window.watchSubjects = watchSubjects;
+subjectListBtn?.addEventListener('click', async ()=>{
+  subjectsModal.style.display='flex';
+  currentSubjectSession = (document.querySelector('.name-session-tabs button.active')?.dataset?.session) || 'pagi';
+  await loadSubjectsOnce();
+  watchSubjects();
+});
+closeSubjectModalBtn?.addEventListener('click', ()=>{
+  subjectsModal.style.display='none';
+  if(unsubscribeSubjects) { unsubscribeSubjects(); unsubscribeSubjects = null; }
+});
+subjectPagiTab?.addEventListener('click', ()=>{
+  subjectPagiTab.classList.add('active'); subjectPetangTab.classList.remove('active');
+  currentSubjectSession = 'pagi'; renderSubjectsUI();
+});
+subjectPetangTab?.addEventListener('click', ()=>{
+  subjectPetangTab.classList.add('active'); subjectPagiTab.classList.remove('active');
+  currentSubjectSession = 'petang'; renderSubjectsUI();
+});
 
+addSubjectBtn?.addEventListener('click', addSubject);
+renameSubjectBtn?.addEventListener('click', renameSubject);
+deleteSubjectBtn?.addEventListener('click', deleteSubject);
+
+subjectSelect?.addEventListener('change', (e)=>{ selectedSubject = e.target.value || null; renderTeachersLists(); });
+attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInput.value));
+
+detachTeacherBtn?.addEventListener('click', async ()=>{
+  const t = detachTeacherBtn.dataset.teacher;
+  if(t) await detachTeacher(t);
+});
+
+exportSubjectsBtn?.addEventListener('click', ()=>{
+  const payload = JSON.stringify(subjectsState, null, 2);
+  const blob = new Blob([payload], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `subjects_${appId}_${new Date().toISOString().slice(0,10)}.json`; a.click();
+});
+importSubjectsBtn?.addEventListener('click', ()=> subjectsImportFile.click());
+subjectsImportFile?.addEventListener('change', async (e)=>{
+  const file = e.target.files?.[0]; if(!file) return;
+  const text = await file.text();
+  try{
+    const obj = JSON.parse(text);
+    if(obj && typeof obj==='object'){
+      subjectsState = { pagi: obj.pagi||{}, petang: obj.petang||{} };
+      await saveSubjectsState();
+      showMessage && showMessage('Subjects imported','success');
+    } else throw new Error('Invalid JSON');
+  } catch(err){
+    showMessage && showMessage('Import failed','error');
+  } finally {
+    subjectsImportFile.value = '';
+  }
+});
+
+subjectFilterSelect?.addEventListener('change', (e)=>{
+  highlightSubjectAcrossActiveTable(e.target.value||'');
+  enhanceSummaryWithSubjects();
+});
+clearSubjectFilterBtn?.addEventListener('click', ()=>{
+  subjectFilterSelect.value='';
+  clearSubjectHighlights();
+  enhanceSummaryWithSubjects();
+});
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    const td = document.activeElement?.closest?.('td');
+    if(td) setTimeout(()=>window.renderCellChipsIfNeeded(td), 0);
+  }
+});
+
+const origBuildSummary = window.buildSummaryTableSkeleton;
+if(typeof origBuildSummary === 'function'){
+  window.buildSummaryTableSkeleton = function(...args){
+    const result = origBuildSummary.apply(this, args);
+    setTimeout(()=>{ enhanceSummaryWithSubjects(); },0);
+    return result;
+  };
+}
 </script>
+
+<script type="module">
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest && e.target.closest('#subjectListBtn');
+  if(!btn) return;
+  const modal = document.getElementById('subjectModal');
+  if(!modal) return;
+  modal.style.display = 'flex';
+  try {
+    const active = document.querySelector('.name-session-tabs button.active');
+    const sess = (active && active.dataset && active.dataset.session) ? active.dataset.session : 'pagi';
+    window.currentSubjectSession = sess;
+    if (typeof loadSubjectsOnce === 'function') loadSubjectsOnce();
+    if (typeof watchSubjects === 'function') watchSubjects();
+  } catch(err){ /* ignore */ }
+});
+</script>
+
 </body>
 </html>

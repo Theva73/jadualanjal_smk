@@ -858,7 +858,10 @@
 
     try {
         fbApp = initializeApp(firebaseConfig);
-        fbAuth = getAuth(fbApp);
+        
+// ensure global appId for cross-module access
+window.appId = window.appId || (firebaseConfig.projectId || 'jadualanjal_smk');
+fbAuth = getAuth(fbApp);
         fbDb = getFirestore(fbApp);
         console.log("Firebase services initialized for Shared Scheduler with Project ID:", firebaseConfig.projectId);
     } catch (e) {
@@ -880,6 +883,8 @@
     let currentNameListSession = 'pagi';
     let namesPagiShared = [];
     let namesPetangShared = [];
+window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
+
     let isDraggingModal = false;
     let modalDragOffsetX, modalDragOffsetY;
     let autocompleteSuggestionsDiv = null;
@@ -913,7 +918,9 @@
         if (!customMessageBox) {
             customMessageBox = document.getElementById('customMessageBox');
             if (!customMessageBox) { console.warn("showMessage: customMessageBox not found. Msg:", message); return; }
-        }
+        
+window.showMessage = showMessage;
+}
         customMessageBox.textContent = message;
         customMessageBox.className = `custom-message-box ${type}`;
         customMessageBox.style.display = 'block';
@@ -4137,5 +4144,25 @@ if(typeof origBuildSummary === 'function'){
   };
 }
 </script>
+
+<script type="module">
+// Always-open handler for 📚 Subjects button, survives panel re-renders
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest?.('#subjectListBtn');
+  if(!btn) return;
+  const modal = document.getElementById('subjectModal');
+  if(!modal){ window.showMessage?.('Subjects modal missing','error'); return; }
+  // make sure button is enabled
+  btn.disabled = false; btn.style.pointerEvents='auto'; btn.classList.remove('disabled','is-disabled');
+  modal.style.display='flex';
+  try {
+    const active = document.querySelector('.name-session-tabs button.active');
+    window.currentSubjectSession = active?.dataset?.session || 'pagi';
+    if (typeof loadSubjectsOnce === 'function') loadSubjectsOnce();
+    if (typeof watchSubjects === 'function') watchSubjects();
+  } catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
+});
+</script>
+
 </body>
 </html>

@@ -442,9 +442,9 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, getDocs, getDoc, deleteDoc, updateDoc, query, serverTimestamp, orderBy, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- Firebase Initialization ---
+     // --- Firebase Initialization ---
     const userProvidedFirebaseConfig = {
-      apiKey: "YOUR_API_KEY", // IMPORTANT: Replace with your actual Firebase API key if not injected
+      apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
       authDomain: "jadual-3f0aa.firebaseapp.com",
       projectId: "jadual-3f0aa",
       storageBucket: "jadual-3f0aa.firebasestorage.app",
@@ -456,15 +456,20 @@
     if (typeof __firebase_config !== 'undefined' && __firebase_config !== null && __firebase_config.trim() !== '') {
         try {
             firebaseConfig = JSON.parse(__firebase_config);
+            console.log("Using injected Firebase config (__firebase_config).");
         } catch (e) {
-            console.error("Error parsing injected __firebase_config. Falling back.", e);
+            console.error("Error parsing injected __firebase_config. Falling back. Error:", e);
             firebaseConfig = userProvidedFirebaseConfig;
         }
     } else {
         firebaseConfig = userProvidedFirebaseConfig;
+        console.log("Using Firebase config defined in the script.");
     }
     
     const appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.appId || 'default-shared-scheduler-app');
+    if (typeof __app_id === 'undefined') {
+        console.warn("Firebase Auth: __app_id is not defined. Using App ID from Firebase config or default.");
+    }
 
     let fbApp, fbAuth, fbDb;
     let fbUserId = null;

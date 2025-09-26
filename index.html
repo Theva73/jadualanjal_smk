@@ -3736,9 +3736,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <select id="subjectSelect" title="Pick a subject to manage"></select>
     </div>
     <div class="input-group">
-      <input id="attachTeacherInput" placeholder="Type a teacher and press Attach (or choose from list below)">
-<datalist id="teacherNamesList"></datalist>
-<div id="teacherSuggestBox" class="suggest-box" style="display:none;position:absolute;z-index:60;"></div>
+      <input id="attachTeacherInput" placeholder="Type a teacher and press Attach (or choose from list below)" autocomplete="off">
       <button id="attachTeacherBtn" title="Attach typed teacher to selected subject">Attach</button>
     </div>
 
@@ -4164,6 +4162,127 @@ document.addEventListener('click', (e)=>{
     if (typeof watchSubjects === 'function') watchSubjects();
   } catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
 });
+</script>
+
+
+<script type="module">
+/* =================== Attach Teacher: reuse timetable suggestion panel =================== */
+(function attachTeacherAutocompleteInit(){
+  const input = document.getElementById('attachTeacherInput');
+  if (!input) return;
+
+  const panel = document.getElementById('autocompleteSuggestions') || (() => {
+    const p = document.createElement('div');
+    p.id = 'autocompleteSuggestions';
+    p.style.position = 'absolute';
+    p.style.zIndex = '9999';
+    p.style.background = '#fff';
+    p.style.border = '1px solid #e5e7eb';
+    p.style.borderRadius = '10px';
+    p.style.boxShadow = '0 10px 24px rgba(0,0,0,.12)';
+    p.style.padding = '6px';
+    p.style.display = 'none';
+    document.body.appendChild(p);
+    return p;
+  })();
+
+  let activeIndex = -1;
+  let visibleItems = [];
+  const MAX_ITEMS = 12;
+
+  function namesNow() {
+    try {
+      return getNamesForSession(window.currentSubjectSession || 'pagi') || [];
+    } catch {
+      return [];
+    }
+  }
+
+  function posPanel() {
+    const r = input.getBoundingClientRect();
+    panel.style.left = (window.scrollX + r.left) + 'px';
+    panel.style.top  = (window.scrollY + r.bottom + 6) + 'px';
+    panel.style.minWidth = r.width + 'px';
+  }
+
+  function closePanel() {
+    panel.style.display = 'none';
+    panel.dataset.mode = '';
+    panel.innerHTML = '';
+    activeIndex = -1;
+    visibleItems = [];
+  }
+
+  function renderItems(list) {
+    panel.innerHTML = '';
+    visibleItems = list.slice(0, MAX_ITEMS);
+    visibleItems.forEach((name, i) => {
+      const item = document.createElement('div');
+      item.textContent = name;
+      item.style.padding = '8px 10px';
+      item.style.borderRadius = '8px';
+      item.style.cursor = 'pointer';
+      item.dataset.index = String(i);
+      item.addEventListener('mouseenter', () => highlight(i));
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        choose(i);
+      });
+      panel.appendChild(item);
+    });
+    if (!visibleItems.length) { closePanel(); return; }
+    panel.style.display = 'block';
+    panel.dataset.mode = 'attach';
+    posPanel();
+    highlight(0);
+  }
+
+  function highlight(i) {
+    const kids = Array.from(panel.children);
+    kids.forEach(el => el.style.background = '');
+    activeIndex = Math.max(0, Math.min(i, kids.length - 1));
+    const el = kids[activeIndex];
+    if (el) el.style.background = '#f3f4f6';
+  }
+
+  function choose(i) {
+    const name = visibleItems[i];
+    if (!name) return;
+    input.value = name;
+    closePanel();
+    if (typeof attachTeacher === 'function') {
+      attachTeacher(name);
+    } else {
+      window.showMessage?.('Teacher selected: ' + name, 'success');
+    }
+  }
+
+  function filter(q) {
+    const Q = (q || '').trim().toUpperCase();
+    if (!Q) { closePanel(); return; }
+    const list = namesNow().filter(n => n.toUpperCase().startsWith(Q));
+    renderItems(list);
+  }
+
+  input.addEventListener('input',  e => filter(e.target.value));
+  input.addEventListener('focus',  e => filter(e.target.value));
+  input.addEventListener('blur',   () => setTimeout(closePanel, 120));
+  window.addEventListener('resize', posPanel);
+  window.addEventListener('scroll', posPanel, true);
+
+  input.addEventListener('keydown', (e) => {
+    if (panel.style.display !== 'block') return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); highlight(activeIndex + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(activeIndex - 1); }
+    else if (e.key === 'Enter')   { e.preventDefault(); choose(activeIndex); }
+    else if (e.key === 'Escape')  { e.preventDefault(); closePanel(); }
+  });
+
+  document.getElementById('subjectPagiTab')?.addEventListener('click', () => filter(input.value));
+  document.getElementById('subjectPetangTab')?.addEventListener('click', () => filter(input.value));
+
+  window.__refreshAttachTeacherSuggestions = () => filter(input.value);
+})();
 </script>
 
 </body>

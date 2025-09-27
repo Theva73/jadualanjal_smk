@@ -4491,5 +4491,283 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
 // === End Injected v2 ===
 </script>
 
+
+<!-- === Scheduling Mode Toggle (Subject / Teacher) === -->
+<script type="module">
+(() => {
+  const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
+  const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
+  const setMode = (m) => localStorage.setItem(MODE_KEY, m);
+
+  function placeButton() {
+    const bars = document.querySelectorAll('.bar');
+    const topBar = Array.from(bars).find(b => b.querySelector('#subjectListBtn'));
+    if (!topBar || topBar.querySelector('#entryModeBtn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'entryModeBtn';
+    btn.title = 'Toggle scheduling input method';
+    function label() {
+      const m = getMode();
+      btn.textContent = (m === 'subject') ? 'Mode: Subject' : 'Mode: Teacher';
+    }
+    btn.addEventListener('click', () => {
+      const next = (getMode() === 'subject') ? 'teacher' : 'subject';
+      setMode(next);
+      label();
+      try { window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`, 'success'); } catch(_) {}
+    });
+    label();
+    const subjectsBtn = topBar.querySelector('#subjectListBtn');
+    subjectsBtn ? subjectsBtn.after(btn) : topBar.appendChild(btn);
+  }
+
+  // place now and also after panel re-renders
+  placeButton();
+  const obs = new MutationObserver(() => placeButton());
+  obs.observe(document.body, { childList:true, subtree:true });
+})();
+</script>
+
+
+<!-- === Autocomplete Source Override: Subject-aware === -->
+<script type="module">
+(function(){
+  const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
+  const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
+
+  function getCurrentSessionForSubjects(){
+    const tab = document.querySelector('.name-session-tabs button.active');
+    return (window.currentSubjectSession) || tab?.dataset?.session || 'pagi';
+  }
+
+  function getSubjectsForSession(sess){
+    try { return Object.keys((window.subjectsState?.[sess]) || {}).sort((a,b)=>a.localeCompare(b)); }
+    catch(_) { return []; }
+  }
+
+  function getPairsForSession(sess){
+    const map = (window.subjectsState?.[sess]) || {};
+    const pairs = [];
+    Object.keys(map).forEach(sub => (map[sub]||[]).forEach(t => pairs.push(`${sub} > ${t}`)));
+    return pairs.sort((a,b)=>a.localeCompare(b));
+  }
+
+  window.showCellAutocompleteSuggestions = function(cell, inputText){
+    if (!window.autocompleteSuggestionsDiv) return;
+
+    const mode = getMode();
+    const sessForNames = (window.currentNameListSession === 'petang') ? 'petang' : 'pagi';
+    const textBeforeRemarks = String(inputText || '').split(' // ')[0];
+    const wordsNoStars = textBeforeRemarks.split(/\s+/).filter(w => !w.startsWith('*'));
+    const needle = wordsNoStars.join(' ').toLowerCase().trim();
+    if (!needle) { hideCellAutocompleteSuggestions(); return; }
+
+    let suggestions = [];
+
+    if (mode === 'teacher') {
+      const names = (sessForNames === 'pagi' ? (window.namesPagiShared||[]) : (window.namesPetangShared||[]));
+      suggestions = names.filter(n => String(n).toLowerCase().startsWith(needle) && String(n).toLowerCase() !== needle);
+    } else {
+      const sess = getCurrentSessionForSubjects();
+      const subjects = getSubjectsForSession(sess);
+      const pairs    = getPairsForSession(sess);
+
+      const subMatches = subjects.filter(s => String(s).toLowerCase().startsWith(needle));
+      const map = (window.subjectsState?.[sess]) || {};
+      const expanded = [];
+      subMatches.forEach(s => {
+        const arr = Array.from(map[s] || []);
+        if (arr.length === 1) expanded.push(`${s} > ${arr[0]}`);
+        else expanded.push(s);
+      });
+      const pairMatches = pairs.filter(p => String(p).toLowerCase().startsWith(needle));
+      suggestions = Array.from(new Set([...expanded, ...pairMatches]));
+    }
+
+    if (suggestions.length > 0) {
+      window.activeCellForAutocomplete = cell;
+      const box = window.autocompleteSuggestionsDiv;
+      box.innerHTML = '';
+      suggestions.slice(0, 10).forEach(txt => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.textContent = txt;
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          if (mode === 'subject' && !txt.includes(' > ')) {
+            const s = txt.trim();
+            const sess = getCurrentSessionForSubjects();
+            const arr = Array.from((window.subjectsState?.[sess]?.[s]) || []);
+            const finalText = (arr.length === 1) ? `${s} > ${arr[0]}` : `${s} > `;
+            window.selectCellAutocompleteSuggestion(finalText);
+            if (arr.length > 1) {
+              try { window.showMessage?.(`Select teacher for "${s}": ${arr.join(', ')}`, 'info', 4000); } catch(_) {}
+            }
+          } else {
+            window.selectCellAutocompleteSuggestion(txt);
+          }
+        });
+        box.appendChild(item);
+      });
+
+      const r = cell.getBoundingClientRect();
+      box.style.left = `${r.left + window.scrollX}px`;
+      box.style.top =  `${r.bottom + window.scrollY}px`;
+      box.style.minWidth = `${r.width}px`;
+      box.style.display = 'block';
+      window.currentAutocompleteIndex = -1;
+    } else {
+      hideCellAutocompleteSuggestions();
+    }
+  };
+})();
+</script>
+
+
+<!-- === Subject-only cells, teacher-expanded summary (PATCH) === -->
+<script type="module">
+(() => {
+  const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
+  const clean = (s) => String(s || '').trim();
+  const splitRemarks = (txt) => clean(txt).split(' // ')[0];
+  const minutes = (hhmm) => {
+    if(!hhmm || typeof hhmm!=='string') return NaN;
+    const p = hhmm.split(/[:.]/); if(p.length<2) return NaN;
+    const h = parseInt(p[0],10), m = parseInt(p[1],10);
+    return (Number.isNaN(h)||Number.isNaN(m)) ? NaN : h*60+m;
+  };
+  const rangeStrToMinutes = (range) => {
+    if(!range || typeof range!=='string' || !range.includes('-')) return null;
+    const [s,e] = range.split('-').map(t=>t.trim());
+    const st = minutes(s), en = minutes(e);
+    return (Number.isNaN(st) || Number.isNaN(en)) ? null : [st,en];
+  };
+  const getActiveSubjectSession = () => {
+    const tab = document.querySelector('.name-session-tabs button.active');
+    return (window.currentSubjectSession) || tab?.dataset?.session || 'pagi';
+  };
+  const getTeachersForSubject = (subject, session) => {
+    const map = (window.subjectsState?.[session]) || {};
+    return Array.from(map[subject] || []);
+  };
+  function parseSubjectsAndTeachersFromCellText(cellText, session){
+    const base = splitRemarks(cellText);
+    if(!base) return [];
+    const items = base.split(/[,;\n]/).map(s => clean(s)).filter(Boolean);
+    const out = [];
+    for (const it of items) {
+      if(it.includes('>')) {
+        const [sub, tch] = it.split('>').map(s=>clean(s));
+        if(sub) out.push({ subject: sub, teachers: tch ? [tch] : getTeachersForSubject(sub, session) });
+      } else {
+        out.push({ subject: it, teachers: getTeachersForSubject(it, session) });
+      }
+    }
+    return out;
+  }
+  function expandSummarySubjectsToTeachers(){
+    const summary = document.getElementById('summaryTable');
+    if(!summary || !summary.tBodies[0]) return;
+    const session = getActiveSubjectSession();
+    const headers = Array.from(summary.tHead?.rows?.[0]?.cells || []).map(th => clean(th.textContent));
+    const headerRanges = headers.map(txt => (txt==='Nama/Masa') ? null : rangeStrToMinutes(txt.replace(/\s/g,'')));
+    Array.from(summary.tBodies[0].rows || []).forEach(row => {
+      for (let c=1; c<row.cells.length; c++){
+        const cell = row.cells[c];
+        if(cell.style.display==='none') continue;
+        const raw = clean(cell.textContent);
+        if(!raw) continue;
+        if(/\)\s*(,|$)/.test(raw) || /\(.+\)/.test(raw)) continue;
+        const entries = parseSubjectsAndTeachersFromCellText(raw, session);
+        if(!entries.length) continue;
+        const pretty = entries.map(e => e.teachers?.length ? `${e.subject} (${e.teachers.join(', ')})` : e.subject).join(', ');
+        cell.setAttribute('data-expanded-from', raw);
+        cell.textContent = pretty;
+      }
+    });
+    detectTeacherConflictsAcrossRows(summary, headerRanges);
+  }
+  function detectTeacherConflictsAcrossRows(summaryTable, headerRanges){
+    const tbody = summaryTable.tBodies[0];
+    if(!tbody) return;
+    const rows = Array.from(tbody.rows);
+    const extractTeachersFromDisplay = (txt) => {
+      const hits = [];
+      String(txt||'').split(',').forEach(chunk=>{
+        const m = chunk.match(/\(([^)]+)\)/);
+        if(m && m[1]) m[1].split(',').forEach(x => { const t = clean(x); if(t) hits.push(t); });
+      });
+      return hits;
+    };
+    rows.forEach(r => Array.from(r.cells).forEach(td => td.classList.remove('highlight-conflict')));
+    const perBandTeachers = [];
+    rows.forEach(row=>{
+      for(let c=1; c<row.cells.length; c++){
+        const cell = row.cells[c];
+        if(cell.style.display==='none') continue;
+        const colspan = parseInt(cell.getAttribute('colspan') || '1', 10);
+        const startIdx = c;
+        const endIdx   = c + colspan - 1;
+        const startRange = headerRanges[startIdx];
+        const endRange   = headerRanges[endIdx];
+        if(!startRange || !endRange) continue;
+        const teachers = extractTeachersFromDisplay(cell.textContent);
+        if(teachers.length){
+          for(let b=startIdx; b<=endIdx; b++){
+            perBandTeachers[b] ||= new Map();
+            for(const t of teachers){
+              const entry = perBandTeachers[b].get(t) || { cells:new Set() };
+              entry.cells.add(cell);
+              perBandTeachers[b].set(t, entry);
+            }
+          }
+        }
+      }
+    });
+    perBandTeachers.forEach((bandMap) => {
+      if(!bandMap) return;
+      for (const [teacher, info] of bandMap.entries()){
+        if(info.cells.size > 1){
+          info.cells.forEach(td => td.classList.add('highlight-conflict'));
+        }
+      }
+    });
+    if (typeof window.bubbleProblemRows === 'function') window.bubbleProblemRows();
+  }
+  function attachSummaryHooks(){
+    const runPostProcess = () => {
+      expandSummarySubjectsToTeachers();
+      if (typeof window.detectAndMarkClashes === 'function') {
+        try { window.detectAndMarkClashes(); } catch(_) {}
+      }
+    };
+    if (typeof window.rebuildAndRenderSummary === 'function'){
+      const old = window.rebuildAndRenderSummary;
+      window.rebuildAndRenderSummary = async function(...args){
+        const res = await old.apply(this, args);
+        runPostProcess();
+        return res;
+      };
+    }
+    const target = document.getElementById('summaryTable');
+    if(target){
+      const obs = new MutationObserver(() => runPostProcess());
+      obs.observe(target, { childList:true, subtree:true });
+    }
+    runPostProcess();
+  }
+  function defaultToSubjectModeOnce(){
+    if(!localStorage.getItem(MODE_KEY)){
+      localStorage.setItem(MODE_KEY, 'subject');
+    }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    defaultToSubjectModeOnce();
+    attachSummaryHooks();
+  });
+})();
+</script>
+
+
 </body>
 </html>

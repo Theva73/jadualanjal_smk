@@ -2437,8 +2437,7 @@ function detectAndMarkClashes(){
     }
     
     // --- Autocomplete Functions ---
-    <!-- --- Autocomplete Functions (mode-aware) --- -->
-<script>
+    // --- Autocomplete Functions (mode-aware) ---
 (function(){
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => (localStorage.getItem(MODE_KEY) || 'teacher');
@@ -2462,15 +2461,11 @@ function detectAndMarkClashes(){
     return Array.from((window.subjectsState?.[sess]?.[sub]) || []);
   }
 
-  // --- existing globals used elsewhere ---
-  // autocompleteSuggestionsDiv, activeCellForAutocomplete, currentAutocompleteIndex
   function showCellAutocompleteSuggestions(cell, inputText) {
     if (!window.autocompleteSuggestionsDiv) return;
-
-    const mode = getMode();  // 'teacher' | 'subject'
+    const mode = getMode();
     const cellRect = cell.getBoundingClientRect();
 
-    // Clean typed text: ignore remarks after " // " and star-words
     let textForMatchingInput = String(inputText || '').split(' // ')[0];
     const wordsForMatching = textForMatchingInput.split(/\s+/).filter(w => !w.startsWith('*'));
     const textForMatching = wordsForMatching.join(' ').toLowerCase().trim();
@@ -2479,7 +2474,6 @@ function detectAndMarkClashes(){
     let suggestions = [];
 
     if (mode === 'subject') {
-      // SUBJECT MODE: build from subjectsState
       const sess = getSubjectSession();
       const subjects = subjectListForSession(sess);
       suggestions = subjects
@@ -2491,7 +2485,6 @@ function detectAndMarkClashes(){
           return (arr.length === 1) ? `${sub} > ${arr[0]}` : `${sub} > `;
         });
     } else {
-      // TEACHER MODE (original behavior)
       const currentNameListSession = getActiveNameSession();
       const namesForAutocomplete =
         currentNameListSession === 'pagi' ? (window.namesPagiShared || []) : (window.namesPetangShared || []);
@@ -2544,7 +2537,6 @@ function detectAndMarkClashes(){
       ? currentFullText.substring(currentFullText.indexOf(' // '))
       : '';
 
-    // Keep existing "*flags" before remarks
     const contentBeforeRemark = currentFullText.split(' // ')[0];
     const starWordsBeforeRemark = contentBeforeRemark
       .split(/\s+/)
@@ -2557,7 +2549,6 @@ function detectAndMarkClashes(){
 
     contentNode.textContent = newText;
 
-    // If we inserted "Subject > ..." render the chips immediately
     if (/>/.test(newText) && typeof window.renderCellChipsIfNeeded === 'function') {
       window.renderCellChipsIfNeeded(targetCell);
     }
@@ -2568,7 +2559,6 @@ function detectAndMarkClashes(){
       window.rebuildAndRenderSummary();
     }
 
-    // restore caret to end
     contentNode.focus();
     const range = document.createRange();
     const sel = window.getSelection();
@@ -2585,12 +2575,10 @@ function detectAndMarkClashes(){
     }
   }
 
-  // Expose the updated functions if other code calls them
   window.showCellAutocompleteSuggestions = showCellAutocompleteSuggestions;
   window.hideCellAutocompleteSuggestions = hideCellAutocompleteSuggestions;
   window.selectCellAutocompleteSuggestion = selectCellAutocompleteSuggestion;
 })();
-</script>
     function updateCellSuggestionHighlight() {
         if (!autocompleteSuggestionsDiv || autocompleteSuggestionsDiv.style.display === 'none') return;
         const items = autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item');

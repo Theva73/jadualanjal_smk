@@ -2438,46 +2438,247 @@ function detectAndMarkClashes(){
     
     // --- Autocomplete Functions ---
     function showCellAutocompleteSuggestions(cell, inputText) {
-    // **Mode-aware**: teacher vs subject
-    const currentMode = (localStorage.getItem(`scheduleEntryMode_${window.appId || 'default'}`) || 'teacher');
-    if (currentMode === 'subject') {
-        const typedText = String(inputText || '').split(' // ')[0].replace(/\s+/g, ' ').trim();
-        renderSubjectMatches(cell, typedText);
-        return;
-    }
-    // --- Original Teacher Mode logic ---
-    if (!autocompleteSuggestionsDiv) return;
-    const namesForAutocomplete = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
-    let textForMatchingInput = String(inputText || '').split(' // ')[0];
-    const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*'));
-    const textForMatching = wordsForMatching.join(' ').toLowerCase().trim();
-    if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
-    const filteredSuggestions = namesForAutocomplete.filter(name => {
-        const nameStr = String(name || '').toLowerCase().trim();
-        return nameStr.startsWith(textForMatching) && nameStr !== textForMatching;
-    });
-    if (filteredSuggestions.length > 0) {
-        activeCellForAutocomplete = cell;
-        autocompleteSuggestionsDiv.innerHTML = '';
-        filteredSuggestions.slice(0, 10).forEach(suggestion => {
-            const item = document.createElement('div');
-            item.className = 'suggestion-item';
-            item.textContent = suggestion;
-            item.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                selectCellAutocompleteSuggestion(suggestion);
-            });
-            autocompleteSuggestionsDiv.appendChild(item);
+        if (!autocompleteSuggestionsDiv) return;
+        const namesForAutocomplete = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        let textForMatchingInput = String(inputText || '').split(' // ')[0]; 
+        const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*')); 
+        const textForMatching = wordsForMatching.join(' ').toLowerCase().trim(); 
+
+        if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
+
+        const filteredSuggestions = namesForAutocomplete.filter(name => {
+            const nameStr = String(name || '').toLowerCase().trim();
+            return nameStr.startsWith(textForMatching) && nameStr !== textForMatching;
         });
-        const cellRect = cell.getBoundingClientRect();
-        autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
-        autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
-        autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
-        autocompleteSuggestionsDiv.style.display = 'block';
-        currentAutocompleteIndex = -1;
-    } else {
-        hideCellAutocompleteSuggestions();
+
+        if (filteredSuggestions.length > 0) {
+            activeCellForAutocomplete = cell;
+            autocompleteSuggestionsDiv.innerHTML = '';
+            filteredSuggestions.slice(0, 10).forEach(suggestion => { 
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = suggestion;
+                item.addEventListener('mousedown', (e) => { 
+                    e.preventDefault(); 
+                    selectCellAutocompleteSuggestion(suggestion);
+                });
+                autocompleteSuggestionsDiv.appendChild(item);
+            });
+            const cellRect = cell.getBoundingClientRect();
+            autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
+            autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
+            autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
+            autocompleteSuggestionsDiv.style.display = 'block';
+            currentAutocompleteIndex = -1; 
+        } else {
+            hideCellAutocompleteSuggestions();
+        }
     }
+    function hideCellAutocompleteSuggestions() {
+        if (autocompleteSuggestionsDiv) autocompleteSuggestionsDiv.style.display = 'none';
+        activeCellForAutocomplete = null;
+        currentAutocompleteIndex = -1;
+    }
+    function selectCellAutocompleteSuggestion(suggestionText) {
+        if (activeCellForAutocomplete) {
+            const targetCell = activeCellForAutocomplete;
+            const overlay = targetCell.querySelector('.merged-cell-overlay');
+            const contentNode = overlay || targetCell; 
+
+            const currentFullText = contentNode.textContent;
+            const remarkPart = currentFullText.includes(' // ') ? currentFullText.substring(currentFullText.indexOf(' // ')) : '';
+            
+            const contentBeforeRemark = currentFullText.split(' // ')[0];
+            const starWordsBeforeRemark = contentBeforeRemark.split(/\s+/).filter(word => word.startsWith('*')).join(' ');
+
+            let newText = suggestionText;
+            if (starWordsBeforeRemark) {
+                newText += ' ' + starWordsBeforeRemark;
+            }
+            newText = (newText.trim() + remarkPart).trim();
+            
+            contentNode.textContent = newText;
+            hideCellAutocompleteSuggestions();
+            rebuildAndRenderSummary(); 
+
+            contentNode.focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            if (sel) {
+                if (contentNode.childNodes.length > 0) {
+                    range.selectNodeContents(contentNode);
+                    range.collapse(false); 
+                } else { 
+                    range.setStart(contentNode, 0);
+                    range.collapse(true);
+                }
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+    }
+    function updateCellSuggestionHighlight() {
+        if (!autocompleteSuggestionsDiv || autocompleteSuggestionsDiv.style.display === 'none') return;
+        const items = autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item');
+        items.forEach((item, index) => {
+            item.classList.toggle('active-suggestion', index === currentAutocompleteIndex);
+        });
+    }
+
+    // --- Modal Drag Functions ---
+    function startDragModal(e, modalContentEl = nameModalContent) {
+        if (e.target.closest('.modal-close-btn')) { isDraggingModal = false; return; }
+        isDraggingModal = true;
+        if(modalContentEl) modalContentEl.classList.add('dragging');
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        const rect = modalContentEl.getBoundingClientRect();
+        modalContentEl.style.position = 'fixed'; 
+        modalContentEl.style.left = `${rect.left}px`;
+        modalContentEl.style.top = `${rect.top}px`;
+        modalContentEl.style.transform = 'none'; 
+        modalDragOffsetX = clientX - modalContentEl.offsetLeft;
+        modalDragOffsetY = clientY - modalContentEl.offsetTop;
+        if (e.type === 'touchstart') e.preventDefault();
+    }
+    function dragModal(e, modalContentEl = nameModalContent) {
+        if (!isDraggingModal || !modalContentEl || !modalContentEl.classList.contains('dragging')) return;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        let newLeft = clientX - modalDragOffsetX;
+        let newTop = clientY - modalDragOffsetY;
+        
+        const modalRect = modalContentEl.getBoundingClientRect(); 
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        if (newLeft < 0) newLeft = 0;
+        if (newTop < 0) newTop = 0;
+        if (newLeft + modalRect.width > viewportWidth) newLeft = viewportWidth - modalRect.width;
+        if (newTop + modalRect.height > viewportHeight) newTop = viewportHeight - modalRect.height;
+        
+        modalContentEl.style.left = `${newLeft}px`;
+        modalContentEl.style.top = `${newTop}px`;
+        if (e.type === 'touchmove') e.preventDefault();
+    }
+    function stopDragModal(e, modalContentEl = nameModalContent) {
+        if (isDraggingModal && modalContentEl && modalContentEl.classList.contains('dragging')) {
+            isDraggingModal = false;
+            modalContentEl.classList.remove('dragging');
+        }
+    }
+
+    // --- Clipboard & Table Management ---
+    async function attemptDirectCopyToClipboard() {
+        const fullHtml = document.documentElement.outerHTML;
+        try { await navigator.clipboard.writeText(fullHtml); showMessage('Full HTML copied!', 'success'); }
+        catch (err) {
+            console.warn('Direct copy failed, trying fallback:', err); const textarea = document.createElement('textarea');
+            textarea.value = fullHtml; textarea.style.position = 'fixed'; textarea.style.left = '-9999px';
+            document.body.appendChild(textarea); textarea.select();
+            try { const success = document.execCommand('copy'); if (success) showMessage('Full HTML copied! (fallback)', 'success'); else showMessage('Copy failed (execCommand).', 'error', 5000); }
+            catch (execErr) { console.error('execCommand copy failed:', execErr); showMessage('Copy failed completely.', 'error', 5000); }
+            document.body.removeChild(textarea);
+        }
+    }
+    
+    function addTabButton(id, label) {
+        if (!tableTabs) return null;
+        const button = document.createElement('button'); button.textContent = label; button.dataset.tableId = id;
+        button.title = `Switch to table: ${label}`; button.onclick = () => switchTable(id);
+        tableTabs.appendChild(button); return button;
+    }
+    function switchTable(id) {
+        const targetTable = document.getElementById(id);
+        if (!targetTable && tablesContainer) { 
+            const firstTableInDOM = tablesContainer.querySelector('table');
+            if (firstTableInDOM) { 
+                id = firstTableInDOM.id; 
+                console.warn(`SwitchTable: Target table '${id}' not found, falling back to the first available table '${firstTableInDOM.id}'.`);
+            } else { 
+                if (tablesContainer.children.length === 0) {
+                    console.warn("SwitchTable: No tables exist. Adding a new default table.");
+                    addNewTable(true); 
+                    return; 
+                }
+                console.error(`SwitchTable: Target table '${id}' not found, and no fallback tables available.`); return;
+            }
+        } else if (!targetTable) { 
+             console.error(`SwitchTable: Target table '${id}' not found, and tablesContainer is missing.`); return;
+        }
+
+        activeTableId = id;
+        if(tablesContainer) Array.from(tablesContainer.querySelectorAll('table')).filter(t => t.dataset.independent !== 'true').forEach(t => t.classList.toggle('active', t.id === id));
+        if(tableTabs) tableTabs.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.tableId === id));
+        deselectAllTableCells(); rebuildAndRenderSummary(); updateAllMergeOverlays(); hideCellAutocompleteSuggestions();
+    }
+    function addNewTable(isInitial = false) {
+        if (!tablesContainer || !tableTabs) { console.error("addNewTable: Critical DOM elements (tablesContainer or tableTabs) missing."); return; }
+        tableCount++; 
+        const defaultTableNameBase = "Schedule";
+        let newTableIndex = tableTabs.children.length + 1;
+        let proposedName = `${defaultTableNameBase} ${newTableIndex}`;
+        
+        const existingNames = Array.from(tableTabs.children).map(btn => btn.textContent);
+        while(existingNames.includes(proposedName)) {
+            newTableIndex++;
+            proposedName = `${defaultTableNameBase} ${newTableIndex}`;
+        }
+
+        const label = isInitial ? proposedName : customPrompt('Enter new table name:', proposedName);
+        if (!label && !isInitial) { 
+            showMessage('Table creation cancelled.', 'info');
+            tableCount--; 
+            return;
+        }
+        const finalTableName = (label || proposedName).trim();
+
+        const newTable = document.createElement('table');
+        newTable.id = `tbl_${Date.now()}_${tableCount}`; 
+        newTable.dataset.tableName = finalTableName;
+
+        const thead = newTable.createTHead();
+        const timeSlotHeaderRow = thead.insertRow();
+        timeSlotHeaderRow.className = ''; 
+        const defaultHeaders = ['Class/Time', '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00'];
+        defaultHeaders.forEach(headerText => {
+            const th = document.createElement('th');
+            th.contentEditable = 'true'; th.textContent = headerText;
+            timeSlotHeaderRow.appendChild(th);
+        });
+        
+        ensureDateHeaderRowExists(newTable); 
+
+        const tbody = newTable.createTBody();
+        for (let r = 0; r < 2; r++) { 
+            const dataRow = tbody.insertRow();
+            for (let c = 0; c < timeSlotHeaderRow.cells.length; c++) {
+                const td = dataRow.insertCell(); td.contentEditable = 'true';
+                if (c === 0) td.textContent = `Sample Class ${String.fromCharCode(65 + r)}`;
+            }
+        }
+        tablesContainer.appendChild(newTable);
+        addTabButton(newTable.id, finalTableName);
+        switchTable(newTable.id); 
+        if (!isInitial) showMessage(`Table "${finalTableName}" added.`, 'success');
+        else console.log(`Initial table "${finalTableName}" created with ID ${newTable.id}.`);
+    }
+
+// === Added: Create standalone table that is excluded from summary ===
+function addNewIndependentTable() {
+    addNewTable(); // reuse standard table creation
+    const newTable = document.getElementById(activeTableId);
+    if (newTable) {
+        newTable.dataset.independent = 'true';
+        newTable.classList.add('independent-table');
+        // tweak tab label
+        const currentTab = tableTabs?.querySelector('button.active');
+        if (currentTab && !currentTab.textContent.includes('(Standalone)')) {
+            currentTab.textContent += ' (Standalone)';
+        }
+    }
+    rebuildAndRenderSummary();
+    showMessage('Standalone table added – it will not appear in the summary.', 'success');
 }
 
     async function promptAndRenameActiveTable() {
@@ -4332,58 +4533,6 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   function attachSummaryHooks(){ let isProcessing=false, timer=null; const run=()=>{ if(isProcessing) return; isProcessing=true; try{ expandSummarySubjectsToTeachers(); } finally { try{ if(typeof window.detectAndMarkClashes==='function') window.detectAndMarkClashes(); }catch(_){ } isProcessing=false; } }; if(typeof window.rebuildAndRenderSummary==='function'){ const old=window.rebuildAndRenderSummary; window.rebuildAndRenderSummary=async function(...args){ const res=await old.apply(this,args); run(); return res; }; } const target=document.getElementById('summaryTable'); if(target){ const obs=new MutationObserver(()=>{ clearTimeout(timer); if(isProcessing) return; timer=setTimeout(run,150); }); obs.observe(target,{childList:true,subtree:true}); } run(); }
   document.addEventListener('DOMContentLoaded', attachSummaryHooks);
 })();
-// === Entry Mode toggle wiring (center button) ===
-(function(){
-  const btn = document.getElementById('entryModeBtn');
-  if (!btn) return;
-  const key = `scheduleEntryMode_${window.appId || 'default'}`;
-  function applyLabel(){
-    const mode = (localStorage.getItem(key) || 'teacher');
-    btn.textContent = `Mode: ${mode.charAt(0).toUpperCase()+mode.slice(1)}`;
-    // high-contrast text if needed
-    btn.style.color = '#fff';
-  }
-  btn.addEventListener('click', ()=>{
-    const cur = (localStorage.getItem(key) || 'teacher');
-    const nxt = (cur === 'teacher') ? 'subject' : 'teacher';
-    localStorage.setItem(key, nxt);
-    applyLabel();
-    // Force-close any stale suggestions when switching
-    try{ if (typeof hideCellAutocompleteSuggestions==='function') hideCellAutocompleteSuggestions(); }catch(_){}
-  });
-  applyLabel();
-})();
 </script>
-
-<script>
-// === Robust Mode Toggle (click + keyboard) ===
-document.addEventListener('DOMContentLoaded', function(){
-  const btn = document.getElementById('entryModeBtn');
-  if (!btn) return;
-  const key = `scheduleEntryMode_${window.appId || 'default'}`;
-  function setMode(mode){
-    localStorage.setItem(key, mode);
-    btn.textContent = `Mode: ${mode.charAt(0).toUpperCase()+mode.slice(1)}`;
-    btn.style.background = (mode==='subject') ? '#0aa150' : '#1b6ef3';
-    btn.style.color = '#fff';
-    btn.style.zIndex = '1000';
-    // Close suggestions to avoid stale list from previous mode
-    try{ window.hideCellAutocompleteSuggestions && window.hideCellAutocompleteSuggestions(); }catch(e){}
-  }
-  function currentMode(){ return (localStorage.getItem(key) || 'teacher'); }
-  // initialize
-  setMode(currentMode());
-  btn.setAttribute('role','button');
-  btn.setAttribute('tabindex','0');
-  btn.style.pointerEvents = 'auto';
-  btn.addEventListener('click', function(){
-    const nxt = currentMode()==='teacher' ? 'subject' : 'teacher';
-    setMode(nxt);
-  });
-  btn.addEventListener('keydown', function(ev){
-    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); btn.click(); }
-  });
-});
-</script>
-
-</body></html>
+</body>
+</html>

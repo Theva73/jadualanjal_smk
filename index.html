@@ -2437,148 +2437,86 @@ function detectAndMarkClashes(){
     }
     
     // --- Autocomplete Functions ---
-    // --- Autocomplete Functions (mode-aware) ---
-(function(){
-  const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
-  const getMode = () => (localStorage.getItem(MODE_KEY) || 'teacher');
+    function showCellAutocompleteSuggestions(cell, inputText) {
+        if (!autocompleteSuggestionsDiv) return;
+        const namesForAutocomplete = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        let textForMatchingInput = String(inputText || '').split(' // ')[0]; 
+        const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*')); 
+        const textForMatching = wordsForMatching.join(' ').toLowerCase().trim(); 
 
-  function getActiveNameSession(){
-    try { return (window.currentNameListSession || window.currentSubjectSession) || document.querySelector('.name-session-tabs button.active')?.dataset?.session || 'pagi'; }
-    catch(_){ return 'pagi'; }
-  }
+        if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
 
-  function getSubjectSession(){
-    try { return (window.currentSubjectSession) || document.querySelector('.name-session-tabs button.active')?.dataset?.session || 'pagi'; }
-    catch(_){ return 'pagi'; }
-  }
-
-  function subjectListForSession(sess){
-    try { return Object.keys((window.subjectsState?.[sess]) || {}); }
-    catch(_){ return []; }
-  }
-
-  function teachersForSubject(sess, sub){
-    return Array.from((window.subjectsState?.[sess]?.[sub]) || []);
-  }
-
-  function showCellAutocompleteSuggestions(cell, inputText) {
-    if (!window.autocompleteSuggestionsDiv) return;
-    const mode = getMode();
-    const cellRect = cell.getBoundingClientRect();
-
-    let textForMatchingInput = String(inputText || '').split(' // ')[0];
-    const wordsForMatching = textForMatchingInput.split(/\s+/).filter(w => !w.startsWith('*'));
-    const textForMatching = wordsForMatching.join(' ').toLowerCase().trim();
-    if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
-
-    let suggestions = [];
-
-    if (mode === 'subject') {
-      const sess = getSubjectSession();
-      const subjects = subjectListForSession(sess);
-      suggestions = subjects
-        .filter(sub => String(sub || '').toLowerCase().startsWith(textForMatching) &&
-                       String(sub || '').toLowerCase() != textForMatching)
-        .slice(0, 14)
-        .map(sub => {
-          const arr = teachersForSubject(sess, sub);
-          return (arr.length === 1) ? `${sub} > ${arr[0]}` : `${sub} > `;
+        const filteredSuggestions = namesForAutocomplete.filter(name => {
+            const nameStr = String(name || '').toLowerCase().trim();
+            return nameStr.startsWith(textForMatching) && nameStr !== textForMatching;
         });
-    } else {
-      const currentNameListSession = getActiveNameSession();
-      const namesForAutocomplete =
-        currentNameListSession === 'pagi' ? (window.namesPagiShared || []) : (window.namesPetangShared || []);
-      suggestions = namesForAutocomplete
-        .filter(name => {
-          const nameStr = String(name || '').toLowerCase().trim();
-          return nameStr.startsWith(textForMatching) && nameStr != textForMatching;
-        })
-        .slice(0, 10);
+
+        if (filteredSuggestions.length > 0) {
+            activeCellForAutocomplete = cell;
+            autocompleteSuggestionsDiv.innerHTML = '';
+            filteredSuggestions.slice(0, 10).forEach(suggestion => { 
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = suggestion;
+                item.addEventListener('mousedown', (e) => { 
+                    e.preventDefault(); 
+                    selectCellAutocompleteSuggestion(suggestion);
+                });
+                autocompleteSuggestionsDiv.appendChild(item);
+            });
+            const cellRect = cell.getBoundingClientRect();
+            autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
+            autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
+            autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
+            autocompleteSuggestionsDiv.style.display = 'block';
+            currentAutocompleteIndex = -1; 
+        } else {
+            hideCellAutocompleteSuggestions();
+        }
     }
-
-    if (suggestions.length > 0) {
-      window.activeCellForAutocomplete = cell;
-      window.autocompleteSuggestionsDiv.innerHTML = '';
-      suggestions.forEach(suggestion => {
-        const item = document.createElement('div');
-        item.className = 'suggestion-item';
-        item.textContent = suggestion;
-        item.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          selectCellAutocompleteSuggestion(suggestion);
-        });
-        window.autocompleteSuggestionsDiv.appendChild(item);
-      });
-      window.autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
-      window.autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
-      window.autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
-      window.autocompleteSuggestionsDiv.style.display = 'block';
-      window.currentAutocompleteIndex = -1;
-    } else {
-      hideCellAutocompleteSuggestions();
+    function hideCellAutocompleteSuggestions() {
+        if (autocompleteSuggestionsDiv) autocompleteSuggestionsDiv.style.display = 'none';
+        activeCellForAutocomplete = null;
+        currentAutocompleteIndex = -1;
     }
-  }
+    function selectCellAutocompleteSuggestion(suggestionText) {
+        if (activeCellForAutocomplete) {
+            const targetCell = activeCellForAutocomplete;
+            const overlay = targetCell.querySelector('.merged-cell-overlay');
+            const contentNode = overlay || targetCell; 
 
-  function hideCellAutocompleteSuggestions() {
-    if (window.autocompleteSuggestionsDiv) window.autocompleteSuggestionsDiv.style.display = 'none';
-    window.activeCellForAutocomplete = null;
-    window.currentAutocompleteIndex = -1;
-  }
+            const currentFullText = contentNode.textContent;
+            const remarkPart = currentFullText.includes(' // ') ? currentFullText.substring(currentFullText.indexOf(' // ')) : '';
+            
+            const contentBeforeRemark = currentFullText.split(' // ')[0];
+            const starWordsBeforeRemark = contentBeforeRemark.split(/\s+/).filter(word => word.startsWith('*')).join(' ');
 
-  function selectCellAutocompleteSuggestion(suggestionText) {
-    if (!window.activeCellForAutocomplete) return;
+            let newText = suggestionText;
+            if (starWordsBeforeRemark) {
+                newText += ' ' + starWordsBeforeRemark;
+            }
+            newText = (newText.trim() + remarkPart).trim();
+            
+            contentNode.textContent = newText;
+            hideCellAutocompleteSuggestions();
+            rebuildAndRenderSummary(); 
 
-    const targetCell = window.activeCellForAutocomplete;
-    const overlay = targetCell.querySelector('.merged-cell-overlay');
-    const contentNode = overlay || targetCell;
-
-    const currentFullText = contentNode.textContent;
-    const remarkPart = currentFullText.includes(' // ')
-      ? currentFullText.substring(currentFullText.indexOf(' // '))
-      : '';
-
-    const contentBeforeRemark = currentFullText.split(' // ')[0];
-    const starWordsBeforeRemark = contentBeforeRemark
-      .split(/\s+/)
-      .filter(word => word.startsWith('*'))
-      .join(' ');
-
-    let newText = suggestionText;
-    if (starWordsBeforeRemark) newText += ' ' + starWordsBeforeRemark;
-    newText = (newText.trim() + remarkPart).trim();
-
-    contentNode.textContent = newText;
-
-    if (/>/.test(newText) && typeof window.renderCellChipsIfNeeded === 'function') {
-      window.renderCellChipsIfNeeded(targetCell);
+            contentNode.focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            if (sel) {
+                if (contentNode.childNodes.length > 0) {
+                    range.selectNodeContents(contentNode);
+                    range.collapse(false); 
+                } else { 
+                    range.setStart(contentNode, 0);
+                    range.collapse(true);
+                }
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
     }
-
-    hideCellAutocompleteSuggestions();
-
-    if (typeof window.rebuildAndRenderSummary === 'function') {
-      window.rebuildAndRenderSummary();
-    }
-
-    contentNode.focus();
-    const range = document.createRange();
-    const sel = window.getSelection();
-    if (sel) {
-      if (contentNode.childNodes.length > 0) {
-        range.selectNodeContents(contentNode);
-        range.collapse(false);
-      } else {
-        range.setStart(contentNode, 0);
-        range.collapse(true);
-      }
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-  }
-
-  window.showCellAutocompleteSuggestions = showCellAutocompleteSuggestions;
-  window.hideCellAutocompleteSuggestions = hideCellAutocompleteSuggestions;
-  window.selectCellAutocompleteSuggestion = selectCellAutocompleteSuggestion;
-})();
     function updateCellSuggestionHighlight() {
         if (!autocompleteSuggestionsDiv || autocompleteSuggestionsDiv.style.display === 'none') return;
         const items = autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item');

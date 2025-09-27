@@ -632,6 +632,20 @@
   clip-path:polygon(100% 0,100% 100%,0 100%);
   cursor:se-resize;
 }
+
+/* === Injected: Subjects Manager styles (lean, add/delete only) === */
+.subject-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 8px;border-bottom:1px solid #f1f3f5;transition:background-color .2s;
+}
+.subject-item:hover{background:#f8f9fa;}
+.subject-item:last-child{border-bottom:none;}
+.subject-item span{flex-grow:1;cursor:default;color:#212529;}
+.subject-item button{
+  background:#dc3545;color:#fff;border:none;border-radius:5px;padding:6px 12px;font-size:.9em;
+}
+.subject-item button:hover{background:#c82333;}
+/* === /Injected styles === */
 </style>
 </head>
 <body>
@@ -3686,5 +3700,204 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 1000);
 });
 </script>
+
+<!-- === Injected: Subjects Manager (Add/Delete) === -->
+<script>
+(function(){
+  // Guard against multiple injections
+  if (window.__subjectsManagerInjected) return;
+  window.__subjectsManagerInjected = true;
+
+  // Expect these globals to already exist in your app (as in your working script):
+  // fbDb, fbIsAuthReady, fbUserId, appId, onSnapshot, setDoc, doc, serverTimestamp
+  // showMessage(msg, level), customConfirm(msg), nameModal
+
+  // State
+  let subjectsPagiShared = [];
+  let subjectsPetangShared = [];
+  let currentSubjectSession = 'pagi';
+
+  // DOM refs
+  let subjectListContainer, newSubjectInput, subjectPagiTabElement, subjectPetangTabElement;
+
+  function ensureSubjectsPanelMounted(){
+    // Try to place the panel right after the Names list.
+    const nameList = document.getElementById('nameList');
+    const modalContent = document.getElementById('nameModalContent') || (nameModal && nameModal.querySelector('.modal-content')) || document.body;
+
+    const panelId = 'subjectsManagerPanel_Lean';
+    if (document.getElementById(panelId)) return; // already mounted
+
+    const wrapper = document.createElement('div');
+    wrapper.id = panelId;
+    wrapper.innerHTML = `
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e9ecef;">
+      <h3 style="margin:0 0 10px 0;font-size:1.05em;color:#333;">Subjects (by session)</h3>
+
+      <div class="name-session-tabs" id="subjectSessionTabs" style="margin-top:6px">
+        <button id="subjectPagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
+        <button id="subjectPetangTab" data-session="petang">Petang (Afternoon)</button>
+      </div>
+
+      <div class="input-group" style="margin-top:8px;display:flex;gap:8px;">
+        <input id="newSubjectInput" placeholder="Add new subject to current session" style="flex:1; padding:8px 10px;">
+        <button id="addSubjectBtnInModal" title="Add the subject to the list" style="padding:8px 12px;">Add</button>
+      </div>
+
+      <div id="subjectList" style="margin-top:12px; max-height:250px; overflow-y:auto;"></div>
+    `;
+
+    if (nameList && nameList.parentElement){
+      nameList.parentElement.insertBefore(wrapper, nameList.nextSibling);
+    } else {
+      modalContent.appendChild(wrapper);
+    }
+
+    // Cache refs
+    subjectListContainer    = document.getElementById('subjectList');
+    newSubjectInput         = document.getElementById('newSubjectInput');
+    subjectPagiTabElement   = document.getElementById('subjectPagiTab');
+    subjectPetangTabElement = document.getElementById('subjectPetangTab');
+
+    // Listeners
+    subjectPagiTabElement && subjectPagiTabElement.addEventListener('click', () => handleSubjectSessionSwitch('pagi'));
+    subjectPetangTabElement && subjectPetangTabElement.addEventListener('click', () => handleSubjectSessionSwitch('petang'));
+    const addBtn = document.getElementById('addSubjectBtnInModal');
+    addBtn && addBtn.addEventListener('click', () => {
+      if (newSubjectInput) addSubjectToSessionInFirestore(newSubjectInput.value);
+    });
+    subjectListContainer && subjectListContainer.addEventListener('click', async (e) => {
+      const delBtn = e.target && e.target.closest && e.target.closest('button[data-subject-delete]');
+      if (delBtn) await deleteSubjectFromSessionInFirestore(delBtn.dataset.subjectDelete);
+    });
+  }
+
+  // --- Firestore helpers ---
+  function _subjectsDocRef(session){
+    if (typeof fbDb === 'undefined') return null;
+    // location: artifacts/{appId}/public/data/sharedSubjectLists/{session}
+    return window.doc(fbDb, "artifacts", window.appId, "public/data/sharedSubjectLists", session);
+  }
+
+  async function addSubjectToSessionInFirestore(subject){
+    try{
+      if (!window.fbDb || !window.fbIsAuthReady){ window.showMessage && window.showMessage("Firebase not ready.", "error"); return; }
+      const trimmed = String(subject||'').trim();
+      if (!trimmed){ window.showMessage && window.showMessage("Subject cannot be empty.", "info"); return; }
+
+      const current = currentSubjectSession === 'pagi' ? subjectsPagiShared : subjectsPetangShared;
+      if (current.map(s=>s.toLowerCase()).includes(trimmed.toLowerCase())){
+        window.showMessage && window.showMessage(`"${trimmed}" already exists.`, "info"); return;
+      }
+      if (!window.appId || window.appId === 'default-shared-scheduler-app'){
+        window.showMessage && window.showMessage("Config error: App ID missing.", "error"); return;
+      }
+
+      const updated = [...current, trimmed].sort((a,b)=>String(a).localeCompare(String(b), undefined, {sensitivity:'base'}));
+      await window.setDoc(_subjectsDocRef(currentSubjectSession), {
+        subjects: updated,
+        lastUpdatedBy: window.fbUserId || "anonymous",
+        updatedAt: window.serverTimestamp && window.serverTimestamp()
+      });
+      if (newSubjectInput){ newSubjectInput.value = ''; newSubjectInput.focus(); }
+    }catch(err){ console.error(err); window.showMessage && window.showMessage(`Failed to add subject: ${err.message}`, "error"); }
+  }
+
+  async function deleteSubjectFromSessionInFirestore(subjectToDelete){
+    try{
+      if (!window.fbDb || !window.fbIsAuthReady){ window.showMessage && window.showMessage("Firebase not ready.", "error"); return; }
+      const s = String(subjectToDelete||'');
+      if (window.customConfirm){
+        const ok = await window.customConfirm(`Delete subject "${s}" from ${currentSubjectSession}?`);
+        if (!ok) return;
+      }
+      const current = currentSubjectSession === 'pagi' ? subjectsPagiShared : subjectsPetangShared;
+      const updated = current.filter(x => String(x) !== s);
+
+      await window.setDoc(_subjectsDocRef(currentSubjectSession), {
+        subjects: updated,
+        lastUpdatedBy: window.fbUserId || "anonymous",
+        updatedAt: window.serverTimestamp && window.serverTimestamp()
+      });
+    }catch(err){ console.error(err); window.showMessage && window.showMessage(`Failed to delete subject: ${err.message}`, "error"); }
+  }
+
+  function listenToSharedSubjectList(sessionToListen){
+    try{
+      if (!window.fbDb || !window.fbIsAuthReady) { console.warn(`subjects(${sessionToListen}): Firestore not ready.`); return () => {}; }
+      if (!window.appId || window.appId === 'default-shared-scheduler-app') { console.error(`subjects(${sessionToListen}): invalid appId.`); return () => {}; }
+      const ref = _subjectsDocRef(sessionToListen);
+      return window.onSnapshot(ref, (snap) => {
+        const arr = snap && snap.exists ? (snap.exists() ? (snap.data().subjects || []) : []) : (snap && snap.data ? (snap.data().subjects || []) : []);
+        const sanitized = (arr || []).map(s=>String(s||'').trim()).filter(Boolean);
+        if (sessionToListen === 'pagi') subjectsPagiShared = sanitized; else subjectsPetangShared = sanitized;
+        if (subjectListContainer && window.nameModal && window.getComputedStyle(window.nameModal).display !== 'none') renderSubjectList();
+      }, (error)=>{ console.error(`subjects(${sessionToListen}) listen error:`, error); window.showMessage && window.showMessage(`Error fetching ${sessionToListen} subjects.`, "error"); });
+    }catch(err){ console.error(err); return () => {}; }
+  }
+
+  // --- UI helpers ---
+  function renderSubjectList(){
+    if (!subjectListContainer) return;
+    const src = currentSubjectSession === 'pagi' ? subjectsPagiShared : subjectsPetangShared;
+    if (!src.length){
+      subjectListContainer.innerHTML = `<div style="font-style:italic;color:#6c757d;">No subjects yet.</div>`;
+      return;
+    }
+    subjectListContainer.innerHTML = src.map(s => `
+      <div class="subject-item">
+        <span>${s}</span>
+        <button data-subject-delete="${s}">Delete</button>
+      </div>
+    `).join('');
+  }
+
+  function handleSubjectSessionSwitch(session){
+    currentSubjectSession = (session === 'petang') ? 'petang' : 'pagi';
+    subjectPagiTabElement && subjectPagiTabElement.classList.toggle('active', currentSubjectSession==='pagi');
+    subjectPetangTabElement && subjectPetangTabElement.classList.toggle('active', currentSubjectSession==='petang');
+    renderSubjectList();
+  }
+
+  // Hook into your app lifecycle
+  function startSubjects(){
+    ensureSubjectsPanelMounted();
+    // Begin subject listeners when auth/Firestore is ready.
+    window.__unsubSubjectsPagi && window.__unsubSubjectsPagi(); // cleanup previous if any
+    window.__unsubSubjectsPetang && window.__unsubSubjectsPetang();
+
+    window.__unsubSubjectsPagi  = listenToSharedSubjectList('pagi');
+    window.__unsubSubjectsPetang= listenToSharedSubjectList('petang');
+    handleSubjectSessionSwitch('pagi');
+  }
+
+  // Try to start when your app indicates auth is ready, else fallback to DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', function(){
+    // If your app sets fbIsAuthReady later, poll briefly until it's ready then start.
+    let tries = 0;
+    const maxTries = 80; // ~8s
+    const iv = setInterval(()=>{
+      tries++;
+      if (window.fbIsAuthReady && window.fbDb && window.appId){
+        clearInterval(iv);
+        startSubjects();
+      } else if (tries >= maxTries){
+        clearInterval(iv);
+        // Still mount the panel so UI appears; Firestore listeners will no-op until ready.
+        ensureSubjectsPanelMounted();
+      }
+    }, 100);
+  });
+
+  // Expose minimal API if needed elsewhere
+  window.__SubjectsManager = {
+    refresh: renderSubjectList,
+    switch: handleSubjectSessionSwitch,
+    add: addSubjectToSessionInFirestore,
+    del: deleteSubjectFromSessionInFirestore
+  };
+})();
+</script>
+<!-- === /Injected: Subjects Manager === -->
 </body>
 </html>

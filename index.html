@@ -4446,12 +4446,21 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   function setLabel(btn){ const m=getMode(); btn.textContent=(m==='subject')?'Mode: Subject':'Mode: Teacher'; }
 
   function initModeBtn(){
-    const btn=document.getElementById('entryModeBtn'); if(!btn) return;
+    const btn = document.getElementById('entryModeBtn'); 
+    if(!btn) return;
     setLabel(btn);
-    btn.addEventListener('click', ()=>{ const next=(getMode()==='subject')?'teacher':'subject'; setMode(next); setLabel(btn); try{window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`,'success');}catch(_){}});
+    btn.addEventListener('click', () => {
+      const next = (getMode()==='subject') ? 'teacher' : 'subject';
+      setMode(next);
+      setLabel(btn);
+      try{
+        document.dispatchEvent(new CustomEvent('mode-changed', { detail: { mode: next }}));
+      }catch(_){}
+      try{ window.showMessage && window.showMessage(`Scheduling mode: ${next.toUpperCase()}`, 'success'); }catch(_){}
+    });
   }
 
-  if(!localStorage.getItem(MODE_KEY)){ localStorage.setItem(MODE_KEY,'subject'); }
+  if(!localStorage.getItem(MODE_KEY)){ localStorage.setItem(MODE_KEY,'teacher'); }
   document.addEventListener('DOMContentLoaded', initModeBtn);
 
   // ==== SUBJECT SUGGESTION HIJACK ====
@@ -4493,26 +4502,51 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     return (el?.textContent||'').split(' // ')[0].replace(/\s+/g,' ').trim();
   }
 
-  function hijack(){
-    if(getMode()!=='subject') return;
-    const box=window.autocompleteSuggestionsDiv; if(!box || box.style.display==='none') return;
-    const cell=window.activeCellForAutocomplete || document.activeElement?.closest?.('td');
-    if(!cell) return;
-    const txt=typedFromCell(cell);
-    renderSubjectMatches(cell, txt);
+  /* --- FIX: Subject-mode hijack — always render Subject list even when dropdown is hidden --- */
+function hijack(){
+  if(getMode()!=='subject') return;
+
+  // Active cell (tracked or focused)
+  const cell = window.activeCellForAutocomplete || (document.activeElement && document.activeElement.closest && document.activeElement.closest('td'));
+  if(!cell) return;
+
+  // Ensure suggestions box exists
+  let box = window.autocompleteSuggestionsDiv || document.getElementById('autocompleteSuggestions');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'autocompleteSuggestions';
+    document.body.appendChild(box);
+    window.autocompleteSuggestionsDiv = box;
   }
 
-  const ensureHijack = () => { try{ hijack(); }catch(_){}};
+  // Always render Subject matches (works on focus/click before typing too)
+  const txt = typedFromCell(cell);
+  try { renderSubjectMatches(cell, txt); } catch(e) { console.error('renderSubjectMatches error', e); }
+}
 
-  document.addEventListener('input', ensureHijack, true);
-  document.addEventListener('keyup', ensureHijack, true);
-  document.addEventListener('focus', ensureHijack, true);
+const ensureHijack = () => { try{ hijack(); }catch(e){ console.debug('ensureHijack error', e);} };
 
-  const boxReady = setInterval(()=>{
-    if(window.autocompleteSuggestionsDiv){
-      clearInterval(boxReady);
-      const obs=new MutationObserver(()=>ensureHijack());
-      obs.observe(window.autocompleteSuggestionsDiv, {childList:true, attributes:true, attributeFilter:['style']});
+// Fire early (capture) so our Subject list wins even if teacher list tries to draw
+document.addEventListener('click', ensureHijack, true);
+document.addEventListener('focus', ensureHijack, true);
+document.addEventListener('input', ensureHijack, true);
+document.addEventListener('keyup', ensureHijack, true);
+
+// If the suggestions box toggles visibility from elsewhere, re-render
+(function(){
+  try{
+    let box = window.autocompleteSuggestionsDiv || document.getElementById('autocompleteSuggestions');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'autocompleteSuggestions';
+      document.body.appendChild(box);
+      window.autocompleteSuggestionsDiv = box;
+    }
+    const obs = new MutationObserver(()=>{ ensureHijack(); });
+    obs.observe(box, { attributes:true, attributeFilter:['style','class'] });
+  }catch(e){ /* no-op */ }
+})();
+/* --- END FIX --- */utes:true, attributeFilter:['style']});
     }
   }, 120);
 })();
@@ -4534,5 +4568,35 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   document.addEventListener('DOMContentLoaded', attachSummaryHooks);
 })();
 </script>
+
+<script>
+// --- Extra safety: reset dropdown on mode toggle so Subject list refreshes instantly ---
+(function(){
+  function resetDropdownAndRefocus(){
+    try{
+      if(window.autocompleteSuggestionsDiv){ window.autocompleteSuggestionsDiv.style.display='none'; }
+      setTimeout(function(){
+        try{
+          if(document.activeElement){
+            document.activeElement.dispatchEvent(new Event('focus', {bubbles:true, cancelable:true}));
+          }
+        }catch(_){}
+      },0);
+    }catch(_){}
+  }
+
+  // Attach to the known mode button if present
+  try{
+    var btn = document.getElementById('entryModeBtn');
+    if(btn){
+      btn.addEventListener('click', function(){
+        resetDropdownAndRefocus();
+        try{ window.showMessage && window.showMessage('Scheduling mode: ' + String(getMode()||'').toUpperCase(), 'success'); }catch(_){}
+      }, true);
+    }
+  }catch(_){}
+})();
+</script>
+
 </body>
 </html>

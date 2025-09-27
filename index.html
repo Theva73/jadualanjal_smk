@@ -3825,8 +3825,8 @@ const subjectsDocRef = doc(getFirestore(), 'artifacts', appId, 'public', 'data',
 
 const normalize = s => (s||'').trim();
 function getNamesForSession(session){
-  const pagi = Array.from(namesPagiShared||[]);
-  const petang = Array.from(namesPetangShared||[]);
+  const pagi = Array.from(window.namesPagiShared||[]);
+  const petang = Array.from(window.namesPetangShared||[]);
   const current = (session === 'petang') ? petang : pagi;
   const unionSorted = Array.from(new Set([...pagi, ...petang])).sort((a,b)=>String(a).localeCompare(String(b)));
   return (Array.isArray(current) && current.length) ? current : unionSorted;

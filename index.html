@@ -692,10 +692,22 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="8" x2="22" y2="13"></line><line x1="22" y1="8" x2="17" y2="13"></line></svg>
             <span>Clear Names (All Tables)</span>
         </button>
-<button id="searchTimetableBtn" class="top-action-btn" title="Open searchable timetable">🔍 Search Timetable</button>
-    </div>
+</div>
 
-    <div id="centerModeBar" style="display:flex;align-items:center;justify-content:center;margin:10px 0 14px;"><button id="entryModeBtn" class="top-action-btn" style="min-width:220px;text-align:center" title="Toggle scheduling input method">Mode: Teacher</button></div>
+    
+<!-- === Centered Mode Toggle Bar (High Contrast) === -->
+<style>
+  #centerModeBar{display:flex;align-items:center;justify-content:center;margin:12px 0;}
+  #entryModeBtn.top-action-btn{
+    background:#0d6efd; color:#fff; font-weight:700; border-radius:9999px;
+    padding:10px 18px; min-width:240px; box-shadow:0 2px 6px rgba(0,0,0,.12);
+  }
+  #entryModeBtn.top-action-btn:active{ transform:translateY(1px); }
+</style>
+<div id="centerModeBar">
+  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method">Mode: Teacher</button>
+</div>
+
 <div id="collapsibleButtonBars">
         <div class="bar">
             <button id="directCopyFullHtmlBtn" title="Copy the entire page's HTML to clipboard">📋 Copy HTML</button>
@@ -3652,73 +3664,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 
-  <!-- ░░░ Resizable / draggable timetable panel ░░░ -->
-<div id="timetablePanel" class="panel hidden" data-x="0" data-y="0">
-  <div class="panel-header" id="timetableHandle">
-      ☰ Searchable Timetable
-      <button id="closeTimetablePanel" aria-label="Close timetable">×</button>
-  </div>
-
-  <iframe id="timetableIframe"
-          src="./timetable.html"
-          loading="lazy"
-          style="width:100%;height:100%;border:none;"></iframe>
-
-  <div id="timetableGrip" class="panel-grip"></div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const panel   = document.getElementById('timetablePanel');
-  const handle  = document.getElementById('timetableHandle');
-  const grip    = document.getElementById('timetableGrip');
-  const openBtn = document.getElementById('searchTimetableBtn');
-  const closeBtn= document.getElementById('closeTimetablePanel');
-
-  /* Dynamic iframe path */
-  const iframe = document.getElementById('timetableIframe');
-  if (iframe) {
-      const base = location.href.substring(0, location.href.lastIndexOf('/') + 1);
-      iframe.src = base + 'timetable.html';
-  }
-
-  if(openBtn && panel){
-     openBtn.addEventListener('click', () => panel.classList.remove('hidden'));
-  }
-  if(closeBtn && panel){
-     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
-  }
-
-  if(typeof interact !== 'undefined' && panel){
-      interact(panel).draggable({
-        allowFrom:'#timetableHandle',
-        listeners:{ move(event){
-          const t = event.target;
-          const x = (parseFloat(t.getAttribute('data-x'))||0)+event.dx;
-          const y = (parseFloat(t.getAttribute('data-y'))||0)+event.dy;
-          t.style.transform = `translate(${x}px,${y}px)`;
-          t.setAttribute('data-x',x); t.setAttribute('data-y',y);
-        }}
-      });
-
-      interact(panel).resizable({
-        edges:{left:true,right:true,top:true,bottom:true},
-        listeners:{ move(event){
-          const t = event.target;
-          const {width,height} = event.rect;
-          t.style.width = width + 'px';
-          t.style.height = height + 'px';
-          const x = (parseFloat(t.getAttribute('data-x'))||0) + event.deltaRect.left;
-          const y = (parseFloat(t.getAttribute('data-y'))||0) + event.deltaRect.top;
-          t.style.transform = `translate(${x}px,${y}px)`;
-          t.setAttribute('data-x',x); t.setAttribute('data-y',y);
-        }},
-        modifiers:[ interact.modifiers.restrictSize({min:{width:280,height:200},max:{width:window.innerWidth*0.95,height:window.innerHeight*0.95}})]
-      });
-  }
-});
-</script>
-
+  
 <!-- Remove SMK banners completely -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -4492,14 +4438,16 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
 // === End Injected v2 ===
 </script>
 
+
+<!-- === Mode Toggle Wiring (Centered) === -->
 <script type="module">
 (() => {
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
   const setMode = (m) => localStorage.setItem(MODE_KEY, m);
-  function setLabel(btn){ const m = getMode(); btn.textContent = (m === 'subject') ? 'Mode: Subject' : 'Mode: Teacher'; }
+  function setLabel(btn){ const m=getMode(); btn.textContent = (m==='subject') ? 'Mode: Subject' : 'Mode: Teacher'; }
   function init(){
-    const btn = document.getElementById('entryModeBtn'); if(!btn) return;
+    const btn=document.getElementById('entryModeBtn'); if(!btn) return;
     setLabel(btn);
     btn.addEventListener('click', () => { const next=(getMode()==='subject')?'teacher':'subject'; setMode(next); setLabel(btn); try{window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`,'success');}catch(_){}});
   }
@@ -4507,64 +4455,79 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
-<script type="module">
-(function(){
+
+<!-- === Autocomplete: FORCE Subject-only list in Subject mode (self-healing patch) === -->
+<script>
+(function enforceSubjectOnlyAutocomplete(){
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
-  function getCurrentSessionForSubjects(){
-    const tab = document.querySelector('.name-session-tabs button.active');
-    return (window.currentSubjectSession) || tab?.dataset?.session || 'pagi';
+  function getCurrentSubjectSession(){
+    const tab=document.querySelector('.name-session-tabs button.active');
+    return (window.currentSubjectSession)||tab?.dataset?.session||'pagi';
   }
-  function getSubjectsForSession(sess){
-    try { return Object.keys((window.subjectsState?.[sess]) || {}).sort((a,b)=>a.localeCompare(b)); }
-    catch(_) { return []; }
+  function getSubjects(sess){
+    try { return Object.keys((window.subjectsState?.[sess])||{}); } catch(_){ return []; }
   }
-  window.showCellAutocompleteSuggestions = function(cell, inputText){
-    if (!window.autocompleteSuggestionsDiv) return;
-    const mode = getMode();
-    const sessForNames = (window.currentNameListSession === 'petang') ? 'petang' : 'pagi';
-    const textBeforeRemarks = String(inputText || '').split(' // ')[0];
-    const wordsNoStars = textBeforeRemarks.split(/\s+/).filter(w => !w.startsWith('*'));
-    const needle = wordsNoStars.join(' ').toLowerCase().trim();
-    if (!needle) { hideCellAutocompleteSuggestions(); return; }
-    let suggestions = [];
-    if (mode === 'teacher') {
-      const names = (sessForNames === 'pagi' ? (window.namesPagiShared||[]) : (window.namesPetangShared||[]));
-      suggestions = names.filter(n => String(n).toLowerCase().startsWith(needle) && String(n).toLowerCase() != needle);
-    } else {
-      const sess = getCurrentSessionForSubjects();
-      const subjects = getSubjectsForSession(sess);
-      suggestions = subjects.filter(s => String(s).toLowerCase().startsWith(needle));
+
+  function patchedShow(cell, inputText){
+    if(!window.autocompleteSuggestionsDiv) return;
+    const mode=getMode();
+    const sessForNames=(window.currentNameListSession==='petang')?'petang':'pagi';
+    const textBefore=String(inputText||'').split(' // ')[0];
+    const words=textBefore.split(/\s+/).filter(w=>!w.startsWith('*'));
+    const needle=words.join(' ').toLowerCase().trim();
+    if(!needle){ hideCellAutocompleteSuggestions(); return; }
+
+    let suggestions=[];
+    if(mode==='teacher'){
+      const names=(sessForNames==='pagi'?(window.namesPagiShared||[]):(window.namesPetangShared||[]));
+      suggestions = names.filter(n=>String(n).toLowerCase().startsWith(needle) && String(n).toLowerCase()!==needle);
+    }else{
+      const sess=getCurrentSubjectSession();
+      const subs=getSubjects(sess);
+      suggestions = subs.filter(s=>String(s).toLowerCase().startsWith(needle));
     }
-    if (suggestions.length > 0) {
+
+    if(suggestions.length>0){
       window.activeCellForAutocomplete = cell;
-      const box = window.autocompleteSuggestionsDiv; box.innerHTML='';
-      suggestions.slice(0, 12).forEach(txt => {
-        const item = document.createElement('div'); item.className='suggestion-item'; item.textContent=txt;
-        item.addEventListener('mousedown', (e) => {
+      const box=window.autocompleteSuggestionsDiv; box.innerHTML='';
+      suggestions.slice(0, 14).forEach(txt=>{
+        const div=document.createElement('div'); div.className='suggestion-item'; div.textContent=txt;
+        div.addEventListener('mousedown', (e)=>{
           e.preventDefault();
-          if (getMode() === 'subject') {
-            const sess = getCurrentSessionForSubjects();
-            const arr = Array.from((window.subjectsState?.[sess]?.[txt]) || []);
-            const finalText = (arr.length === 1) ? `${txt} > ${arr[0]}` : `${txt} > `;
+          if(getMode()==='subject'){
+            const sess=getCurrentSubjectSession();
+            const arr=Array.from((window.subjectsState?.[sess]?.[txt])||[]);
+            const finalText=(arr.length===1)?`${txt} > ${arr[0]}`:`${txt} > `;
             window.selectCellAutocompleteSuggestion(finalText);
-            if (arr.length > 1) { try { window.showMessage?.(`Select teacher for "${txt}": ${arr.join(', ')}`, 'info', 4000); } catch(_) {} }
-          } else {
-            window.selectCellAutocompleteSuggestion(txt);
-          }
+            if(arr.length>1){ try{window.showMessage?.(`Select teacher for "${txt}": ${arr.join(', ')}`, 'info', 4000);}catch(_){}} 
+          }else{ window.selectCellAutocompleteSuggestion(txt); }
         });
-        box.appendChild(item);
+        box.appendChild(div);
       });
-      const r = cell.getBoundingClientRect();
-      box.style.left = `${r.left + window.scrollX}px`; box.style.top = `${r.bottom + window.scrollY}px`;
-      box.style.minWidth = `${r.width}px`; box.style.display = 'block'; window.currentAutocompleteIndex = -1;
-    } else {
+      const r=cell.getBoundingClientRect();
+      box.style.left = (r.left + window.scrollX) + 'px';
+      box.style.top  = (r.bottom + window.scrollY) + 'px';
+      box.style.minWidth = r.width + 'px';
+      box.style.display = 'block';
+      window.currentAutocompleteIndex = -1;
+    }else{
       hideCellAutocompleteSuggestions();
     }
-  };
+  }
+
+  function patch(){
+    // Replace and lock for a short period in case other scripts reassign it
+    window.showCellAutocompleteSuggestions = patchedShow;
+  }
+  // Patch now and re-apply a few times to beat any late initializers
+  patch();
+  let count=0; const id=setInterval(()=>{ patch(); if(++count>10) clearInterval(id); }, 150);
 })();
 </script>
-<script type="module">
+
+<!-- === Subject-only cells, teacher-expanded summary (debounced & locked) === -->
+<script>
 (() => {
   const clean = (s) => String(s || '').trim();
   const splitRemarks = (txt) => clean(txt).split(' // ')[0];

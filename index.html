@@ -2438,6 +2438,41 @@ function detectAndMarkClashes(){
     
     // --- Autocomplete Functions ---
     // --- Autocomplete Functions (mode-aware) ---
+(function(){
+  const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
+  const getMode = () => (localStorage.getItem(MODE_KEY) || 'teacher');
+
+  
+  // expose for legacy code that calls getMode()
+  try { window.getMode = getMode; } catch(_) {}
+function getActiveNameSession(){
+    try { return (window.currentNameListSession || window.currentSubjectSession) || document.querySelector('.name-session-tabs button.active')?.dataset?.session || 'pagi'; }
+    catch(_){ return 'pagi'; }
+  }
+
+  
+// === Subject list helpers ===
+function getSubjectSession(){
+  // use current active name session if available; default 'pagi'
+  try {
+    if (typeof currentNameListSession !== 'undefined') return currentNameListSession;
+  } catch(e){}
+  return 'pagi';
+}
+function subjectListForSession(sess){
+  // Expect window.subjectsBySession = {pagi: [...], petang:[...]}
+  const sb = (window.subjectsBySession||{});
+  const arr = Array.isArray(sb[sess]) ? sb[sess] : [];
+  return arr;
+}
+function teachersForSubject(sess, subject){
+  // Expect window.subjectTeachersMap = {'pagi': {'Math':['Ali','Bee'], ...}, 'petang': {...}}
+  const m = (window.subjectTeachersMap||{});
+  const bucket = m[sess] || {};
+  const arr = bucket[subject] || [];
+  return Array.isArray(arr) ? arr : [];
+}
+)();
     function updateCellSuggestionHighlight() {
         if (!autocompleteSuggestionsDiv || autocompleteSuggestionsDiv.style.display === 'none') return;
         const items = autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item');
@@ -4583,6 +4618,30 @@ document.addEventListener('click', (e) => {
     autocompleteSuggestionsDiv.style.display = 'none';
   }
 });
+
+
+
+// === Autocomplete globals: safe init (compat) ===
+try {
+  if (typeof autocompleteSuggestionsDiv === 'undefined') { var autocompleteSuggestionsDiv = null; }
+  if (typeof activeCellForAutocomplete === 'undefined') { var activeCellForAutocomplete = null; }
+  if (typeof currentAutocompleteIndex === 'undefined') { var currentAutocompleteIndex = -1; }
+} catch(e){}
+
+// === Legacy helper for callers (switchTable, etc.) ===
+function hideCellAutocompleteSuggestions() {
+  try {
+    if (typeof autocompleteSuggestionsDiv !== 'undefined' && autocompleteSuggestionsDiv) {
+      autocompleteSuggestionsDiv.style.display = 'none';
+      // optional: clear items to avoid stale click handlers
+      // autocompleteSuggestionsDiv.innerHTML = '';
+    }
+    if (typeof currentAutocompleteIndex !== 'undefined') currentAutocompleteIndex = -1;
+    if (typeof activeCellForAutocomplete !== 'undefined') activeCellForAutocomplete = null;
+  } catch (err) {
+    console.warn('hideCellAutocompleteSuggestions error:', err);
+  }
+}
 
 </script>
 </body>

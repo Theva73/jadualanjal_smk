@@ -4347,6 +4347,102 @@ document.addEventListener('click', (e)=>{
     if (typeof watchSubjects === 'function') watchSubjects();
   } catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
 });
+
+// === Row & Column Manipulation Functions (Injected) ===
+function getActiveTable() {
+    return document.querySelector('#tablesContainer table.active');
+}
+function getSelectedOrLastClickedCell(table){
+    let sel = table ? table.querySelector('td.selected, th.selected') : null;
+    if (!sel && typeof lastClickedCell !== 'undefined' && lastClickedCell && lastClickedCell.closest('table') === table){
+        sel = lastClickedCell;
+    }
+    return sel;
+}
+// Add Row Above
+document.getElementById('addRowAboveBtn')?.addEventListener('click', () => {
+    const table = getActiveTable();
+    if (!table) return;
+    const selected = getSelectedOrLastClickedCell(table);
+    if (!selected) { showMessage("Select a row first.", "error"); return; }
+    const row = selected.parentNode;
+    const newRow = table.insertRow(row.rowIndex);
+    for (let i = 0; i < row.cells.length; i++) {
+        const cell = newRow.insertCell(i);
+        cell.contentEditable = "true";
+    }
+    ensureDateHeaderRowExists(table);
+});
+// Add Row Below
+document.getElementById('addRowBelowBtn')?.addEventListener('click', () => {
+    const table = getActiveTable();
+    if (!table) return;
+    const selected = getSelectedOrLastClickedCell(table);
+    if (!selected) { showMessage("Select a row first.", "error"); return; }
+    const row = selected.parentNode;
+    const newRow = table.insertRow(row.rowIndex + 1);
+    for (let i = 0; i < row.cells.length; i++) {
+        const cell = newRow.insertCell(i);
+        cell.contentEditable = "true";
+    }
+    ensureDateHeaderRowExists(table);
+});
+// Add Column Left
+document.getElementById('addColLeftBtn')?.addEventListener('click', () => {
+    const table = getActiveTable();
+    if (!table) return;
+    const selected = getSelectedOrLastClickedCell(table);
+    if (!selected) { showMessage("Select a column first.", "error"); return; }
+    const colIndex = selected.cellIndex;
+    for (let r of table.rows) {
+        const cell = r.insertCell(colIndex);
+        cell.contentEditable = "true";
+    }
+    ensureDateHeaderRowExists(table);
+});
+// Add Column Right
+document.getElementById('addColRightBtn')?.addEventListener('click', () => {
+    const table = getActiveTable();
+    if (!table) return;
+    const selected = getSelectedOrLastClickedCell(table);
+    if (!selected) { showMessage("Select a column first.", "error"); return; }
+    const colIndex = selected.cellIndex + 1;
+    for (let r of table.rows) {
+        const cell = r.insertCell(colIndex);
+        cell.contentEditable = "true";
+    }
+    ensureDateHeaderRowExists(table);
+});
+// Delete Row
+document.getElementById('deleteRowBtn')?.addEventListener('click', () => {
+    const table = getActiveTable();
+    if (!table) return;
+    const selected = getSelectedOrLastClickedCell(table);
+    if (!selected) { showMessage("Select a row first.", "error"); return; }
+    table.deleteRow(selected.parentNode.rowIndex);
+    ensureDateHeaderRowExists(table);
+});
+// Delete Column
+document.getElementById('deleteColBtn')?.addEventListener('click', () => {
+    const table = getActiveTable();
+    if (!table) return;
+    const selected = getSelectedOrLastClickedCell(table);
+    if (!selected) { showMessage("Select a column first.", "error"); return; }
+    const colIndex = selected.cellIndex;
+    for (let r of table.rows) {
+        if (r.cells[colIndex]) r.deleteCell(colIndex);
+    }
+    ensureDateHeaderRowExists(table);
+});
+
+// Optional: make lastClickedCell track any click in tables (non-destructive to existing selection mode)
+document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
+    const cell = e.target?.closest('td,th');
+    if (cell && cell.closest('table')) {
+        lastClickedCell = cell;
+    }
+});
+// === End Injected Patch ===
 </script>
 
 </body>

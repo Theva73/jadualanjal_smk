@@ -1612,7 +1612,9 @@ function detectAndMarkClashes(){
             const sanitizedNames = namesFromDb.map(name => String(name || '').trim()).filter(name => name.length > 0);
             if (sessionToListen === 'pagi') namesPagiShared = sanitizedNames; else namesPetangShared = sanitizedNames;
             if (sessionToListen === currentNameListSession && nameModal?.style.display === 'flex' && searchNameInputElement) renderNameListFromFirestore(searchNameInputElement.value);
-            rebuildAndRenderSummary(); showNameModalLoading(false);
+            
+        document.dispatchEvent(new CustomEvent('sharedNameListUpdated'));
+        rebuildAndRenderSummary(); showNameModalLoading(false);
         }, (error) => { console.error(`Error listening to ${sessionToListen} names:`, error); showMessage(`Error fetching ${sessionToListen} names.`, "error"); showNameModalLoading(false); });
     }
 
@@ -3808,6 +3810,17 @@ let selectedSubject = null;
 let currentSubjectSession = 'pagi';
 let unsubscribeSubjects = null;
 
+
+
+// Listen for updates to the shared name list from the main script.
+document.addEventListener('sharedNameListUpdated', () => {
+    if (typeof subjectsModal !== 'undefined' && subjectsModal && subjectsModal.style.display === 'flex') {
+        console.log('Shared name list updated, re-rendering teacher list in Subjects modal.');
+        if (typeof renderTeachersLists === 'function') {
+            try { renderTeachersLists(); } catch (e) { console.warn('renderTeachersLists() threw', e); }
+        }
+    }
+});
 const subjectsDocRef = doc(getFirestore(), 'artifacts', appId, 'public', 'data', 'subjects', 'main');
 
 const normalize = s => (s||'').trim();

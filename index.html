@@ -633,42 +633,6 @@
   cursor:se-resize;
 }
 </style>
-
-<!-- ===== Subjects styles (NEW) ===== -->
-<style>
-.subject-highlight {
-  outline: 3px solid #8bc34a !important;
-  box-shadow: inset 0 0 0 9999px rgba(139,195,74,0.15);
-}
-.cell-chip { display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.chip-subject, .chip-teacher {
-  display:inline-block; padding:2px 6px; border-radius:10px; font-size:.85em;
-  background:#eef5ff; border:1px solid #cfe2ff; color:#0056b3; white-space:nowrap;
-}
-.chip-teacher { background:#eef9f1; border-color:#cdeedc; color:#1e7e34; }
-</style>
-
-<style>
-/* Compact teacher list styling */
-#teachersInSessionList, #teachersInSubjectList {
-  font-size: 13px;       /* smaller font */
-  line-height: 1.3;      /* tighter line spacing */
-  max-height: 180px;     /* limit height with scroll if too long */
-  overflow-y: auto;      /* add scrollbar if content exceeds max-height */
-  padding: 4px;
-}
-
-#teachersInSessionList li, #teachersInSubjectList li {
-  margin: 2px 0;         /* reduce vertical spacing */
-  padding: 2px 4px;      /* compact padding */
-}
-
-#teachersInSessionList li button, #teachersInSubjectList li button {
-  font-size: 11px;       /* smaller buttons */
-  padding: 2px 6px;      /* tighter button spacing */
-}
-</style>
-
 </head>
 <body>
 <div class="main-container">
@@ -692,20 +656,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="8" x2="22" y2="13"></line><line x1="22" y1="8" x2="17" y2="13"></line></svg>
             <span>Clear Names (All Tables)</span>
         </button>
-</div>
+<button id="searchTimetableBtn" class="top-action-btn" title="Open searchable timetable">🔍 Search Timetable</button>
+    </div>
 
-    
-<!-- === Centered Mode Toggle Bar (High Contrast) === -->
-<style>
-  #centerModeBar{display:flex;align-items:center;justify-content:center;margin:12px 0;}
-  #entryModeBtn.top-action-btn{background:#0d6efd;color:#fff;font-weight:700;border-radius:9999px;padding:10px 18px;min-width:240px;box-shadow:0 2px 6px rgba(0,0,0,.12);}
-  #entryModeBtn.top-action-btn:active{transform:translateY(1px);}
-</style>
-<div id="centerModeBar">
-  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method">Mode: Teacher</button>
-</div>
-
-<div id="collapsibleButtonBars">
+    <div id="collapsibleButtonBars">
         <div class="bar">
             <button id="directCopyFullHtmlBtn" title="Copy the entire page's HTML to clipboard">📋 Copy HTML</button>
         </div>
@@ -735,7 +689,6 @@
             <button id="renameTableBtn" title="Rename the currently active table/sheet">📝 Rename Table</button>
             <button id="deleteTableBtn" title="Delete the currently active table/sheet">❌ Delete Table</button>
             <button id="nameListBtn" title="Open a dialog to manage the shared list of names (Firestore)">👥 Names</button>
-            <button id="subjectListBtn" title="Open a dialog to manage subjects and their teacher groups">📚 Subjects</button>
         </div>
         <div class="bar" id="rowColManipulationBar">
             <button id="addRowAboveBtn" title="Add a new row above the currently selected/clicked row">⬆️ Row Above</button>
@@ -890,10 +843,7 @@
 
     try {
         fbApp = initializeApp(firebaseConfig);
-        
-// ensure global appId for cross-module access
-window.appId = window.appId || (firebaseConfig.projectId || 'jadualanjal_smk');
-fbAuth = getAuth(fbApp);
+        fbAuth = getAuth(fbApp);
         fbDb = getFirestore(fbApp);
         console.log("Firebase services initialized for Shared Scheduler with Project ID:", firebaseConfig.projectId);
     } catch (e) {
@@ -913,9 +863,8 @@ fbAuth = getAuth(fbApp);
     let lastClickedCell = null;
     let selectedNameFromList = null;
     let currentNameListSession = 'pagi';
-    window.namesPagiShared = window.namesPagiShared || [];
-window.namesPetangShared = window.namesPetangShared || [];
-
+    let namesPagiShared = [];
+    let namesPetangShared = [];
     let isDraggingModal = false;
     let modalDragOffsetX, modalDragOffsetY;
     let autocompleteSuggestionsDiv = null;
@@ -949,9 +898,7 @@ window.namesPetangShared = window.namesPetangShared || [];
         if (!customMessageBox) {
             customMessageBox = document.getElementById('customMessageBox');
             if (!customMessageBox) { console.warn("showMessage: customMessageBox not found. Msg:", message); return; }
-        
-window.showMessage = showMessage;
-}
+        }
         customMessageBox.textContent = message;
         customMessageBox.className = `custom-message-box ${type}`;
         customMessageBox.style.display = 'block';
@@ -1595,7 +1542,7 @@ function detectAndMarkClashes(){
         const trimmedName = String(name || '').trim();
         if (!trimmedName) { showMessage("Name cannot be empty.", "info"); return; }
         showNameModalLoading(true);
-        const sessionNames = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        const sessionNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
         if (sessionNames.map(n => String(n || '').toLowerCase()).includes(trimmedName.toLowerCase())) { showMessage(`"${trimmedName}" already exists.`, "info"); showNameModalLoading(false); return; }
         if (!appId || appId === 'default-shared-scheduler-app') { showMessage("Config error: App ID missing.", "error"); showNameModalLoading(false); return; }
         const updatedNames = [...sessionNames, trimmedName].sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
@@ -1612,7 +1559,7 @@ function detectAndMarkClashes(){
         if (await customConfirm(`Delete "${nameToDeleteStr}" from shared ${currentNameListSession} session? This also removes it from tables.`)) {
             showNameModalLoading(true);
             if (!appId || appId === 'default-shared-scheduler-app') { showMessage("Config error: App ID missing.", "error"); showNameModalLoading(false); return; }
-            const currentNames = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+            const currentNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
             const updatedNames = currentNames.filter(name => String(name || '') !== nameToDeleteStr);
             const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
             try {
@@ -1641,11 +1588,9 @@ function detectAndMarkClashes(){
             showNameModalLoading(true);
             const namesFromDb = docSnap.exists() ? (docSnap.data().names || []) : [];
             const sanitizedNames = namesFromDb.map(name => String(name || '').trim()).filter(name => name.length > 0);
-            if (sessionToListen === 'pagi') window.namesPagiShared = sanitizedNames; else window.namesPetangShared = sanitizedNames;
+            if (sessionToListen === 'pagi') namesPagiShared = sanitizedNames; else namesPetangShared = sanitizedNames;
             if (sessionToListen === currentNameListSession && nameModal?.style.display === 'flex' && searchNameInputElement) renderNameListFromFirestore(searchNameInputElement.value);
-            
-        document.dispatchEvent(new CustomEvent('sharedNameListUpdated'));
-        rebuildAndRenderSummary(); showNameModalLoading(false);
+            rebuildAndRenderSummary(); showNameModalLoading(false);
         }, (error) => { console.error(`Error listening to ${sessionToListen} names:`, error); showMessage(`Error fetching ${sessionToListen} names.`, "error"); showNameModalLoading(false); });
     }
 
@@ -2438,46 +2383,247 @@ function detectAndMarkClashes(){
     
     // --- Autocomplete Functions ---
     function showCellAutocompleteSuggestions(cell, inputText) {
-    // **Mode-aware**: teacher vs subject
-    const currentMode = (localStorage.getItem(`scheduleEntryMode_${window.appId || 'default'}`) || 'teacher');
-    if (currentMode === 'subject') {
-        const typedText = String(inputText || '').split(' // ')[0].replace(/\s+/g, ' ').trim();
-        renderSubjectMatches(cell, typedText);
-        return;
-    }
-    // --- Original Teacher Mode logic ---
-    if (!autocompleteSuggestionsDiv) return;
-    const namesForAutocomplete = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
-    let textForMatchingInput = String(inputText || '').split(' // ')[0];
-    const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*'));
-    const textForMatching = wordsForMatching.join(' ').toLowerCase().trim();
-    if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
-    const filteredSuggestions = namesForAutocomplete.filter(name => {
-        const nameStr = String(name || '').toLowerCase().trim();
-        return nameStr.startsWith(textForMatching) && nameStr !== textForMatching;
-    });
-    if (filteredSuggestions.length > 0) {
-        activeCellForAutocomplete = cell;
-        autocompleteSuggestionsDiv.innerHTML = '';
-        filteredSuggestions.slice(0, 10).forEach(suggestion => {
-            const item = document.createElement('div');
-            item.className = 'suggestion-item';
-            item.textContent = suggestion;
-            item.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                selectCellAutocompleteSuggestion(suggestion);
-            });
-            autocompleteSuggestionsDiv.appendChild(item);
+        if (!autocompleteSuggestionsDiv) return;
+        const namesForAutocomplete = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
+        let textForMatchingInput = String(inputText || '').split(' // ')[0]; 
+        const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*')); 
+        const textForMatching = wordsForMatching.join(' ').toLowerCase().trim(); 
+
+        if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
+
+        const filteredSuggestions = namesForAutocomplete.filter(name => {
+            const nameStr = String(name || '').toLowerCase().trim();
+            return nameStr.startsWith(textForMatching) && nameStr !== textForMatching;
         });
-        const cellRect = cell.getBoundingClientRect();
-        autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
-        autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
-        autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
-        autocompleteSuggestionsDiv.style.display = 'block';
-        currentAutocompleteIndex = -1;
-    } else {
-        hideCellAutocompleteSuggestions();
+
+        if (filteredSuggestions.length > 0) {
+            activeCellForAutocomplete = cell;
+            autocompleteSuggestionsDiv.innerHTML = '';
+            filteredSuggestions.slice(0, 10).forEach(suggestion => { 
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = suggestion;
+                item.addEventListener('mousedown', (e) => { 
+                    e.preventDefault(); 
+                    selectCellAutocompleteSuggestion(suggestion);
+                });
+                autocompleteSuggestionsDiv.appendChild(item);
+            });
+            const cellRect = cell.getBoundingClientRect();
+            autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
+            autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
+            autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
+            autocompleteSuggestionsDiv.style.display = 'block';
+            currentAutocompleteIndex = -1; 
+        } else {
+            hideCellAutocompleteSuggestions();
+        }
     }
+    function hideCellAutocompleteSuggestions() {
+        if (autocompleteSuggestionsDiv) autocompleteSuggestionsDiv.style.display = 'none';
+        activeCellForAutocomplete = null;
+        currentAutocompleteIndex = -1;
+    }
+    function selectCellAutocompleteSuggestion(suggestionText) {
+        if (activeCellForAutocomplete) {
+            const targetCell = activeCellForAutocomplete;
+            const overlay = targetCell.querySelector('.merged-cell-overlay');
+            const contentNode = overlay || targetCell; 
+
+            const currentFullText = contentNode.textContent;
+            const remarkPart = currentFullText.includes(' // ') ? currentFullText.substring(currentFullText.indexOf(' // ')) : '';
+            
+            const contentBeforeRemark = currentFullText.split(' // ')[0];
+            const starWordsBeforeRemark = contentBeforeRemark.split(/\s+/).filter(word => word.startsWith('*')).join(' ');
+
+            let newText = suggestionText;
+            if (starWordsBeforeRemark) {
+                newText += ' ' + starWordsBeforeRemark;
+            }
+            newText = (newText.trim() + remarkPart).trim();
+            
+            contentNode.textContent = newText;
+            hideCellAutocompleteSuggestions();
+            rebuildAndRenderSummary(); 
+
+            contentNode.focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            if (sel) {
+                if (contentNode.childNodes.length > 0) {
+                    range.selectNodeContents(contentNode);
+                    range.collapse(false); 
+                } else { 
+                    range.setStart(contentNode, 0);
+                    range.collapse(true);
+                }
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+    }
+    function updateCellSuggestionHighlight() {
+        if (!autocompleteSuggestionsDiv || autocompleteSuggestionsDiv.style.display === 'none') return;
+        const items = autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item');
+        items.forEach((item, index) => {
+            item.classList.toggle('active-suggestion', index === currentAutocompleteIndex);
+        });
+    }
+
+    // --- Modal Drag Functions ---
+    function startDragModal(e, modalContentEl = nameModalContent) {
+        if (e.target.closest('.modal-close-btn')) { isDraggingModal = false; return; }
+        isDraggingModal = true;
+        if(modalContentEl) modalContentEl.classList.add('dragging');
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        const rect = modalContentEl.getBoundingClientRect();
+        modalContentEl.style.position = 'fixed'; 
+        modalContentEl.style.left = `${rect.left}px`;
+        modalContentEl.style.top = `${rect.top}px`;
+        modalContentEl.style.transform = 'none'; 
+        modalDragOffsetX = clientX - modalContentEl.offsetLeft;
+        modalDragOffsetY = clientY - modalContentEl.offsetTop;
+        if (e.type === 'touchstart') e.preventDefault();
+    }
+    function dragModal(e, modalContentEl = nameModalContent) {
+        if (!isDraggingModal || !modalContentEl || !modalContentEl.classList.contains('dragging')) return;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        let newLeft = clientX - modalDragOffsetX;
+        let newTop = clientY - modalDragOffsetY;
+        
+        const modalRect = modalContentEl.getBoundingClientRect(); 
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        if (newLeft < 0) newLeft = 0;
+        if (newTop < 0) newTop = 0;
+        if (newLeft + modalRect.width > viewportWidth) newLeft = viewportWidth - modalRect.width;
+        if (newTop + modalRect.height > viewportHeight) newTop = viewportHeight - modalRect.height;
+        
+        modalContentEl.style.left = `${newLeft}px`;
+        modalContentEl.style.top = `${newTop}px`;
+        if (e.type === 'touchmove') e.preventDefault();
+    }
+    function stopDragModal(e, modalContentEl = nameModalContent) {
+        if (isDraggingModal && modalContentEl && modalContentEl.classList.contains('dragging')) {
+            isDraggingModal = false;
+            modalContentEl.classList.remove('dragging');
+        }
+    }
+
+    // --- Clipboard & Table Management ---
+    async function attemptDirectCopyToClipboard() {
+        const fullHtml = document.documentElement.outerHTML;
+        try { await navigator.clipboard.writeText(fullHtml); showMessage('Full HTML copied!', 'success'); }
+        catch (err) {
+            console.warn('Direct copy failed, trying fallback:', err); const textarea = document.createElement('textarea');
+            textarea.value = fullHtml; textarea.style.position = 'fixed'; textarea.style.left = '-9999px';
+            document.body.appendChild(textarea); textarea.select();
+            try { const success = document.execCommand('copy'); if (success) showMessage('Full HTML copied! (fallback)', 'success'); else showMessage('Copy failed (execCommand).', 'error', 5000); }
+            catch (execErr) { console.error('execCommand copy failed:', execErr); showMessage('Copy failed completely.', 'error', 5000); }
+            document.body.removeChild(textarea);
+        }
+    }
+    
+    function addTabButton(id, label) {
+        if (!tableTabs) return null;
+        const button = document.createElement('button'); button.textContent = label; button.dataset.tableId = id;
+        button.title = `Switch to table: ${label}`; button.onclick = () => switchTable(id);
+        tableTabs.appendChild(button); return button;
+    }
+    function switchTable(id) {
+        const targetTable = document.getElementById(id);
+        if (!targetTable && tablesContainer) { 
+            const firstTableInDOM = tablesContainer.querySelector('table');
+            if (firstTableInDOM) { 
+                id = firstTableInDOM.id; 
+                console.warn(`SwitchTable: Target table '${id}' not found, falling back to the first available table '${firstTableInDOM.id}'.`);
+            } else { 
+                if (tablesContainer.children.length === 0) {
+                    console.warn("SwitchTable: No tables exist. Adding a new default table.");
+                    addNewTable(true); 
+                    return; 
+                }
+                console.error(`SwitchTable: Target table '${id}' not found, and no fallback tables available.`); return;
+            }
+        } else if (!targetTable) { 
+             console.error(`SwitchTable: Target table '${id}' not found, and tablesContainer is missing.`); return;
+        }
+
+        activeTableId = id;
+        if(tablesContainer) Array.from(tablesContainer.querySelectorAll('table')).filter(t => t.dataset.independent !== 'true').forEach(t => t.classList.toggle('active', t.id === id));
+        if(tableTabs) tableTabs.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.tableId === id));
+        deselectAllTableCells(); rebuildAndRenderSummary(); updateAllMergeOverlays(); hideCellAutocompleteSuggestions();
+    }
+    function addNewTable(isInitial = false) {
+        if (!tablesContainer || !tableTabs) { console.error("addNewTable: Critical DOM elements (tablesContainer or tableTabs) missing."); return; }
+        tableCount++; 
+        const defaultTableNameBase = "Schedule";
+        let newTableIndex = tableTabs.children.length + 1;
+        let proposedName = `${defaultTableNameBase} ${newTableIndex}`;
+        
+        const existingNames = Array.from(tableTabs.children).map(btn => btn.textContent);
+        while(existingNames.includes(proposedName)) {
+            newTableIndex++;
+            proposedName = `${defaultTableNameBase} ${newTableIndex}`;
+        }
+
+        const label = isInitial ? proposedName : customPrompt('Enter new table name:', proposedName);
+        if (!label && !isInitial) { 
+            showMessage('Table creation cancelled.', 'info');
+            tableCount--; 
+            return;
+        }
+        const finalTableName = (label || proposedName).trim();
+
+        const newTable = document.createElement('table');
+        newTable.id = `tbl_${Date.now()}_${tableCount}`; 
+        newTable.dataset.tableName = finalTableName;
+
+        const thead = newTable.createTHead();
+        const timeSlotHeaderRow = thead.insertRow();
+        timeSlotHeaderRow.className = ''; 
+        const defaultHeaders = ['Class/Time', '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00'];
+        defaultHeaders.forEach(headerText => {
+            const th = document.createElement('th');
+            th.contentEditable = 'true'; th.textContent = headerText;
+            timeSlotHeaderRow.appendChild(th);
+        });
+        
+        ensureDateHeaderRowExists(newTable); 
+
+        const tbody = newTable.createTBody();
+        for (let r = 0; r < 2; r++) { 
+            const dataRow = tbody.insertRow();
+            for (let c = 0; c < timeSlotHeaderRow.cells.length; c++) {
+                const td = dataRow.insertCell(); td.contentEditable = 'true';
+                if (c === 0) td.textContent = `Sample Class ${String.fromCharCode(65 + r)}`;
+            }
+        }
+        tablesContainer.appendChild(newTable);
+        addTabButton(newTable.id, finalTableName);
+        switchTable(newTable.id); 
+        if (!isInitial) showMessage(`Table "${finalTableName}" added.`, 'success');
+        else console.log(`Initial table "${finalTableName}" created with ID ${newTable.id}.`);
+    }
+
+// === Added: Create standalone table that is excluded from summary ===
+function addNewIndependentTable() {
+    addNewTable(); // reuse standard table creation
+    const newTable = document.getElementById(activeTableId);
+    if (newTable) {
+        newTable.dataset.independent = 'true';
+        newTable.classList.add('independent-table');
+        // tweak tab label
+        const currentTab = tableTabs?.querySelector('button.active');
+        if (currentTab && !currentTab.textContent.includes('(Standalone)')) {
+            currentTab.textContent += ' (Standalone)';
+        }
+    }
+    rebuildAndRenderSummary();
+    showMessage('Standalone table added – it will not appear in the summary.', 'success');
 }
 
     async function promptAndRenameActiveTable() {
@@ -2766,7 +2912,7 @@ function detectAndMarkClashes(){
     }
     function renderNameListFromFirestore(filterText = '') {
         if (!nameListContainer) return; if (!fbIsAuthReady) { nameListContainer.innerHTML = '<p>Loading names...</p>'; return; }
-        nameListContainer.innerHTML = ''; const namesToRender = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        nameListContainer.innerHTML = ''; const namesToRender = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
         const normalizedFilterText = String(filterText || '').toLowerCase().trim();
         if (!Array.isArray(namesToRender)) { nameListContainer.innerHTML = '<p>Error: Name list invalid.</p>'; return; }
         const filteredNames = namesToRender.filter(name => String(name || '').toLowerCase().trim().includes(normalizedFilterText));
@@ -2786,7 +2932,7 @@ function detectAndMarkClashes(){
             try {
                 const importedNames = e.target.result.split(/\r?\n/).map(n => String(n||'').trim()).filter(n => n);
                 if (importedNames.length === 0) { showMessage('No names in file.', 'info'); return; }
-                const currentSessionNames = (currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared).map(n => String(n||'').trim());
+                const currentSessionNames = (currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared).map(n => String(n||'').trim());
                 const combinedNames = [...new Set([...currentSessionNames, ...importedNames])];
                 await saveSharedNameListToFirestore(currentNameListSession, combinedNames);
             } catch (error) { showMessage('Error processing name list file.', 'error'); }
@@ -3460,7 +3606,73 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 
-  
+  <!-- ░░░ Resizable / draggable timetable panel ░░░ -->
+<div id="timetablePanel" class="panel hidden" data-x="0" data-y="0">
+  <div class="panel-header" id="timetableHandle">
+      ☰ Searchable Timetable
+      <button id="closeTimetablePanel" aria-label="Close timetable">×</button>
+  </div>
+
+  <iframe id="timetableIframe"
+          src="./timetable.html"
+          loading="lazy"
+          style="width:100%;height:100%;border:none;"></iframe>
+
+  <div id="timetableGrip" class="panel-grip"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const panel   = document.getElementById('timetablePanel');
+  const handle  = document.getElementById('timetableHandle');
+  const grip    = document.getElementById('timetableGrip');
+  const openBtn = document.getElementById('searchTimetableBtn');
+  const closeBtn= document.getElementById('closeTimetablePanel');
+
+  /* Dynamic iframe path */
+  const iframe = document.getElementById('timetableIframe');
+  if (iframe) {
+      const base = location.href.substring(0, location.href.lastIndexOf('/') + 1);
+      iframe.src = base + 'timetable.html';
+  }
+
+  if(openBtn && panel){
+     openBtn.addEventListener('click', () => panel.classList.remove('hidden'));
+  }
+  if(closeBtn && panel){
+     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+  }
+
+  if(typeof interact !== 'undefined' && panel){
+      interact(panel).draggable({
+        allowFrom:'#timetableHandle',
+        listeners:{ move(event){
+          const t = event.target;
+          const x = (parseFloat(t.getAttribute('data-x'))||0)+event.dx;
+          const y = (parseFloat(t.getAttribute('data-y'))||0)+event.dy;
+          t.style.transform = `translate(${x}px,${y}px)`;
+          t.setAttribute('data-x',x); t.setAttribute('data-y',y);
+        }}
+      });
+
+      interact(panel).resizable({
+        edges:{left:true,right:true,top:true,bottom:true},
+        listeners:{ move(event){
+          const t = event.target;
+          const {width,height} = event.rect;
+          t.style.width = width + 'px';
+          t.style.height = height + 'px';
+          const x = (parseFloat(t.getAttribute('data-x'))||0) + event.deltaRect.left;
+          const y = (parseFloat(t.getAttribute('data-y'))||0) + event.deltaRect.top;
+          t.style.transform = `translate(${x}px,${y}px)`;
+          t.setAttribute('data-x',x); t.setAttribute('data-y',y);
+        }},
+        modifiers:[ interact.modifiers.restrictSize({min:{width:280,height:200},max:{width:window.innerWidth*0.95,height:window.innerHeight*0.95}})]
+      });
+  }
+});
+</script>
+
 <!-- Remove SMK banners completely -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -3473,886 +3685,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, 1000);
 });
-</script>
-
-<!-- ===== Subjects Modal (NEW) ===== -->
-<div id="subjectModal" class="modal">
-  <div class="modal-content" id="subjectModalContent">
-    <div class="modal-header" id="subjectModalHeader">
-      <h3 id="subjectModalTitle">Subjects Manager</h3>
-      <button type="button" class="modal-close-btn" id="closeSubjectModalBtn" title="Close subjects manager">×</button>
-    </div>
-
-    <div class="name-session-tabs">
-      <button id="subjectPagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
-      <button id="subjectPetangTab" data-session="petang">Petang (Afternoon)</button>
-    </div>
-
-    <div class="input-group">
-      <input id="newSubjectInput" placeholder="Add new subject to current session">
-      <button id="addSubjectBtn" title="Add the subject to the current session">Add Subject</button>
-    </div>
-    <div class="input-group">
-      <input id="renameSubjectInput" placeholder="Rename selected subject">
-      <button id="renameSubjectBtn" title="Rename selected subject">Rename</button>
-    </div>
-    <button id="deleteSubjectBtn" style="background:#dc3545;color:#fff;border:none;border-radius:6px;padding:8px 12px;margin-bottom:10px;">Delete Selected Subject</button>
-
-    <div class="input-group">
-      <select id="subjectSelect" title="Pick a subject to manage"></select>
-    </div>
-    <div class="input-group">
-      <input id="attachTeacherInput" placeholder="Type a teacher and press Attach (or choose from list below)">
-      <button id="attachTeacherBtn" title="Attach typed teacher to selected subject">Attach</button>
-    </div>
-
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-      <div style="flex:1;">
-        <h4 style="margin:6px 0;">Teachers in current session</h4>
-        <div id="teachersFromNamesList" style="border:1px solid #ddd;border-radius:8px;max-height:220px;overflow:auto;padding:8px;"></div>
-      </div>
-      <div style="flex:1;">
-        <h4 style="margin:6px 0;">Teachers in selected subject</h4>
-        <div id="teachersInSubject" style="border:1px solid #ddd;border-radius:8px;max-height:220px;overflow:auto;padding:8px;"></div>
-      </div>
-    </div>
-
-    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
-      <button id="detachTeacherBtn" title="Detach highlighted teacher from selected subject">Detach Teacher</button>
-      <button id="exportSubjectsBtn" title="Export all subjects for both sessions">Export</button>
-      <button id="importSubjectsBtn" title="Import subjects JSON">Import</button>
-      <input type="file" id="subjectsImportFile" accept=".json" style="display:none;">
-    </div>
-
-    <div style="margin-top:16px;border-top:1px solid #eee;padding-top:10px;display:flex;gap:8px;align-items:center;">
-      <strong>Quick subject filter:</strong>
-      <select id="subjectFilterSelect" title="Highlight all cells matching a subject"></select>
-      <button id="clearSubjectFilterBtn">Clear Filter</button>
-    </div>
-
-    <div id="loadingIndicatorSubjects" style="display:none;margin-top:10px;"><div class="spinner"></div></div>
-  </div>
-</div>
-
-<!-- ===== Subjects Manager Script (NEW) ===== -->
-<script type="module">
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const subjectsModal = document.getElementById('subjectModal');
-const subjectListBtn = document.getElementById('subjectListBtn');
-const closeSubjectModalBtn = document.getElementById('closeSubjectModalBtn');
-
-const subjectPagiTab = document.getElementById('subjectPagiTab');
-const subjectPetangTab = document.getElementById('subjectPetangTab');
-
-const newSubjectInput = document.getElementById('newSubjectInput');
-const addSubjectBtn = document.getElementById('addSubjectBtn');
-const renameSubjectInput = document.getElementById('renameSubjectInput');
-const renameSubjectBtn = document.getElementById('renameSubjectBtn');
-const deleteSubjectBtn = document.getElementById('deleteSubjectBtn');
-
-const subjectSelect = document.getElementById('subjectSelect');
-const attachTeacherInput = document.getElementById('attachTeacherInput');
-const attachTeacherBtn = document.getElementById('attachTeacherBtn');
-
-const teachersFromNamesListDiv = document.getElementById('teachersFromNamesList');
-const teachersInSubjectDiv = document.getElementById('teachersInSubject');
-const detachTeacherBtn = document.getElementById('detachTeacherBtn');
-
-const exportSubjectsBtn = document.getElementById('exportSubjectsBtn');
-const importSubjectsBtn = document.getElementById('importSubjectsBtn');
-const subjectsImportFile = document.getElementById('subjectsImportFile');
-
-const subjectFilterSelect = document.getElementById('subjectFilterSelect');
-const clearSubjectFilterBtn = document.getElementById('clearSubjectFilterBtn');
-
-const loadingIndicatorSubjects = document.getElementById('loadingIndicatorSubjects');
-
-// uses existing globals defined in your base file
-let subjectsState = { pagi:{}, petang:{} };
-let selectedSubject = null;
-let currentSubjectSession = 'pagi';
-let unsubscribeSubjects = null;
-
-
-
-// Listen for updates to the shared name list from the main script.
-document.addEventListener('sharedNameListUpdated', () => {
-    if (typeof subjectsModal !== 'undefined' && subjectsModal && subjectsModal.style.display === 'flex') {
-        console.log('Shared name list updated, re-rendering teacher list in Subjects modal.');
-        if (typeof renderTeachersLists === 'function') {
-            try { renderTeachersLists(); } catch (e) { console.warn('renderTeachersLists() threw', e); }
-        }
-    }
-});
-const subjectsDocRef = doc(getFirestore(), 'artifacts', appId, 'public', 'data', 'subjects', 'main');
-
-const normalize = s => (s||'').trim();
-function getNamesForSession(session){
-  const pagi = Array.from(window.namesPagiShared||[]);
-  const petang = Array.from(window.namesPetangShared||[]);
-  const current = (session === 'petang') ? petang : pagi;
-  const unionSorted = Array.from(new Set([...pagi, ...petang])).sort((a,b)=>String(a).localeCompare(String(b)));
-  return (Array.isArray(current) && current.length) ? current : unionSorted;
-}
-function ensureSubjectsSessionMap(sess){
-  if(!subjectsState[sess]) subjectsState[sess] = {};
-}
-function renderSubjectsUI(){
-  const sessMap = subjectsState[currentSubjectSession] || {};
-  const allSubjects = Object.keys(sessMap).sort((a,b)=>a.localeCompare(b));
-  subjectSelect.innerHTML = '';
-  subjectFilterSelect.innerHTML = '<option value="">— Select subject to highlight —</option>';
-  allSubjects.forEach(s=>{
-    const opt1 = document.createElement('option'); opt1.value = s; opt1.textContent = s; subjectSelect.appendChild(opt1);
-    const opt2 = document.createElement('option'); opt2.value = s; opt2.textContent = s; subjectFilterSelect.appendChild(opt2);
-  });
-  if(allSubjects.length){
-    if(!selectedSubject || !sessMap[selectedSubject]) selectedSubject = allSubjects[0];
-    subjectSelect.value = selectedSubject;
-  } else {
-    selectedSubject = null;
-  }
-  renderTeachersLists();
-}
-function renderTeachersLists(){
-  const names = getNamesForSession(currentSubjectSession);
-  teachersFromNamesListDiv.innerHTML = '';
-  names.forEach(n=>{
-    const item = document.createElement('div');
-    item.className = 'name-item';
-    const span = document.createElement('span'); span.textContent = n; span.onclick = ()=>{ attachTeacherInput.value = n; };
-    item.appendChild(span);
-    teachersFromNamesListDiv.appendChild(item);
-  });
-  teachersInSubjectDiv.innerHTML = '';
-  const inSubject = (subjectsState[currentSubjectSession]?.[selectedSubject] || []);
-  inSubject.forEach(n=>{
-    const row = document.createElement('div'); row.className = 'name-item';
-    const span = document.createElement('span'); span.textContent = n;
-    span.onclick = ()=>{
-      Array.from(teachersInSubjectDiv.querySelectorAll('.highlighted')).forEach(x=>x.classList.remove('highlighted'));
-      row.classList.add('highlighted');
-      detachTeacherBtn.dataset.teacher = n;
-    };
-    const del = document.createElement('button'); del.textContent = 'Remove'; del.onclick = async ()=>{ await detachTeacher(n); };
-    row.appendChild(span); row.appendChild(del);
-    teachersInSubjectDiv.appendChild(row);
-  });
-}
-function showSubjectsLoading(b){ loadingIndicatorSubjects.style.display = b?'flex':'none'; }
-
-async function loadSubjectsOnce(){
-  showSubjectsLoading(true);
-  try{
-    const snap = await getDoc(subjectsDocRef);
-    if(snap.exists()){
-      const data = snap.data()||{};
-      subjectsState = { pagi: data.pagi||{}, petang: data.petang||{} };
-    } else {
-      subjectsState = { pagi:{}, petang:{} };
-      await setDoc(subjectsDocRef, { pagi:{}, petang:{}, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-    }
-  } catch(e){
-    console.error('Load subjects error:', e);
-    showMessage && showMessage('Failed to load subjects', 'error');
-  } finally {
-    showSubjectsLoading(false);
-    renderSubjectsUI();
-  }
-}
-function watchSubjects(){
-  if(unsubscribeSubjects) unsubscribeSubjects();
-  unsubscribeSubjects = onSnapshot(subjectsDocRef, (snap)=>{
-    if(snap.exists()){
-      const data=snap.data()||{};
-      subjectsState = { pagi:data.pagi||{}, petang:data.petang||{} };
-      renderSubjectsUI();
-      refreshAutocompleteSubjects();
-    }
-  });
-}
-async function saveSubjectsState(){
-  try{
-    await updateDoc(subjectsDocRef, { pagi: subjectsState.pagi, petang: subjectsState.petang, updatedAt: serverTimestamp() });
-  } catch(e){
-    await setDoc(subjectsDocRef, { pagi: subjectsState.pagi, petang: subjectsState.petang, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-  }
-}
-async function addSubject(){
-  const s = normalize(newSubjectInput.value);
-  if(!s) return showMessage && showMessage('Enter a subject name', 'info');
-  ensureSubjectsSessionMap(currentSubjectSession);
-  const sessMap = subjectsState[currentSubjectSession];
-  if(sessMap[s]) return showMessage && showMessage('Subject already exists', 'info');
-  sessMap[s] = [];
-  await saveSubjectsState();
-  newSubjectInput.value='';
-  selectedSubject=s;
-  renderSubjectsUI();
-  showMessage && showMessage(`Subject "${s}" added`, 'success');
-}
-async function renameSubject(){
-  const newName = normalize(renameSubjectInput.value);
-  if(!selectedSubject) return showMessage && showMessage('Select a subject to rename', 'info');
-  if(!newName) return showMessage && showMessage('Enter a new name', 'info');
-  if(newName===selectedSubject) return;
-  ensureSubjectsSessionMap(currentSubjectSession);
-  const sessMap = subjectsState[currentSubjectSession];
-  if(sessMap[newName]) return showMessage && showMessage('Subject with that name already exists', 'error');
-  sessMap[newName] = sessMap[selectedSubject] || [];
-  delete sessMap[selectedSubject];
-  await saveSubjectsState();
-  renameSubjectInput.value='';
-  selectedSubject=newName;
-  renderSubjectsUI();
-  showMessage && showMessage('Subject renamed', 'success');
-}
-async function deleteSubject(){
-  if(!selectedSubject) return showMessage && showMessage('Select a subject to delete', 'info');
-  ensureSubjectsSessionMap(currentSubjectSession);
-  delete subjectsState[currentSubjectSession][selectedSubject];
-  selectedSubject=null;
-  await saveSubjectsState();
-  renderSubjectsUI();
-  showMessage && showMessage('Subject deleted', 'success');
-}
-async function attachTeacher(name){
-  name = normalize(name);
-  if(!name) return showMessage && showMessage('Type or pick a teacher', 'info');
-  if(!selectedSubject) return showMessage && showMessage('Select a subject first', 'info');
-  ensureSubjectsSessionMap(currentSubjectSession);
-  const arr = subjectsState[currentSubjectSession][selectedSubject] || [];
-  if(!arr.includes(name)) arr.push(name);
-  subjectsState[currentSubjectSession][selectedSubject] = arr.sort((a,b)=>a.localeCompare(b));
-  await saveSubjectsState();
-  attachTeacherInput.value='';
-  renderTeachersLists();
-}
-async function detachTeacher(name){
-  if(!selectedSubject) return;
-  ensureSubjectsSessionMap(currentSubjectSession);
-  const arr = subjectsState[currentSubjectSession][selectedSubject] || [];
-  subjectsState[currentSubjectSession][selectedSubject] = arr.filter(n=>n!==name);
-  await saveSubjectsState();
-  renderTeachersLists();
-}
-
-function clearSubjectHighlights(){
-  if(!tablesContainer) return;
-  tablesContainer.querySelectorAll('td, .merged-cell-overlay').forEach(el=>{ el.classList.remove('subject-highlight'); });
-}
-function highlightSubjectAcrossActiveTable(subject){
-  clearSubjectHighlights();
-  if(!subject) return;
-  if(!tablesContainer) return;
-  const activeTable = tablesContainer.querySelector('table.active');
-  if(!activeTable) return;
-  const cells = activeTable.querySelectorAll('td');
-  cells.forEach(td=>{
-    let text = '';
-    const overlay = td.querySelector('.merged-cell-overlay');
-    if(overlay) text = overlay.textContent.trim();
-    else text = td.textContent.trim();
-    const hasChip = td.querySelector('.chip-subject');
-    const subjectFromChip = hasChip ? td.querySelector('.chip-subject')?.textContent : null;
-    if(subjectFromChip && subjectFromChip.toUpperCase() === subject.toUpperCase()){
-      (overlay||td).classList.add('subject-highlight');
-    } else {
-      if(text.toUpperCase().startsWith((subject+' >').toUpperCase())){
-        (overlay||td).classList.add('subject-highlight');
-      }
-    }
-  });
-}
-
-let subjectAutocomplete = [];
-function refreshAutocompleteSubjects(){
-  const sessMap = subjectsState[currentSubjectSession]||{};
-  const pairs = [];
-  Object.keys(sessMap).forEach(sub=>{ (sessMap[sub]||[]).forEach(t=>{ pairs.push(`${sub} > ${t}`); }); });
-  subjectAutocomplete = pairs.sort((a,b)=>a.localeCompare(b));
-}
-
-window.renderCellChipsIfNeeded = function(cell){
-  if(!cell) return;
-  let el = cell.querySelector('.merged-cell-overlay') || cell;
-  const raw = (el.textContent||'').trim();
-  const parts = raw.split('//');
-  const main = parts[0].trim();
-  const notes = parts.slice(1).join('//').trim();
-  const match = main.match(/^(.+?)\s*>\s*(.+)$/);
-  if(match){
-    const subject = match[1].trim();
-    const teacher = match[2].trim();
-    const wrapper = document.createElement('span'); wrapper.className = 'cell-chip';
-    const s = document.createElement('span'); s.className = 'chip-subject'; s.textContent = subject;
-    const t = document.createElement('span'); t.className = 'chip-teacher'; t.textContent = teacher;
-    wrapper.appendChild(s); wrapper.appendChild(t);
-    el.textContent = ''; el.appendChild(wrapper);
-    if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
-  }
-};
-
-(function monkeyPatchAutocomplete(){
-  const box = document.getElementById('autocompleteSuggestions');
-  document.addEventListener('focusin', (e)=>{
-    const td = e.target?.closest?.('td'); if(!td) return;
-    refreshAutocompleteSubjects();
-  });
-  document.addEventListener('click', (e)=>{
-    setTimeout(()=>{
-      const active = document.activeElement?.closest?.('td');
-      if(active) window.renderCellChipsIfNeeded(active);
-    }, 0);
-  });
-  document.addEventListener('focusout',(e)=>{
-    const td = e.target?.closest?.('td');
-    if(td) window.renderCellChipsIfNeeded(td);
-  });
-})();
-
-function enhanceSummaryWithSubjects(){
-  if(!summaryTableElement || !summaryTableElement.tBodies[0]) return;
-  const rows = Array.from(summaryTableElement.tBodies[0].rows);
-  if(!rows.length) return;
-  const activeTable = document.querySelector('#tablesContainer table.active');
-  const teacherToSubject = {};
-  if(activeTable){
-    const tds = activeTable.querySelectorAll('td');
-    tds.forEach(td=>{
-      const subEl = td.querySelector('.chip-subject');
-      const tEl   = td.querySelector('.chip-teacher');
-      if(subEl && tEl){
-        const sub = subEl.textContent.trim();
-        const tch = tEl.textContent.trim();
-        if(sub && tch){
-          teacherToSubject[tch] = teacherToSubject[tch] || new Set();
-          teacherToSubject[tch].add(sub);
-        }
-      }
-    });
-  }
-  rows.forEach(row=>{
-    const nameCell = row.cells?.[0];
-    if(!nameCell) return;
-    const rawName = (nameCell.textContent||'').trim();
-    const subjectsSeen = Array.from(teacherToSubject[rawName]||[]);
-    if(subjectsSeen.length){
-      nameCell.textContent = `${rawName} (${subjectsSeen.join(', ')})`;
-    }
-  });
-}
-
-subjectListBtn?.addEventListener('click', async ()=>{
-  subjectsModal.style.display='flex';
-  currentSubjectSession = (document.querySelector('.name-session-tabs button.active')?.dataset?.session) || 'pagi';
-  await loadSubjectsOnce();
-  watchSubjects();
-});
-closeSubjectModalBtn?.addEventListener('click', ()=>{
-  subjectsModal.style.display='none';
-  if(unsubscribeSubjects) { unsubscribeSubjects(); unsubscribeSubjects = null; }
-});
-subjectPagiTab?.addEventListener('click', ()=>{
-  subjectPagiTab.classList.add('active'); subjectPetangTab.classList.remove('active');
-  currentSubjectSession = 'pagi'; renderSubjectsUI();
-});
-subjectPetangTab?.addEventListener('click', ()=>{
-  subjectPetangTab.classList.add('active'); subjectPagiTab.classList.remove('active');
-  currentSubjectSession = 'petang'; renderSubjectsUI();
-});
-
-addSubjectBtn?.addEventListener('click', addSubject);
-renameSubjectBtn?.addEventListener('click', renameSubject);
-deleteSubjectBtn?.addEventListener('click', deleteSubject);
-
-subjectSelect?.addEventListener('change', (e)=>{ selectedSubject = e.target.value || null; renderTeachersLists(); });
-attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInput.value));
-
-
-/* === Attach-Teacher Autocomplete (Subjects Modal) === */
-(function(){
-  // Reuse the global suggestions div used by schedule autocomplete
-  // Fallback create if missing
-  if (typeof autocompleteSuggestionsDiv === 'undefined' || !autocompleteSuggestionsDiv) {
-    window.autocompleteSuggestionsDiv = document.createElement('div');
-    autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';
-    document.body.appendChild(autocompleteSuggestionsDiv);
-  }
-
-  const input = document.getElementById('attachTeacherInput');
-  if (!input) return;
-
-  let activeIndex = -1;
-  let currentItems = [];
-
-  function getCandidateNames(){
-    // Prefer current subject session list; fallback to union
-    try { 
-      if (typeof getNamesForSession === 'function') {
-        return getNamesForSession(typeof currentSubjectSession!=='undefined'? currentSubjectSession : 'pagi') || [];
-      }
-    } catch(_) {}
-    const pagi = Array.from(window.namesPagiShared || []);
-    const petang = Array.from(window.namesPetangShared || []);
-    return Array.from(new Set([...pagi, ...petang]));
-  }
-
-  function positionDropdown(anchorEl){
-    const rect = anchorEl.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const left = rect.left + scrollLeft;
-    const top = rect.bottom + scrollTop;
-    autocompleteSuggestionsDiv.style.position = 'absolute';
-    autocompleteSuggestionsDiv.style.left = left + 'px';
-    autocompleteSuggestionsDiv.style.top = top + 'px';
-    autocompleteSuggestionsDiv.style.minWidth = rect.width + 'px';
-    autocompleteSuggestionsDiv.style.zIndex = 9999;
-    autocompleteSuggestionsDiv.style.background = '#fff';
-    autocompleteSuggestionsDiv.style.border = '1px solid #ddd';
-    autocompleteSuggestionsDiv.style.borderRadius = '8px';
-    autocompleteSuggestionsDiv.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-    autocompleteSuggestionsDiv.style.maxHeight = '240px';
-    autocompleteSuggestionsDiv.style.overflowY = 'auto';
-  }
-
-  function clearDropdown(){ autocompleteSuggestionsDiv.innerHTML = ''; activeIndex = -1; currentItems = []; }
-
-  function hideDropdown(){ clearDropdown(); autocompleteSuggestionsDiv.style.display = 'none'; }
-
-  function showDropdown(){ autocompleteSuggestionsDiv.style.display = 'block'; }
-
-  function buildItems(q){
-    const needle = String(q||'').toLowerCase().trim();
-    if (!needle){ hideDropdown(); return; }
-    const words = needle.split(/\s+/).filter(Boolean);
-    const names = getCandidateNames();
-    const filtered = names.filter(n => {
-      const s = String(n).toLowerCase();
-      return words.every(w => s.includes(w)) || s.startsWith(needle);
-    }).slice(0, 50);
-
-    clearDropdown();
-    if (!filtered.length){ hideDropdown(); return; }
-
-    filtered.forEach((name, i) => {
-      const div = document.createElement('div');
-      div.textContent = name;
-      div.style.padding = '8px 10px';
-      div.style.cursor = 'pointer';
-      div.addEventListener('mouseenter', ()=>{ setActive(i); });
-      div.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); // prevent blur
-      div.addEventListener('click', ()=>{
-        input.value = name;
-        hideDropdown();
-        setTimeout(()=> input.focus(), 0);
-      });
-      autocompleteSuggestionsDiv.appendChild(div);
-    });
-    currentItems = Array.from(autocompleteSuggestionsDiv.children);
-    setActive(0);
-    positionDropdown(input);
-    showDropdown();
-  }
-
-  function setActive(i){
-    currentItems.forEach((el, idx)=>{
-      el.style.background = idx===i ? '#eef6ff' : '#fff';
-    });
-    activeIndex = i;
-  }
-
-  function move(delta){
-    if (!currentItems.length) return;
-    let i = activeIndex + delta;
-    if (i < 0) i = currentItems.length - 1;
-    if (i >= currentItems.length) i = 0;
-    setActive(i);
-    const el = currentItems[i];
-    const pTop = autocompleteSuggestionsDiv.scrollTop;
-    const pBottom = pTop + autocompleteSuggestionsDiv.clientHeight;
-    const eTop = el.offsetTop;
-    const eBottom = eTop + el.offsetHeight;
-    if (eTop < pTop) autocompleteSuggestionsDiv.scrollTop = eTop;
-    else if (eBottom > pBottom) autocompleteSuggestionsDiv.scrollTop = eBottom - autocompleteSuggestionsDiv.clientHeight;
-  }
-
-  function acceptActive(){
-    if (activeIndex>=0 && currentItems[activeIndex]){
-      const name = currentItems[activeIndex].textContent;
-      input.value = name;
-      hideDropdown();
-    }
-  }
-
-  // Wire events
-  input.addEventListener('input', ()=> buildItems(input.value));
-  input.addEventListener('keydown', (e)=>{
-    if (e.key === 'ArrowDown'){ e.preventDefault(); move(1); }
-    else if (e.key === 'ArrowUp'){ e.preventDefault(); move(-1); }
-    else if (e.key === 'Enter'){ if (autocompleteSuggestionsDiv.style.display!=='none'){ e.preventDefault(); acceptActive(); } }
-    else if (e.key === 'Escape'){ hideDropdown(); }
-  });
-
-  // Hide on outside click / scroll
-  document.addEventListener('click', (e)=>{
-    if (e.target !== input && !autocompleteSuggestionsDiv.contains(e.target)){ hideDropdown(); }
-  }, true);
-  window.addEventListener('scroll', ()=>{ if (autocompleteSuggestionsDiv.style.display!=='none') positionDropdown(input); }, true);
-
-  // Also refresh when shared name list updates (from your earlier patch)
-  document.addEventListener('sharedNameListUpdated', ()=>{
-    if (document.activeElement === input){ buildItems(input.value); }
-  });
-
-  // If the modal opens, reset dropdown
-  if (typeof subjectsModal !== 'undefined'){
-    const obs = new MutationObserver(()=>{ if (subjectsModal.style.display === 'flex'){ hideDropdown(); } });
-    obs.observe(subjectsModal, { attributes: true, attributeFilter: ['style'] });
-  }
-})();
-/* === /Attach-Teacher Autocomplete === */
-
-
-
-detachTeacherBtn?.addEventListener('click', async ()=>{
-  const t = detachTeacherBtn.dataset.teacher;
-  if(t) await detachTeacher(t);
-});
-
-exportSubjectsBtn?.addEventListener('click', ()=>{
-  const payload = JSON.stringify(subjectsState, null, 2);
-  const blob = new Blob([payload], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `subjects_${appId}_${new Date().toISOString().slice(0,10)}.json`; a.click();
-});
-importSubjectsBtn?.addEventListener('click', ()=> subjectsImportFile.click());
-subjectsImportFile?.addEventListener('change', async (e)=>{
-  const file = e.target.files?.[0]; if(!file) return;
-  const text = await file.text();
-  try{
-    const obj = JSON.parse(text);
-    if(obj && typeof obj==='object'){
-      subjectsState = { pagi: obj.pagi||{}, petang: obj.petang||{} };
-      await saveSubjectsState();
-      showMessage && showMessage('Subjects imported','success');
-    } else throw new Error('Invalid JSON');
-  } catch(err){
-    showMessage && showMessage('Import failed','error');
-  } finally {
-    subjectsImportFile.value = '';
-  }
-});
-
-subjectFilterSelect?.addEventListener('change', (e)=>{
-  highlightSubjectAcrossActiveTable(e.target.value||'');
-  enhanceSummaryWithSubjects();
-});
-clearSubjectFilterBtn?.addEventListener('click', ()=>{
-  subjectFilterSelect.value='';
-  clearSubjectHighlights();
-  enhanceSummaryWithSubjects();
-});
-
-document.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){
-    const td = document.activeElement?.closest?.('td');
-    if(td) setTimeout(()=>window.renderCellChipsIfNeeded(td), 0);
-  }
-});
-
-const origBuildSummary = window.buildSummaryTableSkeleton;
-if(typeof origBuildSummary === 'function'){
-  window.buildSummaryTableSkeleton = function(...args){
-    const result = origBuildSummary.apply(this, args);
-    setTimeout(()=>{ enhanceSummaryWithSubjects(); },0);
-    return result;
-  };
-}
-</script>
-
-<script type="module">
-// Always-open handler for 📚 Subjects button, survives panel re-renders
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest?.('#subjectListBtn');
-  if(!btn) return;
-  const modal = document.getElementById('subjectModal');
-  if(!modal){ window.showMessage?.('Subjects modal missing','error'); return; }
-  // make sure button is enabled
-  btn.disabled = false; btn.style.pointerEvents='auto'; btn.classList.remove('disabled','is-disabled');
-  modal.style.display='flex';
-  try {
-    const active = document.querySelector('.name-session-tabs button.active');
-    window.currentSubjectSession = active?.dataset?.session || 'pagi';
-    if (typeof loadSubjectsOnce === 'function') loadSubjectsOnce();
-    if (typeof watchSubjects === 'function') watchSubjects();
-  } catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
-});
-
-
-
-// === Row & Column Manipulation Functions (Injected v2) ===
-
-// Guard globals used by existing code
-window.lastClickedCell = window.lastClickedCell || null;
-
-// Safe message helper (fallbacks if showMessage isn't in scope yet)
-const __safeShow = (msg, type='info') => {
-  try { (typeof showMessage === 'function') ? showMessage(msg, type) : alert(msg); }
-  catch (_) { alert(msg); }
-};
-
-function getActiveTable(){
-  return document.querySelector('#tablesContainer table active, #tablesContainer table.active');
-}
-function getSelectedCell(table){
-  if(!table) return null;
-  let sel = table.querySelector('td.selected, th.selected');
-  if(!sel && window.lastClickedCell && window.lastClickedCell.closest('table') === table){
-    sel = window.lastClickedCell;
-  }
-  return sel;
-}
-function getBodyAndRow(table, selected){
-  const tbody = table.tBodies[0] || table.createTBody();
-  // Prefer a row in TBODY; if clicked header, fall back to last body row
-  let row = selected ? selected.closest('tbody tr') : null;
-  if(!row && tbody.rows.length){ row = tbody.rows[tbody.rows.length-1]; }
-  return { tbody, row };
-}
-// how many columns should a new row have?
-function getColumnCountForNewRow(table){
-  const tbody = table.tBodies[0];
-  if(tbody && tbody.rows.length){ return tbody.rows[0].cells.length; }
-  const thead = table.tHead;
-  if(thead){
-    // find the last non-date-header row
-    let rows = Array.from(thead.rows);
-    rows = rows.filter(r => !r.classList.contains('date-header-row'));
-    if(rows.length){ return rows[rows.length-1].cells.length; }
-  }
-  // fallback to first row in table
-  return table.rows[0] ? table.rows[0].cells.length : 1;
-}
-
-// Add Row Above
-document.getElementById('addRowAboveBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  const { tbody, row } = getBodyAndRow(table, selected);
-  if(!row && !tbody) { __safeShow("No table body found.", "error"); return; }
-  const idx = row ? row.sectionRowIndex : 0;
-  const newRow = tbody.insertRow(idx);
-  const cols = getColumnCountForNewRow(table);
-  for(let i=0;i<cols;i++){ const c = newRow.insertCell(i); c.contentEditable = "true"; }
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Add Row Below
-document.getElementById('addRowBelowBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  const { tbody, row } = getBodyAndRow(table, selected);
-  const idx = row ? row.sectionRowIndex + 1 : tbody.rows.length;
-  const newRow = tbody.insertRow(idx);
-  const cols = getColumnCountForNewRow(table);
-  for(let i=0;i<cols;i++){ const c = newRow.insertCell(i); c.contentEditable = "true"; }
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Insert column helper: add at index for all rows in THEAD and TBODY
-function insertColumn(table, insertIndex){
-  const sections = [];
-  if(table.tHead) sections.push(table.tHead);
-  for(const tb of table.tBodies) sections.push(tb);
-  // also include tFoot if used in future
-  if(table.tFoot) sections.push(table.tFoot);
-  for(const sec of sections){
-    for(const r of sec.rows){
-      const idx = Math.min(insertIndex, r.cells.length);
-      const cell = r.insertCell(idx);
-      cell.contentEditable = "true";
-    }
-  }
-}
-
-// Add Column Left
-document.getElementById('addColLeftBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  if(!selected){ __safeShow("Select a column first.", "error"); return; }
-  insertColumn(table, selected.cellIndex);
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Add Column Right
-document.getElementById('addColRightBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  if(!selected){ __safeShow("Select a column first.", "error"); return; }
-  insertColumn(table, selected.cellIndex + 1);
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Delete Row (TBODY only)
-document.getElementById('deleteRowBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  const tbody = table.tBodies[0];
-  if(!tbody){ __safeShow("No rows to delete.", "error"); return; }
-  const row = selected ? selected.closest('tbody tr') : null;
-  if(!row){ __safeShow("Select a body row to delete.", "error"); return; }
-  tbody.deleteRow(row.sectionRowIndex);
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Delete Column (all sections)
-document.getElementById('deleteColBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  if(!selected){ __safeShow("Select a column first.", "error"); return; }
-  const idx = selected.cellIndex;
-  const sections = [];
-  if(table.tHead) sections.push(table.tHead);
-  for(const tb of table.tBodies) sections.push(tb);
-  if(table.tFoot) sections.push(table.tFoot);
-  for(const sec of sections){
-    for(const r of sec.rows){
-      if(r.cells[idx]) r.deleteCell(idx);
-    }
-  }
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Track last clicked cell for usability
-document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
-  const cell = e.target?.closest('td,th');
-  if(cell && cell.closest('table')) window.lastClickedCell = cell;
-});
-// === End Injected v2 ===
-</script>
-
-
-<!-- === Mode Toggle + Subject Hijack === -->
-<script>
-(function(){
-  const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
-  const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
-  const setMode = (m) => localStorage.setItem(MODE_KEY, m);
-
-  function setLabel(btn){ const m=getMode(); btn.textContent=(m==='subject')?'Mode: Subject':'Mode: Teacher'; }
-
-  function initModeBtn(){
-    const btn=document.getElementById('entryModeBtn'); if(!btn) return;
-    setLabel(btn);
-    btn.addEventListener('click', ()=>{ const next=(getMode()==='subject')?'teacher':'subject'; setMode(next); setLabel(btn); try{window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`,'success');}catch(_){}});
-  }
-
-  if(!localStorage.getItem(MODE_KEY)){ localStorage.setItem(MODE_KEY,'subject'); }
-  document.addEventListener('DOMContentLoaded', initModeBtn);
-
-  // ==== SUBJECT SUGGESTION HIJACK ====
-  function subjectList(sess){
-    try{ return Object.keys((window.subjectsState?.[sess])||{}); }catch(_){ return []; }
-  }
-  function currentSubjectSession(){
-    const tab=document.querySelector('.name-session-tabs button.active');
-    return (window.currentSubjectSession)||tab?.dataset?.session||'pagi';
-  }
-  function renderSubjectMatches(cell, typed){
-    const box=window.autocompleteSuggestionsDiv; if(!box) return;
-    const sess=currentSubjectSession();
-    const list=subjectList(sess);
-    const needle=(typed||'').toLowerCase();
-    const matches=list.filter(s=>String(s).toLowerCase().startsWith(needle)).slice(0,14);
-    box.innerHTML='';
-    matches.forEach(sub=>{
-      const div=document.createElement('div'); div.className='suggestion-item'; div.textContent=sub;
-      div.addEventListener('mousedown', (e)=>{
-        e.preventDefault();
-        const arr=Array.from((window.subjectsState?.[sess]?.[sub])||[]);
-        const val=(arr.length===1)?`${sub} > ${arr[0]}`:`${sub} > `;
-        window.selectCellAutocompleteSuggestion(val);
-        if(arr.length>1){ try{window.showMessage?.(`Select teacher for "${sub}": ${arr.join(', ')}`,'info',4000);}catch(_){ } }
-      });
-      box.appendChild(div);
-    });
-    const r=cell.getBoundingClientRect();
-    box.style.left = (r.left + window.scrollX) + 'px';
-    box.style.top  = (r.bottom + window.scrollY) + 'px';
-    box.style.minWidth = r.width + 'px';
-    box.style.display='block';
-    window.currentAutocompleteIndex=-1;
-  }
-
-  function typedFromCell(cell){
-    const el=cell?.querySelector('[contenteditable="true"]')||cell;
-    return (el?.textContent||'').split(' // ')[0].replace(/\s+/g,' ').trim();
-  }
-
-  function hijack(){
-    if(getMode()!=='subject') return;
-    const box=window.autocompleteSuggestionsDiv; if(!box || box.style.display==='none') return;
-    const cell=window.activeCellForAutocomplete || document.activeElement?.closest?.('td');
-    if(!cell) return;
-    const txt=typedFromCell(cell);
-    renderSubjectMatches(cell, txt);
-  }
-
-  const ensureHijack = () => { try{ hijack(); }catch(_){}};
-
-  document.addEventListener('input', ensureHijack, true);
-  document.addEventListener('keyup', ensureHijack, true);
-  document.addEventListener('focus', ensureHijack, true);
-
-  const boxReady = setInterval(()=>{
-    if(window.autocompleteSuggestionsDiv){
-      clearInterval(boxReady);
-      const obs=new MutationObserver(()=>ensureHijack());
-      obs.observe(window.autocompleteSuggestionsDiv, {childList:true, attributes:true, attributeFilter:['style']});
-    }
-  }, 120);
-})();
-</script>
-
-<!-- === Summary expansion & conflicts (unchanged) === -->
-<script>
-(() => {
-  const clean = (s) => String(s || '').trim();
-  const splitRemarks = (txt) => clean(txt).split(' // ')[0];
-  const minutes = (hhmm) => { if(!hhmm||typeof hhmm!=='string')return NaN; const p=hhmm.split(/[:.]/); if(p.length<2)return NaN; const h=parseInt(p[0],10),m=parseInt(p[1],10); return (Number.isNaN(h)||Number.isNaN(m))?NaN:h*60+m; };
-  const rangeStrToMinutes = (range) => { if(!range||typeof range!=='string'||!range.includes('-'))return null; const [s,e]=range.split('-').map(t=>t.trim()); const st=minutes(s), en=minutes(e); return (Number.isNaN(st)||Number.isNaN(en))?null:[st,en]; };
-  const getActiveSubjectSession = () => { const tab = document.querySelector('.name-session-tabs button.active'); return (window.currentSubjectSession) || tab?.dataset?.session || 'pagi'; };
-  const getTeachersForSubject = (subject, session) => { const map = (window.subjectsState?.[session]) || {}; return Array.from(map[subject] || []); };
-  function parseSubjectsAndTeachersFromCellText(cellText, session){ const base=splitRemarks(cellText); if(!base) return []; const items=base.split(/[,;\n]/).map(s=>clean(s)).filter(Boolean); const out=[]; for(const it of items){ if(it.includes('>')){ const [sub,tch]=it.split('>').map(s=>clean(s)); if(sub) out.push({subject:sub, teachers:tch?[tch]:getTeachersForSubject(sub,session)}); } else { out.push({subject:it, teachers:getTeachersForSubject(it,session)});} } return out; }
-  function expandSummarySubjectsToTeachers(){ const summary=document.getElementById('summaryTable'); if(!summary||!summary.tBodies[0])return; const session=getActiveSubjectSession(); const headers=Array.from(summary.tHead?.rows?.[0]?.cells||[]).map(th=>clean(th.textContent)); const headerRanges=headers.map(txt=> (txt==='Nama/Masa')?null:rangeStrToMinutes(txt.replace(/\s/g,''))); Array.from(summary.tBodies[0].rows||[]).forEach(row=>{ for(let c=1;c<row.cells.length;c++){ const cell=row.cells[c]; if(cell.style.display==='none') continue; const raw=clean(cell.getAttribute('data-expanded-from')||cell.textContent); if(!raw) continue; const already=/\(.+\)/.test(cell.textContent); if(already && cell.hasAttribute('data-expanded-from')) continue; const entries=parseSubjectsAndTeachersFromCellText(raw,session); if(!entries.length) continue; const pretty=entries.map(e=> e.teachers?.length?`${e.subject} (${e.teachers.join(', ')})`:e.subject).join(', '); cell.setAttribute('data-expanded-from',raw); cell.textContent=pretty; } }); detectTeacherConflictsAcrossRows(summary, headerRanges); }
-  function detectTeacherConflictsAcrossRows(summaryTable, headerRanges){ const tbody=summaryTable.tBodies[0]; if(!tbody) return; const rows=Array.from(tbody.rows); const extract=(txt)=>{ const hits=[]; String(txt||'').split(',').forEach(chunk=>{ const m=chunk.match(/\(([^)]+)\)/); if(m&&m[1]) m[1].split(',').forEach(x=>{ const t=clean(x); if(t) hits.push(t); }); }); return hits; }; rows.forEach(r=>Array.from(r.cells).forEach(td=>td.classList.remove('highlight-conflict'))); const perBand=[]; rows.forEach(row=>{ for(let c=1;c<row.cells.length;c++){ const cell=row.cells[c]; if(cell.style.display==='none') continue; const colspan=parseInt(cell.getAttribute('colspan')||'1',10); const startIdx=c, endIdx=c+colspan-1; const startRange=headerRanges[startIdx], endRange=headerRanges[endIdx]; if(!startRange||!endRange) continue; const teachers=extract(cell.textContent); if(teachers.length){ for(let b=startIdx;b<=endIdx;b++){ perBand[b] ||= new Map(); for(const t of teachers){ const entry=perBand[b].get(t) || {cells:new Set()}; entry.cells.add(cell); perBand[b].set(t, entry); } } } } }); perBand.forEach(map=>{ if(!map) return; for(const [teacher,info] of map.entries()){ if(info.cells.size>1){ info.cells.forEach(td=>td.classList.add('highlight-conflict')); } } }); if(typeof window.bubbleProblemRows==='function') window.bubbleProblemRows(); }
-  function attachSummaryHooks(){ let isProcessing=false, timer=null; const run=()=>{ if(isProcessing) return; isProcessing=true; try{ expandSummarySubjectsToTeachers(); } finally { try{ if(typeof window.detectAndMarkClashes==='function') window.detectAndMarkClashes(); }catch(_){ } isProcessing=false; } }; if(typeof window.rebuildAndRenderSummary==='function'){ const old=window.rebuildAndRenderSummary; window.rebuildAndRenderSummary=async function(...args){ const res=await old.apply(this,args); run(); return res; }; } const target=document.getElementById('summaryTable'); if(target){ const obs=new MutationObserver(()=>{ clearTimeout(timer); if(isProcessing) return; timer=setTimeout(run,150); }); obs.observe(target,{childList:true,subtree:true}); } run(); }
-  document.addEventListener('DOMContentLoaded', attachSummaryHooks);
-})();
-// === Entry Mode toggle wiring (center button) ===
-(function(){
-  const btn = document.getElementById('entryModeBtn');
-  if (!btn) return;
-  const key = `scheduleEntryMode_${window.appId || 'default'}`;
-  function applyLabel(){
-    const mode = (localStorage.getItem(key) || 'teacher');
-    btn.textContent = `Mode: ${mode.charAt(0).toUpperCase()+mode.slice(1)}`;
-    // high-contrast text if needed
-    btn.style.color = '#fff';
-  }
-  btn.addEventListener('click', ()=>{
-    const cur = (localStorage.getItem(key) || 'teacher');
-    const nxt = (cur === 'teacher') ? 'subject' : 'teacher';
-    localStorage.setItem(key, nxt);
-    applyLabel();
-    // Force-close any stale suggestions when switching
-    try{ if (typeof hideCellAutocompleteSuggestions==='function') hideCellAutocompleteSuggestions(); }catch(_){}
-  });
-  applyLabel();
-})();
 </script>
 </body>
 </html>

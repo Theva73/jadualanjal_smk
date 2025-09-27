@@ -4348,101 +4348,147 @@ document.addEventListener('click', (e)=>{
   } catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
 });
 
-// === Row & Column Manipulation Functions (Injected) ===
-function getActiveTable() {
-    return document.querySelector('#tablesContainer table.active');
+
+
+// === Row & Column Manipulation Functions (Injected v2) ===
+
+// Guard globals used by existing code
+window.lastClickedCell = window.lastClickedCell || null;
+
+// Safe message helper (fallbacks if showMessage isn't in scope yet)
+const __safeShow = (msg, type='info') => {
+  try { (typeof showMessage === 'function') ? showMessage(msg, type) : alert(msg); }
+  catch (_) { alert(msg); }
+};
+
+function getActiveTable(){
+  return document.querySelector('#tablesContainer table active, #tablesContainer table.active');
 }
-function getSelectedOrLastClickedCell(table){
-    let sel = table ? table.querySelector('td.selected, th.selected') : null;
-    if (!sel && typeof lastClickedCell !== 'undefined' && lastClickedCell && lastClickedCell.closest('table') === table){
-        sel = lastClickedCell;
-    }
-    return sel;
+function getSelectedCell(table){
+  if(!table) return null;
+  let sel = table.querySelector('td.selected, th.selected');
+  if(!sel && window.lastClickedCell && window.lastClickedCell.closest('table') === table){
+    sel = window.lastClickedCell;
+  }
+  return sel;
 }
+function getBodyAndRow(table, selected){
+  const tbody = table.tBodies[0] || table.createTBody();
+  // Prefer a row in TBODY; if clicked header, fall back to last body row
+  let row = selected ? selected.closest('tbody tr') : null;
+  if(!row && tbody.rows.length){ row = tbody.rows[tbody.rows.length-1]; }
+  return { tbody, row };
+}
+// how many columns should a new row have?
+function getColumnCountForNewRow(table){
+  const tbody = table.tBodies[0];
+  if(tbody && tbody.rows.length){ return tbody.rows[0].cells.length; }
+  const thead = table.tHead;
+  if(thead){
+    // find the last non-date-header row
+    let rows = Array.from(thead.rows);
+    rows = rows.filter(r => !r.classList.contains('date-header-row'));
+    if(rows.length){ return rows[rows.length-1].cells.length; }
+  }
+  // fallback to first row in table
+  return table.rows[0] ? table.rows[0].cells.length : 1;
+}
+
 // Add Row Above
 document.getElementById('addRowAboveBtn')?.addEventListener('click', () => {
-    const table = getActiveTable();
-    if (!table) return;
-    const selected = getSelectedOrLastClickedCell(table);
-    if (!selected) { showMessage("Select a row first.", "error"); return; }
-    const row = selected.parentNode;
-    const newRow = table.insertRow(row.rowIndex);
-    for (let i = 0; i < row.cells.length; i++) {
-        const cell = newRow.insertCell(i);
-        cell.contentEditable = "true";
-    }
-    ensureDateHeaderRowExists(table);
-});
-// Add Row Below
-document.getElementById('addRowBelowBtn')?.addEventListener('click', () => {
-    const table = getActiveTable();
-    if (!table) return;
-    const selected = getSelectedOrLastClickedCell(table);
-    if (!selected) { showMessage("Select a row first.", "error"); return; }
-    const row = selected.parentNode;
-    const newRow = table.insertRow(row.rowIndex + 1);
-    for (let i = 0; i < row.cells.length; i++) {
-        const cell = newRow.insertCell(i);
-        cell.contentEditable = "true";
-    }
-    ensureDateHeaderRowExists(table);
-});
-// Add Column Left
-document.getElementById('addColLeftBtn')?.addEventListener('click', () => {
-    const table = getActiveTable();
-    if (!table) return;
-    const selected = getSelectedOrLastClickedCell(table);
-    if (!selected) { showMessage("Select a column first.", "error"); return; }
-    const colIndex = selected.cellIndex;
-    for (let r of table.rows) {
-        const cell = r.insertCell(colIndex);
-        cell.contentEditable = "true";
-    }
-    ensureDateHeaderRowExists(table);
-});
-// Add Column Right
-document.getElementById('addColRightBtn')?.addEventListener('click', () => {
-    const table = getActiveTable();
-    if (!table) return;
-    const selected = getSelectedOrLastClickedCell(table);
-    if (!selected) { showMessage("Select a column first.", "error"); return; }
-    const colIndex = selected.cellIndex + 1;
-    for (let r of table.rows) {
-        const cell = r.insertCell(colIndex);
-        cell.contentEditable = "true";
-    }
-    ensureDateHeaderRowExists(table);
-});
-// Delete Row
-document.getElementById('deleteRowBtn')?.addEventListener('click', () => {
-    const table = getActiveTable();
-    if (!table) return;
-    const selected = getSelectedOrLastClickedCell(table);
-    if (!selected) { showMessage("Select a row first.", "error"); return; }
-    table.deleteRow(selected.parentNode.rowIndex);
-    ensureDateHeaderRowExists(table);
-});
-// Delete Column
-document.getElementById('deleteColBtn')?.addEventListener('click', () => {
-    const table = getActiveTable();
-    if (!table) return;
-    const selected = getSelectedOrLastClickedCell(table);
-    if (!selected) { showMessage("Select a column first.", "error"); return; }
-    const colIndex = selected.cellIndex;
-    for (let r of table.rows) {
-        if (r.cells[colIndex]) r.deleteCell(colIndex);
-    }
-    ensureDateHeaderRowExists(table);
+  const table = getActiveTable(); if(!table) return;
+  const selected = getSelectedCell(table);
+  const { tbody, row } = getBodyAndRow(table, selected);
+  if(!row && !tbody) { __safeShow("No table body found.", "error"); return; }
+  const idx = row ? row.sectionRowIndex : 0;
+  const newRow = tbody.insertRow(idx);
+  const cols = getColumnCountForNewRow(table);
+  for(let i=0;i<cols;i++){ const c = newRow.insertCell(i); c.contentEditable = "true"; }
+  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
 });
 
-// Optional: make lastClickedCell track any click in tables (non-destructive to existing selection mode)
-document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
-    const cell = e.target?.closest('td,th');
-    if (cell && cell.closest('table')) {
-        lastClickedCell = cell;
-    }
+// Add Row Below
+document.getElementById('addRowBelowBtn')?.addEventListener('click', () => {
+  const table = getActiveTable(); if(!table) return;
+  const selected = getSelectedCell(table);
+  const { tbody, row } = getBodyAndRow(table, selected);
+  const idx = row ? row.sectionRowIndex + 1 : tbody.rows.length;
+  const newRow = tbody.insertRow(idx);
+  const cols = getColumnCountForNewRow(table);
+  for(let i=0;i<cols;i++){ const c = newRow.insertCell(i); c.contentEditable = "true"; }
+  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
 });
-// === End Injected Patch ===
+
+// Insert column helper: add at index for all rows in THEAD and TBODY
+function insertColumn(table, insertIndex){
+  const sections = [];
+  if(table.tHead) sections.push(table.tHead);
+  for(const tb of table.tBodies) sections.push(tb);
+  // also include tFoot if used in future
+  if(table.tFoot) sections.push(table.tFoot);
+  for(const sec of sections){
+    for(const r of sec.rows){
+      const idx = Math.min(insertIndex, r.cells.length);
+      const cell = r.insertCell(idx);
+      cell.contentEditable = "true";
+    }
+  }
+}
+
+// Add Column Left
+document.getElementById('addColLeftBtn')?.addEventListener('click', () => {
+  const table = getActiveTable(); if(!table) return;
+  const selected = getSelectedCell(table);
+  if(!selected){ __safeShow("Select a column first.", "error"); return; }
+  insertColumn(table, selected.cellIndex);
+  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
+});
+
+// Add Column Right
+document.getElementById('addColRightBtn')?.addEventListener('click', () => {
+  const table = getActiveTable(); if(!table) return;
+  const selected = getSelectedCell(table);
+  if(!selected){ __safeShow("Select a column first.", "error"); return; }
+  insertColumn(table, selected.cellIndex + 1);
+  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
+});
+
+// Delete Row (TBODY only)
+document.getElementById('deleteRowBtn')?.addEventListener('click', () => {
+  const table = getActiveTable(); if(!table) return;
+  const selected = getSelectedCell(table);
+  const tbody = table.tBodies[0];
+  if(!tbody){ __safeShow("No rows to delete.", "error"); return; }
+  const row = selected ? selected.closest('tbody tr') : null;
+  if(!row){ __safeShow("Select a body row to delete.", "error"); return; }
+  tbody.deleteRow(row.sectionRowIndex);
+  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
+});
+
+// Delete Column (all sections)
+document.getElementById('deleteColBtn')?.addEventListener('click', () => {
+  const table = getActiveTable(); if(!table) return;
+  const selected = getSelectedCell(table);
+  if(!selected){ __safeShow("Select a column first.", "error"); return; }
+  const idx = selected.cellIndex;
+  const sections = [];
+  if(table.tHead) sections.push(table.tHead);
+  for(const tb of table.tBodies) sections.push(tb);
+  if(table.tFoot) sections.push(table.tFoot);
+  for(const sec of sections){
+    for(const r of sec.rows){
+      if(r.cells[idx]) r.deleteCell(idx);
+    }
+  }
+  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
+});
+
+// Track last clicked cell for usability
+document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
+  const cell = e.target?.closest('td,th');
+  if(cell && cell.closest('table')) window.lastClickedCell = cell;
+});
+// === End Injected v2 ===
 </script>
 
 </body>

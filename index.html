@@ -2442,10 +2442,7 @@ function detectAndMarkClashes(){
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => (localStorage.getItem(MODE_KEY) || 'teacher');
 
-  
-  // expose for legacy code that calls getMode()
-  try { window.getMode = getMode; } catch(_) {}
-function getActiveNameSession(){
+  function getActiveNameSession(){
     try { return (window.currentNameListSession || window.currentSubjectSession) || document.querySelector('.name-session-tabs button.active')?.dataset?.session || 'pagi'; }
     catch(_){ return 'pagi'; }
   }
@@ -4141,7 +4138,11 @@ attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInpu
 (function(){
   // Reuse the global suggestions div used by schedule autocomplete
   // Fallback create if missing
-  if (!window.autocompleteSuggestionsDiv) {window.autocompleteSuggestionsDiv = document.createElement('div');window.autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';document.body.appendChild(window.autocompleteSuggestionsDiv);}
+  if (typeof autocompleteSuggestionsDiv === 'undefined' || !autocompleteSuggestionsDiv) {
+    window.autocompleteSuggestionsDiv = document.createElement('div');
+    autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';
+    document.body.appendChild(autocompleteSuggestionsDiv);
+  }
 
   const input = document.getElementById('attachTeacherInput');
   if (!input) return;

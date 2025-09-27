@@ -881,9 +881,8 @@ fbAuth = getAuth(fbApp);
     let lastClickedCell = null;
     let selectedNameFromList = null;
     let currentNameListSession = 'pagi';
-    let namesPagiShared = [];
-    let namesPetangShared = [];
-window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
+    window.namesPagiShared = window.namesPagiShared || [];
+window.namesPetangShared = window.namesPetangShared || [];
 
     let isDraggingModal = false;
     let modalDragOffsetX, modalDragOffsetY;
@@ -1564,7 +1563,7 @@ function detectAndMarkClashes(){
         const trimmedName = String(name || '').trim();
         if (!trimmedName) { showMessage("Name cannot be empty.", "info"); return; }
         showNameModalLoading(true);
-        const sessionNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
+        const sessionNames = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
         if (sessionNames.map(n => String(n || '').toLowerCase()).includes(trimmedName.toLowerCase())) { showMessage(`"${trimmedName}" already exists.`, "info"); showNameModalLoading(false); return; }
         if (!appId || appId === 'default-shared-scheduler-app') { showMessage("Config error: App ID missing.", "error"); showNameModalLoading(false); return; }
         const updatedNames = [...sessionNames, trimmedName].sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
@@ -1581,7 +1580,7 @@ function detectAndMarkClashes(){
         if (await customConfirm(`Delete "${nameToDeleteStr}" from shared ${currentNameListSession} session? This also removes it from tables.`)) {
             showNameModalLoading(true);
             if (!appId || appId === 'default-shared-scheduler-app') { showMessage("Config error: App ID missing.", "error"); showNameModalLoading(false); return; }
-            const currentNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
+            const currentNames = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
             const updatedNames = currentNames.filter(name => String(name || '') !== nameToDeleteStr);
             const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
             try {
@@ -1610,7 +1609,7 @@ function detectAndMarkClashes(){
             showNameModalLoading(true);
             const namesFromDb = docSnap.exists() ? (docSnap.data().names || []) : [];
             const sanitizedNames = namesFromDb.map(name => String(name || '').trim()).filter(name => name.length > 0);
-            if (sessionToListen === 'pagi') namesPagiShared = sanitizedNames; else namesPetangShared = sanitizedNames;
+            if (sessionToListen === 'pagi') window.namesPagiShared = sanitizedNames; else window.namesPetangShared = sanitizedNames;
             if (sessionToListen === currentNameListSession && nameModal?.style.display === 'flex' && searchNameInputElement) renderNameListFromFirestore(searchNameInputElement.value);
             
         document.dispatchEvent(new CustomEvent('sharedNameListUpdated'));
@@ -2408,7 +2407,7 @@ function detectAndMarkClashes(){
     // --- Autocomplete Functions ---
     function showCellAutocompleteSuggestions(cell, inputText) {
         if (!autocompleteSuggestionsDiv) return;
-        const namesForAutocomplete = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
+        const namesForAutocomplete = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
         let textForMatchingInput = String(inputText || '').split(' // ')[0]; 
         const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*')); 
         const textForMatching = wordsForMatching.join(' ').toLowerCase().trim(); 
@@ -2936,7 +2935,7 @@ function addNewIndependentTable() {
     }
     function renderNameListFromFirestore(filterText = '') {
         if (!nameListContainer) return; if (!fbIsAuthReady) { nameListContainer.innerHTML = '<p>Loading names...</p>'; return; }
-        nameListContainer.innerHTML = ''; const namesToRender = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
+        nameListContainer.innerHTML = ''; const namesToRender = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
         const normalizedFilterText = String(filterText || '').toLowerCase().trim();
         if (!Array.isArray(namesToRender)) { nameListContainer.innerHTML = '<p>Error: Name list invalid.</p>'; return; }
         const filteredNames = namesToRender.filter(name => String(name || '').toLowerCase().trim().includes(normalizedFilterText));
@@ -2956,7 +2955,7 @@ function addNewIndependentTable() {
             try {
                 const importedNames = e.target.result.split(/\r?\n/).map(n => String(n||'').trim()).filter(n => n);
                 if (importedNames.length === 0) { showMessage('No names in file.', 'info'); return; }
-                const currentSessionNames = (currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared).map(n => String(n||'').trim());
+                const currentSessionNames = (currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared).map(n => String(n||'').trim());
                 const combinedNames = [...new Set([...currentSessionNames, ...importedNames])];
                 await saveSharedNameListToFirestore(currentNameListSession, combinedNames);
             } catch (error) { showMessage('Error processing name list file.', 'error'); }

@@ -4089,6 +4089,88 @@ deleteSubjectBtn?.addEventListener('click', deleteSubject);
 subjectSelect?.addEventListener('change', (e)=>{ selectedSubject = e.target.value || null; renderTeachersLists(); });
 attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInput.value));
 
+/* === Attach-Teacher Autocomplete (Subjects Modal) === */
+(function(){
+  const input = document.getElementById('attachTeacherInput');
+  if(!input) return;
+  // suggestions dropdown for the attach input
+  let sugg = document.getElementById('subjectAttachSuggestions');
+  if(!sugg){
+    sugg = document.createElement('div');
+    sugg.id = 'subjectAttachSuggestions';
+    Object.assign(sugg.style, {
+      position: 'absolute', display: 'none', border: '1px solid #ccc',
+      background: '#fff', zIndex: 3000, maxHeight: '180px', overflowY: 'auto',
+      minWidth: '160px', boxShadow: '0 4px 12px rgba(0,0,0,.12)', borderRadius: '6px'
+    });
+    document.body.appendChild(sugg);
+  }
+  let activeIndex = -1;
+  function getSessionNames(){
+    try {
+      return (currentSubjectSession === 'petang') ? (Array.from(namesPetangShared||[])) : (Array.from(namesPagiShared||[]));
+    } catch(e){ return []; }
+  }
+  function hide(){ sugg.style.display='none'; activeIndex = -1; }
+  function show(list){
+    const rect = input.getBoundingClientRect();
+    sugg.style.left = (rect.left + window.scrollX) + 'px';
+    sugg.style.top  = (rect.bottom + window.scrollY) + 'px';
+    sugg.style.minWidth = rect.width + 'px';
+    sugg.innerHTML = '';
+    list.slice(0,10).forEach((name,i)=>{
+      const item = document.createElement('div');
+      item.textContent = name;
+      item.className = 'suggestion-item';
+      item.style.padding = '8px 10px';
+      item.style.cursor = 'pointer';
+      item.addEventListener('mouseenter', ()=>{ activeIndex=i; highlight(); });
+      item.addEventListener('mousedown', (e)=>{ e.preventDefault(); pick(name); });
+      sugg.appendChild(item);
+    });
+    if(list.length){ sugg.style.display='block'; activeIndex = -1; } else hide();
+  }
+  function highlight(){
+    Array.from(sugg.children).forEach((el,idx)=>{
+      el.style.background = (idx===activeIndex) ? 'rgba(0,123,255,.1)' : '#fff';
+    });
+  }
+  function pick(name){
+    input.value = name;
+    hide();
+    // focus the Attach button for a quick Enter press
+    const btn = document.getElementById('attachTeacherBtn');
+    if(btn){ btn.focus(); }
+  }
+  input.addEventListener('input', ()=>{
+    const q = (input.value||'').trim().toLowerCase();
+    if(!q){ hide(); return; }
+    const list = getSessionNames().filter(n=> String(n).toLowerCase().startsWith(q) && String(n).toLowerCase()!==q);
+    show(list);
+  });
+  input.addEventListener('keydown',(e)=>{
+    if(sugg.style.display==='block'){
+      if(e.key==='ArrowDown'){ e.preventDefault(); activeIndex = Math.min(activeIndex+1, sugg.children.length-1); highlight(); }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); activeIndex = Math.max(activeIndex-1, 0); highlight(); }
+      else if(e.key==='Enter'){
+        if(activeIndex>=0){ e.preventDefault(); const name = sugg.children[activeIndex].textContent; pick(name); }
+      } else if(e.key==='Escape'){ hide(); }
+    }
+  });
+  // click outside to close
+  document.addEventListener('click',(e)=>{
+    if(e.target!==input && !sugg.contains(e.target)) hide();
+  });
+  // When switching sessions or subjects, close suggestions
+  try {
+    subjectPagiTab?.addEventListener('click', hide);
+    subjectPetangTab?.addEventListener('click', hide);
+    subjectSelect?.addEventListener('change', hide);
+  } catch(_){}
+})();
+/* === /Attach-Teacher Autocomplete === */
+
+
 detachTeacherBtn?.addEventListener('click', async ()=>{
   const t = detachTeacherBtn.dataset.teacher;
   if(t) await detachTeacher(t);

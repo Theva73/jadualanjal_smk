@@ -647,6 +647,28 @@
 }
 .chip-teacher { background:#eef9f1; border-color:#cdeedc; color:#1e7e34; }
 </style>
+
+<style>
+/* Compact teacher list styling */
+#teachersInSessionList, #teachersInSubjectList {
+  font-size: 13px;       /* smaller font */
+  line-height: 1.3;      /* tighter line spacing */
+  max-height: 180px;     /* limit height with scroll if too long */
+  overflow-y: auto;      /* add scrollbar if content exceeds max-height */
+  padding: 4px;
+}
+
+#teachersInSessionList li, #teachersInSubjectList li {
+  margin: 2px 0;         /* reduce vertical spacing */
+  padding: 2px 4px;      /* compact padding */
+}
+
+#teachersInSessionList li button, #teachersInSubjectList li button {
+  font-size: 11px;       /* smaller buttons */
+  padding: 2px 6px;      /* tighter button spacing */
+}
+</style>
+
 </head>
 <body>
 <div class="main-container">

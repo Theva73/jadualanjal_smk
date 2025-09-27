@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.1, maximum-scale=5.0">
-  <title>Jadual Anjal — Fixed Safe Version</title>
+  <title>Jadual Anjal — Fixed (27 Sep)</title>
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <style>
     :root{
       --pri:#007bff; --pri-600:#0056b3; --bg:#f0f2f5; --card:#fff;
       --text:#1c1e21; --muted:#6c757d; --line:#dee2e6; --ok:#28a745; --warn:#ffc107; --err:#dc3545;
     }
-    body{margin:0;padding:0;background:var(--bg);font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+    html,body{margin:0;padding:0;background:var(--bg);font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
     .container{max-width:1400px;margin:0 auto;padding:16px}
     .card{background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:16px}
     h2{margin:0 0 8px}
@@ -18,6 +18,7 @@
     .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:center;margin:8px 0}
     .btn{padding:10px 14px;border-radius:8px;border:1px solid transparent;cursor:pointer;white-space:nowrap;
          display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:500;min-height:40px;flex:1 1 150px}
+    .btn:active{transform:translateY(0)}
     .btn-pri{color:#fff;background-image:linear-gradient(90deg,var(--pri),var(--pri-600))}
     .btn-sec{background:#f8f9fa;border-color:#ced4da;color:#212529}
     .btn-ok{color:#fff;background-image:linear-gradient(90deg,#17a2b8,#117a8b)}
@@ -32,22 +33,38 @@
     thead th{background:#f8f9fa;font-weight:600}
     .leftCol{background:#e6f7ff;font-weight:700}
     .selected{outline:3px solid var(--pri);background:#d1e7fd}
+    #summaryTable thead th{background:#e9ecef}
+    #summaryTable td{background:#fff9e6}
     .chip{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-size:.75rem;border:1px solid #0001}
+    .chip.ok{background:#eafbe6}
     .chip.warn{background:#fff3cd}
+    .chip.err{background:#f8d7da}
     .toast{display:none;position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#333;color:#fff;
-           padding:10px 16px;border-radius:8px;z-index:3000}
+           padding:10px 16px;border-radius:8px;z-index:3000;box-shadow:0 6px 18px rgba(0,0,0,.25)}
     .toast.show{display:block}
+    /* modal */
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2500;align-items:center;justify-content:center}
-    .modal .content{width:min(800px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:12px;padding:16px}
-    .blink-dot{width:14px;height:14px;border-radius:50%;background:#28a745;display:inline-block;animation:blinker 1s linear infinite}
+    .modal .content{width:min(800px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.35);padding:16px}
+    .modal .head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:12px}
+    .modal .close{all:unset;cursor:pointer;font-size:1.6rem;line-height:1;color:#555}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .input, select, textarea{padding:10px;border:1px solid #ccc;border-radius:8px;width:100%;box-sizing:border-box}
+    .list{border:1px solid #ddd;border-radius:8px;padding:8px;max-height:220px;overflow:auto}
+    .list-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f3f5;padding:6px 4px}
+    .list-item:last-child{border-bottom:none}
+    .pill{background:#f1f3f5;border-radius:999px;padding:4px 8px;margin:2px;display:inline-block;font-size:.8em}
+    .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f3f3f3;border:1px solid #e1e1e1;border-bottom-width:2px;padding:0 .4em;border-radius:6px}
+    .blink-dot{width:14px;height:14px;border-radius:50%;background:#28a745;display:inline-block;animation:blinker 1s linear infinite;box-shadow:0 0 0 2px #fff,0 0 8px #28a745}
     @keyframes blinker { 50%{opacity:.3} }
+    .standalone{opacity:.92}
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
       <h2 id="scheduleTitle" contenteditable="true">Jadual Anjal</h2>
-      <div id="userIdDisplay">User ID: <span id="userIdText">Loading…</span> <span class="blink-dot"></span></div>
+      <div id="userIdDisplay">User ID: <span id="userIdText">Loading…</span> <span class="blink-dot" title="Live"></span></div>
+
       <div class="bar">
         <button id="toggleControls" class="btn btn-pri">Show Controls</button>
         <button id="btnSavePage" class="btn btn-ok">Save Page</button>
@@ -56,26 +73,149 @@
         <button id="btnSearchTimetable" class="btn btn-pri">🔍 Search Timetable</button>
         <button id="btnManageSubjects" class="btn btn-ghost">📚 Manage Subjects & Groups</button>
       </div>
-      <table id="tbl_1">
-        <thead>
-          <tr><th>Class</th><th>08:00</th><th>09:00</th></tr>
-        </thead>
-        <tbody>
-          <tr><td class="leftCol">5S1</td><td></td><td>JAMES</td></tr>
-          <tr><td class="leftCol">5S2</td><td>*SpecialAssembly</td><td></td></tr>
-        </tbody>
-      </table>
-      <h3>Teacher/Subject Attendance Summary</h3>
+
+      <div id="controlsBox" style="display:none">
+        <div class="bar">
+          <button id="btnCopyHtml" class="btn btn-sec">📋 Copy HTML</button>
+          <button id="btnExportXLSX" class="btn btn-sec">💾 Export Excel</button>
+          <button id="btnImportXLSX" class="btn btn-sec">📂 Import Excel</button>
+          <input type="file" id="fileXLSX" accept=".xlsx,.xls" style="display:none">
+        </div>
+        <div class="bar">
+          <button id="btnSaveShared" class="btn btn-pri">💠 Save Shared</button>
+          <button id="btnLoadShared" class="btn btn-sec">☁️ Load Shared</button>
+          <button id="btnRestoreBackup" class="btn btn-sec">🛡️ Restore Backup</button>
+          <button id="btnExportAll" class="btn btn-sec">📤 Export All</button>
+          <button id="btnImportAll" class="btn btn-sec">📥 Import All</button>
+          <input type="file" id="fileImportAll" accept=".json" style="display:none">
+          <button id="btnClearNew" class="btn btn-warn">🧹 Clear & New</button>
+        </div>
+        <div class="bar">
+          <button id="btnSelectCells" class="btn btn-sec">✨ Select Cells</button>
+          <button id="btnMerge" class="btn btn-sec">🔗 Merge</button>
+          <button id="btnDeselect" class="btn btn-sec">🚫 Deselect</button>
+          <button id="btnUnmerge" class="btn btn-sec">💔 Unmerge</button>
+        </div>
+        <div class="bar">
+          <button id="btnAddTable" class="btn btn-sec">➕ Add Table</button>
+          <button id="btnAddStandalone" class="btn btn-sec">➕ Add Standalone</button>
+          <button id="btnRenameTable" class="btn btn-sec">📝 Rename</button>
+          <button id="btnDeleteTable" class="btn btn-sec">❌ Delete</button>
+          <button id="btnNames" class="btn btn-sec">👥 Names</button>
+        </div>
+      </div>
+
+      <div class="tabs" id="tableTabs"></div>
+      <div id="tablesContainer">
+        <table id="tbl_1" data-table-name="Kelas 3 & 5" class="active">
+          <thead>
+            <tr class="date-row">
+              <th contenteditable="true" class="date-cell">Thursday, 22 May 2025</th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell">DAY INFO</th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell"></th>
+              <th contenteditable="true" class="date-cell"></th>
+            </tr>
+            <tr class="time-row">
+              <th contenteditable="true" class="leftCol">Class</th>
+              <th contenteditable="true">08:00</th>
+              <th contenteditable="true">09:00</th>
+              <th contenteditable="true">10:00</th>
+              <th contenteditable="true">REHAT</th>
+              <th contenteditable="true">12:00</th>
+              <th contenteditable="true">13:00</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td contenteditable="true" class="leftCol">5S1</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true">JAMES *ReportDue // Sick leave</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+            </tr>
+            <tr>
+              <td contenteditable="true" class="leftCol">5S2</td>
+              <td contenteditable="true">*SpecialAssembly</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true">Science Team</td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:18px">Teacher/Subject Attendance Summary</h3>
       <table id="summaryTable"></table>
     </div>
   </div>
+
+  <!-- Manage Subjects & Groups Modal -->
+  <div id="modalManage" class="modal" aria-hidden="true">
+    <div class="content">
+      <div class="head">
+        <h3 style="margin:0">Manage Subjects & Groups</h3>
+        <button class="close" id="closeManage">×</button>
+      </div>
+      <div class="tabs">
+        <button id="tabSubjects" class="active">Subjects</button>
+        <button id="tabGroups">Subject Groups</button>
+      </div>
+
+      <div id="paneSubjects">
+        <div class="grid">
+          <div>
+            <label>Add new subject</label>
+            <input id="inpSubjectName" class="input" placeholder="e.g., Mathematics">
+            <div class="bar" style="margin-top:8px">
+              <button id="btnAddSubject" class="btn btn-pri">Add Subject</button>
+            </div>
+          </div>
+          <div>
+            <label>All subjects</label>
+            <div id="listSubjects" class="list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="paneGroups" style="display:none">
+        <div class="grid">
+          <div>
+            <label>Group Name</label>
+            <input id="inpGroupName" class="input" placeholder="e.g., Science Team">
+            <label style="margin-top:8px;display:block">Subject</label>
+            <select id="selGroupSubject" class="input"></select>
+            <label style="margin-top:8px;display:block">Teachers (Pagi & Petang)</label>
+            <div id="listTeachers" class="list"></div>
+            <div class="bar" style="margin-top:8px">
+              <button id="btnCreateGroup" class="btn btn-pri">Create / Save Group</button>
+            </div>
+          </div>
+          <div>
+            <label>Existing Groups</label>
+            <div id="listGroups" class="list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast">Saved.</div>
 
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    /* ===== Firebase config (intact, with __firebase_config override) ===== */
     const fallbackConfig = {
       apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
       authDomain: "jadual-3f0aa.firebaseapp.com",
@@ -86,24 +226,435 @@
     };
     let firebaseConfig;
     if (typeof window.__firebase_config === "string" && window.__firebase_config.trim()) {
-      try { firebaseConfig = JSON.parse(window.__firebase_config); }
-      catch(e){ firebaseConfig = fallbackConfig; }
+      try { firebaseConfig = JSON.parse(window.__firebase_config); console.log("Using injected __firebase_config"); }
+      catch(e){ console.warn("Failed to parse __firebase_config. Using fallback.", e); firebaseConfig = fallbackConfig; }
     } else { firebaseConfig = fallbackConfig; }
 
+    const appId = (typeof window.__app_id !== "undefined" && window.__app_id) ? window.__app_id : (firebaseConfig.appId || "shared-scheduler");
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    /* ===== DOM ===== */
+    const scheduleTitleEl = document.getElementById("scheduleTitle");
+    const tableTabsEl = document.getElementById("tableTabs");
+    const tablesContainerEl = document.getElementById("tablesContainer");
+    const summaryTableEl = document.getElementById("summaryTable");
+    const toastEl = document.getElementById("toast");
     const userIdText = document.getElementById("userIdText");
+
+    // Controls
+    const toggleControlsBtn = document.getElementById("toggleControls");
+    const controlsBox = document.getElementById("controlsBox");
+    const btnSavePage = document.getElementById("btnSavePage");
+    const btnSaveShared = document.getElementById("btnSaveShared");
+    const btnLoadShared = document.getElementById("btnLoadShared");
+    const btnClearNew = document.getElementById("btnClearNew");
+    const btnManageSubjects = document.getElementById("btnManageSubjects");
+    const btnClearNamesAll = document.getElementById("btnClearNamesAll");
+
+    // Modal elements
+    const modalManage = document.getElementById("modalManage");
+    const closeManage = document.getElementById("closeManage");
+    const tabSubjects = document.getElementById("tabSubjects");
+    const tabGroups = document.getElementById("tabGroups");
+    const paneSubjects = document.getElementById("paneSubjects");
+    const paneGroups = document.getElementById("paneGroups");
+    const inpSubjectName = document.getElementById("inpSubjectName");
+    const btnAddSubject = document.getElementById("btnAddSubject");
+    const listSubjects = document.getElementById("listSubjects");
+    const selGroupSubject = document.getElementById("selGroupSubject");
+    const listTeachers = document.getElementById("listTeachers");
+    const inpGroupName = document.getElementById("inpGroupName");
+    const btnCreateGroup = document.getElementById("btnCreateGroup");
+    const listGroups = document.getElementById("listGroups");
+
+    /* ===== Shared state (single source of truth) ===== */
+    let namesPagiShared = [];   // populated by your existing Names UI elsewhere
+    let namesPetangShared = []; // populated by your existing Names UI elsewhere
+
+    let scheduleState = {
+      scheduleTitle: "Jadual Anjal",
+      activeTableId: "tbl_1",
+      subjects: [
+        { id:"subj_1", name:"Mathematics" },
+        { id:"subj_2", name:"Science" },
+        { id:"subj_3", name:"History" }
+      ],
+      subjectGroups: [
+        { id:"group_1", name:"Science Team", subjectId:"subj_2", teacherNames:["LILY","JAMES"] }
+      ],
+      tables: [] // set from current DOM on first capture
+    };
+
+    /* ===== Helpers ===== */
+    const uid = () => "id_" + Math.random().toString(36).slice(2,9);
+    const showToast = (msg="Saved.", ms=1600) => { toastEl.textContent=msg; toastEl.classList.add("show"); setTimeout(()=>toastEl.classList.remove("show"), ms); };
+
+    function normalizeTextForSummary(txt){
+      if (typeof txt!=="string") return "";
+      // remove notes after ' // ' and asterisk words
+      const first = txt.split(" // ")[0] || "";
+      return first.split(/\s+/).filter(w => !w.startsWith("*")).join(" ").trim();
+    }
+
+    function getAllTeacherNames(){
+      const set = new Set([...(namesPagiShared||[]), ...(namesPetangShared||[])]);
+      return Array.from(set);
+    }
+
+    function getAllSuggestionTokens(){
+      // Teachers + group names
+      const teachers = getAllTeacherNames();
+      const groups = (scheduleState.subjectGroups||[]).map(g=>g.name);
+      return Array.from(new Set([...teachers, ...groups]));
+    }
+
+    /* ===== Build tabs for tables ===== */
+    function refreshTableTabs(){
+      tableTabsEl.innerHTML = "";
+      const tables = Array.from(tablesContainerEl.querySelectorAll("table"));
+      tables.forEach(tbl => {
+        const btn = document.createElement("button");
+        btn.textContent = tbl.dataset.tableName || tbl.id;
+        btn.className = (tbl.classList.contains("active")?"active":"");
+        btn.onclick = () => {
+          tables.forEach(t => t.classList.remove("active"));
+          tbl.classList.add("active");
+          scheduleState.activeTableId = tbl.id;
+          refreshTableTabs();
+          rebuildAndRenderSummary();
+        };
+        tableTabsEl.appendChild(btn);
+      });
+    }
+
+    /* ===== Capture DOM into JSON (tables, date/time headers, body, simple merges placeholder) ===== */
+    function captureStateAsJson(){
+      const tables = Array.from(tablesContainerEl.querySelectorAll("table"));
+      const tablesJson = tables.map(tbl => {
+        const dateRow = tbl.tHead?.querySelector("tr.date-row");
+        const timeRow = tbl.tHead?.querySelector("tr.time-row");
+        const dateHeaderRow = dateRow ? Array.from(dateRow.cells).map(c=>c.textContent||"") : [];
+        const timeHeaderRow = timeRow ? Array.from(timeRow.cells).map(c=>c.textContent||"") : [];
+
+        const bodyRows = Array.from(tbl.tBodies[0]?.rows || []).map(tr =>
+          Array.from(tr.cells).map(td => ({ content: td.textContent || "" }))
+        );
+        return {
+          id: tbl.id,
+          name: tbl.dataset.tableName || tbl.id,
+          isIndependent: tbl.classList.contains("standalone"),
+          dateHeaderRow,
+          timeHeaderRow,
+          bodyRows,
+          merges: [] // (placeholder - complex merge retention not covered here)
+        };
+      });
+
+      return {
+        scheduleTitle: scheduleTitleEl.textContent || "Jadual Anjal",
+        activeTableId: tablesContainerEl.querySelector("table.active")?.id || (tablesJson[0]?.id || "tbl_1"),
+        subjects: scheduleState.subjects || [],
+        subjectGroups: scheduleState.subjectGroups || [],
+        tables: tablesJson
+      };
+    }
+
+    /* ===== Render full UI from JSON ===== */
+    function renderStateFromJson(state){
+      scheduleState = JSON.parse(JSON.stringify(state||scheduleState));
+      scheduleTitleEl.textContent = scheduleState.scheduleTitle || "Jadual Anjal";
+      tablesContainerEl.innerHTML = "";
+      (scheduleState.tables||[]).forEach(tbl => {
+        const tableEl = document.createElement("table");
+        tableEl.id = tbl.id;
+        tableEl.dataset.tableName = tbl.name||tbl.id;
+        if (tbl.isIndependent) tableEl.classList.add("standalone");
+        const thead = document.createElement("thead");
+        const dateTr = document.createElement("tr"); dateTr.className="date-row";
+        (tbl.dateHeaderRow||[]).forEach(txt => {
+          const th = document.createElement("th"); th.className="date-cell"; th.contentEditable="true"; th.textContent = txt||""; dateTr.appendChild(th);
+        });
+        const timeTr = document.createElement("tr"); timeTr.className="time-row";
+        (tbl.timeHeaderRow||[]).forEach((txt,idx) => {
+          const th = document.createElement("th"); th.contentEditable="true"; th.textContent = txt||"";
+          if (idx===0) th.classList.add("leftCol");
+          timeTr.appendChild(th);
+        });
+        thead.appendChild(dateTr); thead.appendChild(timeTr);
+        const tbody = document.createElement("tbody");
+        (tbl.bodyRows||[]).forEach(row => {
+          const tr = document.createElement("tr");
+          row.forEach((cell, idx) => {
+            const td = document.createElement("td"); td.contentEditable="true"; td.textContent = cell.content || "";
+            if (idx===0) td.classList.add("leftCol");
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        tableEl.appendChild(thead); tableEl.appendChild(tbody);
+        tablesContainerEl.appendChild(tableEl);
+      });
+      // activate table
+      const toActivate = document.getElementById(scheduleState.activeTableId) || tablesContainerEl.querySelector("table");
+      tablesContainerEl.querySelectorAll("table").forEach(t => t.classList.remove("active"));
+      if (toActivate) toActivate.classList.add("active");
+
+      attachCellAutocomplete(); // rebind
+      refreshTableTabs();
+      rebuildAndRenderSummary();
+      refreshSubjectsUI();
+      refreshGroupsUI();
+    }
+
+    /* ===== Autocomplete on cells: teachers + group names ===== */
+    function attachCellAutocomplete(){
+      tablesContainerEl.querySelectorAll("td[contenteditable='true']").forEach(td => {
+        td.oninput = () => {/* no-op */};
+        td.onkeydown = (e) => {
+          // simple inline suggestion with Tab
+          if (e.key === "Tab"){
+            const tokens = getAllSuggestionTokens();
+            const val = td.textContent.trim().toUpperCase();
+            if (val){
+              const found = tokens.find(t => t.toUpperCase().startsWith(val));
+              if (found){ e.preventDefault(); td.textContent = found; placeCaretEnd(td); }
+            }
+          }
+        };
+      });
+    }
+    function placeCaretEnd(el){
+      const range = document.createRange(); const sel = window.getSelection();
+      range.selectNodeContents(el); range.collapse(false); sel.removeAllRanges(); sel.addRange(range);
+    }
+
+    /* ===== Summary Builder =====
+       - If a cell contains a group name, expand to all teacherNames of that group
+    */
+    function rebuildAndRenderSummary(){
+      const tables = Array.from(tablesContainerEl.querySelectorAll("table")).filter(t=>!t.classList.contains("standalone"));
+      // Build a union of time headers
+      let timeCols = new Set();
+      tables.forEach(tbl => {
+        const ths = tbl.tHead?.querySelector(".time-row")?.cells || [];
+        Array.from(ths).forEach((th, idx)=>{ if(idx>0) timeCols.add(th.textContent.trim()); });
+      });
+      const timeAxis = Array.from(timeCols).filter(Boolean);
+      // Build teacher rows
+      const teacherBusy = {}; // teacherName -> map time -> boolean
+      const pushBusy = (teacher, timeLabel) => {
+        if (!teacherBusy[teacher]) teacherBusy[teacher] = {};
+        teacherBusy[teacher][timeLabel] = true;
+      };
+
+      tables.forEach(tbl => {
+        const timeRow = tbl.tHead?.querySelector(".time-row");
+        if (!timeRow) return;
+        const times = Array.from(timeRow.cells).map(c=>c.textContent.trim());
+        const body = tbl.tBodies[0];
+        if (!body) return;
+        Array.from(body.rows).forEach(tr => {
+          Array.from(tr.cells).forEach((td, idx) => {
+            if (idx===0) return; // skip class column
+            const label = times[idx] || "";
+            const raw = td.textContent || "";
+            const cleaned = normalizeTextForSummary(raw);
+            if (!cleaned) return;
+            // If matches a group name, expand to members
+            const grp = (scheduleState.subjectGroups||[]).find(g => g.name.toUpperCase() === cleaned.toUpperCase());
+            if (grp){
+              (grp.teacherNames||[]).forEach(name => pushBusy(name.toUpperCase(), label));
+            } else {
+              pushBusy(cleaned.toUpperCase(), label);
+            }
+          });
+        });
+      });
+
+      // Render table
+      const teachers = Object.keys(teacherBusy).sort((a,b)=>a.localeCompare(b));
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+      const h0 = document.createElement("th"); h0.textContent = "Nama / Masa"; trh.appendChild(h0);
+      timeAxis.forEach(t => { const th=document.createElement("th"); th.textContent=t; trh.appendChild(th); });
+      thead.appendChild(trh);
+
+      const tbody = document.createElement("tbody");
+      teachers.forEach(name => {
+        const tr = document.createElement("tr");
+        const td0 = document.createElement("td"); td0.className="leftCol"; td0.textContent=name; tr.appendChild(td0);
+        timeAxis.forEach(t => {
+          const td = document.createElement("td");
+          if (teacherBusy[name]?.[t]) td.innerHTML = '<span class="chip warn">Busy</span>';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      summaryTableEl.innerHTML = "";
+      summaryTableEl.appendChild(thead);
+      summaryTableEl.appendChild(tbody);
+    }
+
+    /* ===== Subjects UI ===== */
+    function refreshSubjectsUI(){
+      listSubjects.innerHTML = "";
+      (scheduleState.subjects||[]).forEach(sub => {
+        const row = document.createElement("div"); row.className="list-item";
+        row.innerHTML = `<span>${sub.name}</span>`;
+        const b = document.createElement("button"); b.className="btn btn-warn"; b.textContent="Delete";
+        b.onclick = () => {
+          scheduleState.subjects = (scheduleState.subjects||[]).filter(s => s.id !== sub.id);
+          // remove subjectId in groups that reference it (optional: warn)
+          scheduleState.subjectGroups = (scheduleState.subjectGroups||[]).map(g => (g.subjectId===sub.id? {...g, subjectId:null}: g));
+          refreshSubjectsUI(); refreshGroupsUI();
+        };
+        row.appendChild(b);
+        listSubjects.appendChild(row);
+      });
+      // subjects dropdown for groups
+      selGroupSubject.innerHTML = "";
+      (scheduleState.subjects||[]).forEach(sub => {
+        const opt = document.createElement("option"); opt.value=sub.id; opt.textContent=sub.name; selGroupSubject.appendChild(opt);
+      });
+    }
+
+    /* ===== Groups UI ===== */
+    function refreshGroupsUI(){
+      // teachers list (checkboxes)
+      listTeachers.innerHTML = "";
+      const allTeachers = getAllTeacherNames();
+      allTeachers.forEach(name => {
+        const id = "t_" + btoa(unescape(encodeURIComponent(name))).replace(/=/g,"");
+        const wrap = document.createElement("div"); wrap.className="list-item";
+        wrap.innerHTML = `<label><input type="checkbox" id="${id}"> ${name}</label>`;
+        listTeachers.appendChild(wrap);
+      });
+
+      // groups list
+      listGroups.innerHTML = "";
+      (scheduleState.subjectGroups||[]).forEach(g => {
+        const row = document.createElement("div"); row.className="list-item";
+        const subjName = (scheduleState.subjects||[]).find(s=>s.id===g.subjectId)?.name || "(no subject)";
+        const teachers = (g.teacherNames||[]).map(n=>`<span class="pill">${n}</span>`).join(" ");
+        row.innerHTML = `<div><strong>${g.name}</strong><div style="font-size:.85em;color:#666">Subject: ${subjName}</div><div>${teachers}</div></div>`;
+        const del = document.createElement("button"); del.className="btn btn-warn"; del.textContent="Delete";
+        del.onclick = () => { scheduleState.subjectGroups = scheduleState.subjectGroups.filter(x=>x.id!==g.id); refreshGroupsUI(); };
+        row.appendChild(del);
+        listGroups.appendChild(row);
+      });
+    }
+
+    /* ===== Events ===== */
+    toggleControlsBtn.onclick = () => {
+      const open = controlsBox.style.display !== "none";
+      controlsBox.style.display = open ? "none" : "block";
+      toggleControlsBtn.textContent = open ? "Show Controls" : "Hide Controls";
+    };
+
+    btnManageSubjects.onclick = () => { modalManage.style.display="flex"; refreshSubjectsUI(); refreshGroupsUI(); };
+    closeManage.onclick = () => { modalManage.style.display="none"; };
+
+    tabSubjects.onclick = () => { tabSubjects.classList.add("active"); tabGroups.classList.remove("active"); paneSubjects.style.display="block"; paneGroups.style.display="none"; };
+    tabGroups.onclick = () => { tabGroups.classList.add("active"); tabSubjects.classList.remove("active"); paneGroups.style.display="block"; paneSubjects.style.display="none"; };
+
+    btnAddSubject.onclick = () => {
+      const name = (inpSubjectName.value||"").trim();
+      if (!name) return;
+      scheduleState.subjects = scheduleState.subjects || [];
+      scheduleState.subjects.push({ id: uid().replace(/^id_/,"subj_"), name });
+      inpSubjectName.value = "";
+      refreshSubjectsUI();
+    };
+
+    btnCreateGroup.onclick = () => {
+      const name = (inpGroupName.value||"").trim();
+      if (!name) return;
+      const subjectId = selGroupSubject.value || null;
+      const picked = Array.from(listTeachers.querySelectorAll("input[type=checkbox]:checked"))
+        .map(cb => cb.parentElement.textContent.trim());
+      const g = { id: uid().replace(/^id_/,"group_"), name, subjectId, teacherNames: picked };
+      scheduleState.subjectGroups = scheduleState.subjectGroups || [];
+      scheduleState.subjectGroups.push(g);
+      inpGroupName.value = "";
+      refreshGroupsUI();
+      showToast("Group saved (local). Save Page or Save Shared to persist.");
+      rebuildAndRenderSummary();
+    };
+
+    btnClearNamesAll.onclick = () => {
+      // wipe non-leftCol body cells in non-standalone tables
+      tablesContainerEl.querySelectorAll("table:not(.standalone) tbody tr").forEach(tr => {
+        Array.from(tr.cells).forEach((td,idx)=>{ if(idx>0) td.textContent=""; });
+      });
+      rebuildAndRenderSummary();
+      showToast("Cleared names.");
+    };
+
+    btnClearNew.onclick = () => {
+      scheduleState.tables = [{
+        id:"tbl_1", name:"Kelas 3 & 5", isIndependent:false,
+        dateHeaderRow:["", "", "", "", "", "", ""],
+        timeHeaderRow:["Class","08:00","09:00","10:00","11:00","12:00","13:00"],
+        bodyRows:[[{"content":"5S1"},{"content":""},{"content":""},{"content":""},{"content":""},{"content":""},{"content":""}]]
+      }];
+      scheduleState.activeTableId = "tbl_1";
+      renderStateFromJson(scheduleState);
+      showToast("New blank schedule.");
+    };
+
+    /* ===== Firestore Save/Load (v2 unified JSON) ===== */
     async function ensureAuth(){
       return new Promise((resolve) => {
         onAuthStateChanged(auth, async (u) => {
           if (u){ userIdText.textContent = u.uid; resolve(u); }
-          else { await signInAnonymously(auth); }
+          else { const cred = await signInAnonymously(auth); /* will re-fire onAuthStateChanged */ }
         });
       });
     }
-    ensureAuth();
+
+    async function saveShared(){
+      const u = await ensureAuth();
+      const data = captureStateAsJson();
+      const col = collection(db, "shared_schedules_v2");
+      const docRef = await addDoc(col, { appId, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), data });
+      showToast("Shared schedule saved: " + docRef.id);
+    }
+
+    async function savePageDraft(){
+      await ensureAuth();
+      const data = captureStateAsJson();
+      // keep a single "page_drafts_v2/appId" doc to allow quick resume
+      const ref = doc(db, "page_drafts_v2", appId);
+      await setDoc(ref, { updatedAt: serverTimestamp(), data });
+      showToast("Page saved.");
+    }
+
+    async function loadLatestShared(){
+      await ensureAuth();
+      const col = collection(db, "shared_schedules_v2");
+      const q = query(col, orderBy("createdAt","desc"));
+      const snap = await getDocs(q);
+      if (snap.empty){ showToast("No shared schedules found."); return; }
+      const first = snap.docs[0]; // latest
+      renderStateFromJson(first.data().data);
+      showToast("Loaded shared: " + first.id);
+    }
+
+    btnSaveShared.onclick = saveShared;
+    btnSavePage.onclick = savePageDraft;
+    btnLoadShared.onclick = loadLatestShared;
+
+    /* ===== Initial boot ===== */
+    (async function boot(){
+      try{ await ensureAuth(); }catch(e){ console.warn("Auth error", e); }
+      // First render from current DOM
+      scheduleState.tables = captureStateAsJson().tables;
+      renderStateFromJson(scheduleState);
+    })();
   </script>
 </body>
 </html>
+

@@ -4702,5 +4702,438 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
 })();
 </script>
 
+
+<script>
+// --- Subjects Manager wiring (modal open/close + buttons) ---
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  function openSubjectsModal(){
+    const modal = $('subjectModal');
+    if(!modal) return;
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden','false');
+    try{ document.body.classList.add('modal-open'); }catch(_){}
+    try{ $('newSubjectInput')?.focus(); }catch(_){}
+  }
+  function closeSubjectsModal(){
+    const modal = $('subjectModal');
+    if(!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden','true');
+    try{ document.body.classList.remove('modal-open'); }catch(_){}
+  }
+
+  document.addEventListener('click', function(e){
+    // X close button
+    if(e.target && e.target.id === 'closeSubjectModalBtn'){ e.preventDefault(); closeSubjectsModal(); return; }
+    // Any element with data-open="subjects" opens modal
+    const opener = e.target.closest && e.target.closest('[data-open="subjects"]');
+    if(opener){ e.preventDefault(); openSubjectsModal(); }
+    // Click outside content closes
+    const modal = $('subjectModal');
+    if(modal && e.target === modal){ closeSubjectsModal(); }
+  }, true);
+
+  // ESC closes
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closeSubjectsModal(); }
+  }, true);
+
+  // Buttons
+  document.addEventListener('click', function(e){
+    if(e.target?.id === 'addSubjectBtn'){
+      e.preventDefault(); try{ addSubject && addSubject(); }catch(err){ console.error(err); }
+    }
+    if(e.target?.id === 'renameSubjectBtn'){
+      e.preventDefault(); try{ renameSubject && renameSubject(); }catch(err){ console.error(err); }
+    }
+    if(e.target?.id === 'deleteSubjectBtn'){
+      e.preventDefault(); try{ deleteSubject && deleteSubject(); }catch(err){ console.error(err); }
+    }
+    if(e.target?.id === 'attachTeacherBtn'){
+      e.preventDefault();
+      try{
+        const v = $('attachTeacherInput')?.value || '';
+        attachTeacher && attachTeacher(v);
+      }catch(err){ console.error(err); }
+    }
+    if(e.target?.id === 'detachTeacherBtn'){
+      e.preventDefault();
+      try{
+        const v = $('detachTeacherInput')?.value || '';
+        detachTeacher && detachTeacher(v);
+      }catch(err){ console.error(err); }
+    }
+  }, true);
+
+  // Tabs (pagi/petang)
+  function activateSessionTab(sess){
+    try{
+      window.currentSubjectSession = sess;
+      document.querySelectorAll('.name-session-tabs button').forEach(b=>b.classList.toggle('active', b.dataset.session===sess));
+      if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+      if(typeof refreshAutocompleteSubjects==='function') refreshAutocompleteSubjects();
+    }catch(_){}
+  }
+  document.addEventListener('click', function(e){
+    if(e.target?.id === 'subjectPagiTab'){ e.preventDefault(); activateSessionTab('pagi'); }
+    if(e.target?.id === 'subjectPetangTab'){ e.preventDefault(); activateSessionTab('petang'); }
+  }, true);
+
+  // Optional: expose for other buttons
+  window.openSubjectsModal = openSubjectsModal;
+  window.closeSubjectsModal = closeSubjectsModal;
+})();
+</script>
+
+
+<script>
+// === Subjects Manager ↔ Firestore Bridge (compat + modular) ===
+(function(){
+  // Detect Firebase SDK flavor
+  const hasCompat = !!(window.firebase && firebase.firestore);
+  const hasMod = !!(window.firebase && window.getFirestore);
+
+  // Resolve app + db
+  let app = null, db = null;
+  try {
+    if (hasCompat) {
+      app = firebase.app();
+      db = firebase.firestore();
+    } else if (hasMod) {
+      app = firebase.getApp ? firebase.getApp() : firebase.initializeApp(window.firebaseConfig);
+      db = getFirestore(app);
+    }
+  } catch (e) {
+    console.warn('Firebase not initialized yet, delaying bridge init...', e);
+    document.addEventListener('DOMContentLoaded', initLater);
+    return;
+  }
+
+  initBridge();
+
+  function initLater(){ try{ initBridge(); }catch(e){ console.error(e);} }
+
+  function initBridge(){
+    // App ID and doc path
+    const appId = (window.appId || localStorage.getItem('appId') || 'default');
+    const path = `artifacts/${appId}/public/data/subjects/main`;
+
+    // Ref helpers (compat + modular)
+    const docRef = hasCompat ? db.doc(path) : doc(db, path);
+    const getDocAny = (ref)=> hasCompat ? ref.get() : getDoc(ref);
+    const setDocAny = (ref, data, opts)=> hasCompat ? ref.set(data, opts) : setDoc(ref, data, opts);
+    const onSnapshotAny = (ref, next, err)=> hasCompat ? ref.onSnapshot(next, err) : onSnapshot(ref, next, err);
+
+    // Ensure global state
+    if(!window.subjectsState) window.subjectsState = { pagi:{}, petang:{} };
+
+    // CRUD functions if missing
+    if(typeof window.addSubject !== 'function'){
+      window.addSubject = async function addSubject(){
+        try{
+          const input = document.getElementById('newSubjectInput');
+          const sess = window.currentSubjectSession || 'pagi';
+          const name = String(input?.value||'').trim();
+          if(!name) return;
+          const s = window.subjectsState[sess] || {};
+          if(!s[name]) s[name] = [];
+          window.subjectsState[sess] = s;
+          await setDocAny(docRef, { [sess]: s }, { merge:true });
+          input.value='';
+          try{ window.showMessage && window.showMessage('Subject added','success'); }catch(_){}
+          if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+          if(typeof refreshAutocompleteSubjects==='function') refreshAutocompleteSubjects();
+        }catch(e){ console.error('addSubject failed', e); }
+      };
+    }
+
+    if(typeof window.renameSubject !== 'function'){
+      window.renameSubject = async function renameSubject(){
+        try{
+          const input = document.getElementById('renameSubjectInput');
+          const sess = window.currentSubjectSession || 'pagi';
+          const [from,to] = String(input?.value||'').split('>').map(s=>s.trim());
+          if(!from || !to) return;
+          const s = Object.assign({}, window.subjectsState[sess]||{});
+          if(!s[from]) return;
+          s[to] = s[from]; delete s[from];
+          window.subjectsState[sess] = s;
+          await setDocAny(docRef, { [sess]: s }, { merge:true });
+          input.value='';
+          try{ window.showMessage && window.showMessage('Subject renamed','success'); }catch(_){}
+          if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+          if(typeof refreshAutocompleteSubjects==='function') refreshAutocompleteSubjects();
+        }catch(e){ console.error('renameSubject failed', e); }
+      };
+    }
+
+    if(typeof window.deleteSubject !== 'function'){
+      window.deleteSubject = async function deleteSubject(){
+        try{
+          const sess = window.currentSubjectSession || 'pagi';
+          const pick = (document.querySelector('#subjectsListCurrent option:checked')?.value||'').trim();
+          if(!pick) return;
+          const s = Object.assign({}, window.subjectsState[sess]||{});
+          delete s[pick];
+          window.subjectsState[sess] = s;
+          await setDocAny(docRef, { [sess]: s }, { merge:true });
+          try{ window.showMessage && window.showMessage('Subject deleted','success'); }catch(_){}
+          if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+          if(typeof refreshAutocompleteSubjects==='function') refreshAutocompleteSubjects();
+        }catch(e){ console.error('deleteSubject failed', e); }
+      };
+    }
+
+    if(typeof window.attachTeacher !== 'function'){
+      window.attachTeacher = async function attachTeacher(name){
+        try{
+          const sess = window.currentSubjectSession || 'pagi';
+          const pick = (document.querySelector('#subjectsListCurrent option:checked')?.value||'').trim();
+          const teacher = String(name || document.getElementById('attachTeacherInput')?.value || '').trim();
+          if(!pick || !teacher) return;
+          const s = Object.assign({}, window.subjectsState[sess]||{});
+          const arr = Array.isArray(s[pick]) ? s[pick] : [];
+          if(!arr.includes(teacher)) arr.push(teacher);
+          s[pick] = arr;
+          window.subjectsState[sess] = s;
+          await setDocAny(docRef, { [sess]: s }, { merge:true });
+          try{ document.getElementById('attachTeacherInput').value=''; }catch(_){}
+          try{ window.showMessage && window.showMessage('Teacher attached','success'); }catch(_){}
+          if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+        }catch(e){ console.error('attachTeacher failed', e); }
+      };
+    }
+
+    if(typeof window.detachTeacher !== 'function'){
+      window.detachTeacher = async function detachTeacher(name){
+        try{
+          const sess = window.currentSubjectSession || 'pagi';
+          const pick = (document.querySelector('#subjectsListCurrent option:checked')?.value||'').trim();
+          const teacher = String(name || document.getElementById('detachTeacherInput')?.value || '').trim();
+          if(!pick || !teacher) return;
+          const s = Object.assign({}, window.subjectsState[sess]||{});
+          const arr = Array.isArray(s[pick]) ? s[pick] : [];
+          window.subjectsState[sess][pick] = arr.filter(t=>t!==teacher);
+          await setDocAny(docRef, { [sess]: window.subjectsState[sess] }, { merge:true });
+          try{ window.showMessage && window.showMessage('Teacher detached','success'); }catch(_){}
+          if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+        }catch(e){ console.error('detachTeacher failed', e); }
+      };
+    }
+
+    // One-time load + live watch
+    if(typeof window.loadSubjectsOnce !== 'function'){
+      window.loadSubjectsOnce = async function loadSubjectsOnce(){
+        try{
+          const snap = await getDocAny(docRef);
+          const data = hasCompat ? (snap.exists ? (snap.data()||{}) : {}) : (snap.exists() ? (snap.data()||{}) : {});
+          window.subjectsState = { pagi: data.pagi || {}, petang: data.petang || {} };
+          if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+          if(typeof refreshAutocompleteSubjects==='function') refreshAutocompleteSubjects();
+        }catch(e){ console.error('loadSubjectsOnce failed', e); }
+      };
+    }
+
+    if(typeof window.watchSubjects !== 'function'){
+      window.watchSubjects = function watchSubjects(){
+        try{
+          return onSnapshotAny(docRef, (snap)=>{
+            const data = hasCompat ? (snap.exists ? (snap.data()||{}) : {}) : (snap.exists() ? (snap.data()||{}) : {});
+            window.subjectsState = { pagi: data.pagi || {}, petang: data.petang || {} };
+            if(typeof renderSubjectsUI==='function') renderSubjectsUI();
+            if(typeof refreshAutocompleteSubjects==='function') refreshAutocompleteSubjects();
+          }, (err)=>{
+            console.error('Subjects onSnapshot error:', err);
+          });
+        }catch(e){ console.error('watchSubjects failed', e); }
+      };
+    }
+
+    // Kick off
+    try{ window.loadSubjectsOnce && window.loadSubjectsOnce(); }catch(_){}
+    try{ window.unsubscribeSubjects && window.unsubscribeSubjects(); }catch(_){}
+    try{ window.unsubscribeSubjects = window.watchSubjects && window.watchSubjects(); }catch(_){}
+  }
+})();
+</script>
+
+
+<script>
+/* ===== Subjects Manager <-> Firestore (robust, multi-ID) ===== */
+(function(){
+  // Helper to resolve multiple possible element IDs
+  function $(ids){
+    if(!Array.isArray(ids)) ids = [ids];
+    for(const id of ids){
+      const el = document.getElementById(id);
+      if(el) return el;
+    }
+    return null;
+  }
+  function q(sel){ return document.querySelector(sel); }
+
+  // Firebase (modular only; compat not used in this build)
+  let app, db;
+  try {
+    app = window.fbApp || (window.firebase && window.firebase.app && window.firebase.app()) || null;
+  } catch(_){ app = null; }
+  try {
+    db = window.fbDb || (window.getFirestore && window.getFirestore(window.fbApp)) || null;
+  } catch(_){ db = null; }
+  // Fallback to global fbDb initialized in the working script
+  db = window.fbDb || db;
+
+  if(!db){
+    console.warn('Subjects Bridge: Firestore not ready; deferring to DOMContentLoaded');
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  }else{
+    init();
+  }
+
+  function init(){
+    try{
+      const appId = window.appId || (localStorage.getItem('appId')||'default-shared-scheduler-app');
+      const path = `artifacts/${appId}/public/data/subjects/main`;
+
+      // Modular API
+      const { doc, getDoc, setDoc, onSnapshot } = window;
+      const subjectsDocRef = doc(db, path);
+
+      // Ensure state
+      window.subjectsState = window.subjectsState || { pagi:{}, petang:{} };
+      window.currentSubjectSession = window.currentSubjectSession || 'pagi';
+
+      // Utility to re-render lists if the page provides hooks
+      function refreshUI(){
+        try{ window.renderSubjectsUI && window.renderSubjectsUI(); }catch(_){}
+        try{ window.refreshAutocompleteSubjects && window.refreshAutocompleteSubjects(); }catch(_){}
+      }
+
+      // Read once + live
+      async function loadOnce(){
+        try{
+          const snap = await getDoc(subjectsDocRef);
+          const data = snap.exists() ? (snap.data()||{}) : {};
+          window.subjectsState = { pagi: data.pagi||{}, petang: data.petang||{} };
+          refreshUI();
+        }catch(e){ console.error('Subjects loadOnce failed', e); }
+      }
+      let unsub = null;
+      function watch(){
+        try{
+          if(unsub) unsub();
+          unsub = onSnapshot(subjectsDocRef, (snap)=>{
+            const data = snap.exists() ? (snap.data()||{}) : {};
+            window.subjectsState = { pagi: data.pagi||{}, petang: data.petang||{} };
+            refreshUI();
+          }, (err)=> console.error('Subjects watch error', err));
+        }catch(e){ console.error('Subjects watch failed', e); }
+      }
+
+      // Make globally visible (the rest of the page might call these)
+      window.loadSubjectsOnce = window.loadSubjectsOnce || loadOnce;
+      window.watchSubjects = window.watchSubjects || watch;
+
+      // ---- CRUD (tolerant to different controls) ----
+      function getSession(){ return window.currentSubjectSession || 'pagi'; }
+      function getSubjectsMap(sess){ return (window.subjectsState[sess] || (window.subjectsState[sess] = {})); }
+      function getSelectedSubject(){
+        // try a select list
+        let s = (q('#subjectsListCurrent option:checked')?.value||'').trim();
+        if(!s) s = (q('#subjectsList option:checked')?.value||'').trim();
+        if(!s) s = (q('[data-selected-subject]')?.getAttribute('data-selected-subject')||'').trim();
+        return s;
+      }
+
+      async function persistSession(sess){
+        try{
+          await setDoc(subjectsDocRef, { [sess]: window.subjectsState[sess]||{} }, { merge: true });
+        }catch(e){ console.error('Persist failed', e); }
+      }
+
+      window.addSubject = window.addSubject || async function addSubject(){
+        const input = $('newSubjectInput') || $('subjectAddInput');
+        const sess = getSession();
+        const name = String(input && input.value || '').trim();
+        if(!name) return;
+        const m = getSubjectsMap(sess);
+        if(!m[name]) m[name] = [];
+        input && (input.value='');
+        await persistSession(sess);
+        refreshUI();
+        try{ window.showMessage && window.showMessage('Subject added', 'success'); }catch(_){}
+      };
+
+      window.renameSubject = window.renameSubject || async function renameSubject(){
+        const input = $('renameSubjectInput') || $('subjectRenameInput');
+        const sess = getSession();
+        const raw = String(input && input.value || '').trim();
+        let from, to;
+        if(raw.includes('>')){
+          [from, to] = raw.split('>').map(s=>s.trim());
+        }else{
+          from = getSelectedSubject();
+          to = raw;
+        }
+        if(!from || !to || from === to) return;
+        const m = Object.assign({}, getSubjectsMap(sess));
+        if(!m[from]) return;
+        m[to] = m[from]; delete m[from];
+        window.subjectsState[sess] = m;
+        input && (input.value='');
+        await persistSession(sess);
+        refreshUI();
+        try{ window.showMessage && window.showMessage('Subject renamed','success'); }catch(_){}
+      };
+
+      window.deleteSubject = window.deleteSubject || async function deleteSubject(){
+        const sess = getSession();
+        const pick = getSelectedSubject();
+        if(!pick) return;
+        const m = Object.assign({}, getSubjectsMap(sess));
+        delete m[pick];
+        window.subjectsState[sess] = m;
+        await persistSession(sess);
+        refreshUI();
+        try{ window.showMessage && window.showMessage('Subject deleted','success'); }catch(_){}
+      };
+
+      window.attachTeacher = window.attachTeacher || async function attachTeacher(name){
+        const sess = getSession();
+        const pick = getSelectedSubject();
+        const teacher = String(name || ($('attachTeacherInput') && $('attachTeacherInput').value) || '').trim();
+        if(!pick || !teacher) return;
+        const m = getSubjectsMap(sess);
+        const arr = Array.isArray(m[pick]) ? m[pick] : [];
+        if(!arr.includes(teacher)) arr.push(teacher);
+        m[pick] = arr;
+        if($('attachTeacherInput')) $('attachTeacherInput').value='';
+        await persistSession(sess);
+        refreshUI();
+        try{ window.showMessage && window.showMessage('Teacher attached','success'); }catch(_){}
+      };
+
+      window.detachTeacher = window.detachTeacher || async function detachTeacher(name){
+        const sess = getSession();
+        const pick = getSelectedSubject();
+        const teacher = String(name || ($('detachTeacherInput') && $('detachTeacherInput').value) || '').trim();
+        if(!pick || !teacher) return;
+        const m = getSubjectsMap(sess);
+        const arr = Array.isArray(m[pick]) ? m[pick] : [];
+        m[pick] = arr.filter(t => t !== teacher);
+        await persistSession(sess);
+        refreshUI();
+        try{ window.showMessage && window.showMessage('Teacher detached','success'); }catch(_){}
+      };
+
+      // boot
+      loadOnce(); watch();
+    }catch(e){ console.error('Subjects bridge init error', e); }
+  }
+})();
+</script>
+
 </body>
 </html>

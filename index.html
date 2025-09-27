@@ -702,7 +702,7 @@
   #entryModeBtn.top-action-btn:active{transform:translateY(1px);}
 </style>
 <div id="centerModeBar">
-  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method">Mode: Teacher</button>
+  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method" type="button" role="button" aria-pressed="false" tabindex="0" style="cursor:pointer; position:relative; z-index:5; pointer-events:auto;">Mode: Teacher</button>
 </div>
 
 <div id="collapsibleButtonBars">
@@ -4598,5 +4598,40 @@ document.addEventListener('keyup', ensureHijack, true);
 })();
 </script>
 
+
+<script>
+// --- Delegated fallback: toggle when anything that *looks* like the Mode button is clicked ---
+document.addEventListener('click', function(e){
+  try{
+    const btn = e.target.closest('#entryModeBtn,[data-mode-btn],.mode-toggle');
+    const looksLikeMode = (!btn && e.target && typeof e.target.textContent==='string' && e.target.textContent.trim().startsWith('Mode:'));
+    const target = btn || (looksLikeMode ? document.getElementById('entryModeBtn') : null);
+    if(!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
+    const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
+    const setMode = (m) => localStorage.setItem(MODE_KEY, m);
+    const next = (getMode()==='subject') ? 'teacher' : 'subject';
+    setMode(next);
+    target.textContent = (next==='subject') ? 'Mode: Subject' : 'Mode: Teacher';
+    try{ document.dispatchEvent(new CustomEvent('mode-changed', { detail: { mode: next }})); }catch(_){}
+    try{ window.showMessage && window.showMessage(`Scheduling mode: ${next.toUpperCase()}`, 'success'); }catch(_){}
+    try{ if(window.autocompleteSuggestionsDiv){ window.autocompleteSuggestionsDiv.style.display='none'; } }catch(_){}
+  }catch(_){}
+}, true);
+
+// Keyboard accessibility
+document.addEventListener('keydown', function(e){
+  const btn = document.getElementById('entryModeBtn');
+  if(!btn) return;
+  if(document.activeElement===btn && (e.key==='Enter' || e.key===' ')){
+    e.preventDefault();
+    btn.click();
+  }
+}, true);
+
+
+</script>
 </body>
 </html>

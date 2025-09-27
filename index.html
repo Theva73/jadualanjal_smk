@@ -701,8 +701,8 @@
   #entryModeBtn.top-action-btn{background:#0d6efd;color:#fff;font-weight:700;border-radius:9999px;padding:10px 18px;min-width:240px;box-shadow:0 2px 6px rgba(0,0,0,.12);}
   #entryModeBtn.top-action-btn:active{transform:translateY(1px);}
 </style>
-<div id="centerModeBar">
-  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method" type="button" role="button" aria-pressed="false" tabindex="0" style="cursor:pointer; position:relative; z-index:5; pointer-events:auto;">Mode: Teacher</button>
+<div id="centerModeBar" data-mode-btn="1" style="cursor:pointer">
+  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method" type="button" style="cursor:pointer; position:relative; z-index:9; pointer-events:auto;">Mode: Teacher</button>
 </div>
 
 <div id="collapsibleButtonBars">
@@ -3771,6 +3771,55 @@ const loadingIndicatorSubjects = document.getElementById('loadingIndicatorSubjec
 
 // uses existing globals defined in your base file
 let subjectsState = { pagi:{}, petang:{} };
+// === Normalization helpers (auto-fix inverted data) ===
+function __subject_getTeacherNameSet(){
+  try{
+    const pagi = Array.from(window.namesPagiShared || []);
+    const petang = Array.from(window.namesPetangShared || []);
+    return new Set([...pagi, ...petang]);
+  }catch(_){ return new Set(); }
+}
+function __subject_invertTeacherToSubject(mapLike){
+  const out = {};
+  try{
+    Object.entries(mapLike||{}).forEach(([teacher, subs])=>{
+      const arr = Array.isArray(subs) ? subs : (subs instanceof Set ? Array.from(subs) : []);
+      arr.forEach((sub)=>{
+        const key = String(sub||'').trim();
+        if(!key) return;
+        if(!out[key]) out[key] = [];
+        if(!out[key].includes(teacher)) out[key].push(teacher);
+      });
+    });
+    // sort for stability
+    Object.keys(out).forEach(k => out[k].sort((a,b)=>a.localeCompare(b)));
+  }catch(_){}
+  return out;
+}
+function __subject_normalizeSession(sess){
+  try{
+    const s = subjectsState[sess] || {};
+    const keys = Object.keys(s);
+    if(!keys.length) return false;
+    const teacherSet = __subject_getTeacherNameSet();
+    const teacherKeyRatio = keys.filter(k => teacherSet.has(k)).length / Math.max(1, keys.length);
+    // Heuristic: if most keys are teacher names and values are arrays => inverted
+    const values = Object.values(s);
+    const looksLikeTeacherToSubjects = values.every(v => Array.isArray(v) || v instanceof Set);
+    if(looksLikeTeacherToSubjects && teacherKeyRatio > 0.5){
+      subjectsState[sess] = __subject_invertTeacherToSubject(s);
+      return true;
+    }
+    return false;
+  }catch(_){ return false; }
+}
+function normalizeAllSubjectsIfNeeded(){
+  const changedP = __subject_normalizeSession('pagi');
+  const changedQ = __subject_normalizeSession('petang');
+  return changedP || changedQ;
+}
+// === /Normalization helpers ===
+
 let selectedSubject = null;
 let currentSubjectSession = 'pagi';
 let unsubscribeSubjects = null;
@@ -3868,6 +3917,7 @@ function watchSubjects(){
     if(snap.exists()){
       const data=snap.data()||{};
       subjectsState = { pagi:data.pagi||{}, petang:data.petang||{} };
+      if(normalizeAllSubjectsIfNeeded()){ try{ await saveSubjectsState(); }catch(_){} }
       renderSubjectsUI();
       refreshAutocompleteSubjects();
     }
@@ -4443,47 +4493,7 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
   const setMode = (m) => localStorage.setItem(MODE_KEY, m);
 
-  // --- Helpers to ensure subjectsState has the right shape: subjects -> Set(teachers)
-  function getTeacherNameSet(){
-    try{
-      const pagi = Array.from(window.namesPagiShared || []);
-      const petang = Array.from(window.namesPetangShared || []);
-      return new Set([...pagi, ...petang]);
-    }catch(_){ return new Set(); }
-  }
-  function invertToSubjectFirst(mapLike){
-    const out = {};
-    try{
-      Object.entries(mapLike||{}).forEach(([teacher, subs])=>{
-        const arr = Array.isArray(subs) ? subs : (subs instanceof Set ? Array.from(subs) : []);
-        arr.forEach((sub)=>{
-          const key = String(sub||'').trim();
-          if(!key) return;
-          if(!out[key]) out[key] = new Set();
-          out[key].add(teacher);
-        });
-      });
-    }catch(_){}
-    return out;
-  }
-  function normalizeSubjectsStateFor(sess){
-    try{
-      let s = (window.subjectsState && window.subjectsState[sess]) || {};
-      const keys = Object.keys(s||{});
-      if(!keys.length) return; // nothing to normalize
-      const values = Object.values(s);
-      const looksLikeTeacherToSubjects = values.some(v => Array.isArray(v) || v instanceof Set);
-      if(looksLikeTeacherToSubjects){
-        const teacherSet = getTeacherNameSet();
-        const teacherKeyRatio = keys.filter(k => teacherSet.has(k)).length / Math.max(1, keys.length);
-        if(teacherKeyRatio > 0.5){
-          const inverted = invertToSubjectFirst(s);
-          window.subjectsState[sess] = inverted;
-          try{ if(typeof saveSubjectsState==='function') saveSubjectsState(); }catch(_){}
-        }
-      }
-    }catch(_){}
-  }function setLabel(btn){ const m=getMode(); btn.textContent=(m==='subject')?'Mode: Subject':'Mode: Teacher'; }
+  function setLabel(btn){ const m=getMode(); btn.textContent=(m==='subject')?'Mode: Subject':'Mode: Teacher'; }
 
   function initModeBtn(){
     const btn=document.getElementById('entryModeBtn'); if(!btn) return;
@@ -4495,18 +4505,7 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   document.addEventListener('DOMContentLoaded', initModeBtn);
 
   // ==== SUBJECT SUGGESTION HIJACK ====
-  function subjectList(sess){
-    try{
-      normalizeSubjectsStateFor(sess);
-      const s = (window.subjectsState && window.subjectsState[sess]) || {};
-      const keys = Object.keys(s||{});
-      if(keys.length) return keys;
-      if(Array.isArray(window.subjectsFlatShared) && window.subjectsFlatShared.length){
-        return window.subjectsFlatShared.slice();
-      }
-      return [];
-    }catch(_){ return []; }
-  }); }catch(_){ return []; }
+  function subjectList(sess){ try{ return Object.keys((subjectsState?.[sess])||{}); }catch(_){ return []; } }); }catch(_){ return []; }
   }
   function currentSubjectSession(){
     const tab=document.querySelector('.name-session-tabs button.active');
@@ -4519,17 +4518,14 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     const needle=(typed||'').toLowerCase();
     const matches=list.filter(s=>String(s).toLowerCase().startsWith(needle)).slice(0,14);
     box.innerHTML='';
-    if(!matches.length){ const div=document.createElement('div'); div.className='suggestion-item disabled'; div.textContent='No subjects defined'; box.appendChild(div); }
     matches.forEach(sub=>{
       const div=document.createElement('div'); div.className='suggestion-item'; div.textContent=sub;
       div.addEventListener('mousedown', (e)=>{
         e.preventDefault();
-        // Subject-only insertion in Subject mode
         const val = sub;
         try { window.selectCellAutocompleteSuggestion(val); } catch(_) {}
-        // Optional hint of teachers (does NOT inject into cell)
         try{
-          const arr = Array.from((window.subjectsState?.[sess]?.[sub])||[]);
+          const arr = Array.from((subjectsState?.[sess]?.[sub])||[]);
           if(arr.length){ window.showMessage && window.showMessage(`Teachers for "${sub}": ${arr.join(', ')}`, 'info', 3000); }
         }catch(_){}
       });
@@ -4548,51 +4544,7 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     return (el?.textContent||'').split(' // ')[0].replace(/\s+/g,' ').trim();
   }
 
-/* --- FIX: Subject-mode hijack — always render Subject list even when dropdown is hidden --- */
-function hijack(){
-  if(getMode()!=='subject') return;
-
-  // Active cell (tracked or focused)
-  const cell = window.activeCellForAutocomplete || (document.activeElement && document.activeElement.closest && document.activeElement.closest('td'));
-  if(!cell) return;
-
-  // Ensure suggestions box exists
-  let box = window.autocompleteSuggestionsDiv || document.getElementById('autocompleteSuggestions');
-  if(!box){
-    box = document.createElement('div');
-    box.id = 'autocompleteSuggestions';
-    document.body.appendChild(box);
-    window.autocompleteSuggestionsDiv = box;
-  }
-
-  // Always render Subject matches (works on focus/click before typing too)
-  const txt = typedFromCell(cell);
-  try { renderSubjectMatches(cell, txt); } catch(e) { console.error('renderSubjectMatches error', e); }
-}
-
-const ensureHijack = () => { try{ hijack(); }catch(e){ console.debug('ensureHijack error', e);} };
-
-// Fire early (capture) so our Subject list wins even if teacher list tries to draw
-document.addEventListener('click', ensureHijack, true);
-document.addEventListener('focus', ensureHijack, true);
-document.addEventListener('input', ensureHijack, true);
-document.addEventListener('keyup', ensureHijack, true);
-
-// If the suggestions box toggles visibility from elsewhere, re-render
-(function(){
-  try{
-    let box = window.autocompleteSuggestionsDiv || document.getElementById('autocompleteSuggestions');
-    if(!box){
-      box = document.createElement('div');
-      box.id = 'autocompleteSuggestions';
-      document.body.appendChild(box);
-      window.autocompleteSuggestionsDiv = box;
-    }
-    const obs = new MutationObserver(()=>{ ensureHijack(); });
-    obs.observe(box, { attributes:true, attributeFilter:['style','class','childList'] });
-  }catch(e){ /* no-op */ }
-})();
-/* --- END FIX --- */  function hijack(){
+  function hijack(){
     if(getMode()!=='subject') return;
     const box=window.autocompleteSuggestionsDiv; if(!box || box.style.display==='none') return;
     const cell=window.activeCellForAutocomplete || document.activeElement?.closest?.('td');
@@ -4635,24 +4587,47 @@ document.addEventListener('keyup', ensureHijack, true);
 </script>
 
 <script>
-// Delegated fallback for Mode toggle
-document.addEventListener('click', function(e){
-  try{
-    const btn = e.target.closest && e.target.closest('#entryModeBtn,[data-mode-btn],.mode-toggle');
-    const looksLikeMode = (!btn && e.target && typeof e.target.textContent==='string' && e.target.textContent.trim().startsWith('Mode:'));
-    const target = btn || (looksLikeMode ? document.getElementById('entryModeBtn') : null);
-    if(!target) return;
-    e.preventDefault(); e.stopPropagation();
+(function(){
+  // Make ANY click on the Mode bar toggle (captures even if overlays try to eat it)
+  function toggleMode(targetEl){
     const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
     const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
     const setMode = (m) => localStorage.setItem(MODE_KEY, m);
     const next = (getMode()==='subject') ? 'teacher' : 'subject';
     setMode(next);
-    target.textContent = (next==='subject') ? 'Mode: Subject' : 'Mode: Teacher';
+    // Update visible label (both button and bar text)
+    try{
+      const btn = document.getElementById('entryModeBtn');
+      if(btn) btn.textContent = (next==='subject') ? 'Mode: Subject' : 'Mode: Teacher';
+      const bar = document.getElementById('centerModeBar');
+      if(bar && !btn) bar.textContent = (next==='subject') ? 'Mode: Subject' : 'Mode: Teacher';
+    }catch(_){}
     try{ document.dispatchEvent(new CustomEvent('mode-changed', { detail: { mode: next }})); }catch(_){}
     try{ if(window.autocompleteSuggestionsDiv){ window.autocompleteSuggestionsDiv.style.display='none'; } }catch(_){}
-  }catch(_){}
-}, true);
+  }
+
+  document.addEventListener('click', function(e){
+    try{
+      const hit = e.target.closest && e.target.closest('#entryModeBtn, #centerModeBar, [data-mode-btn]');
+      const looksLike = (!hit && e.target && String(e.target.textContent||'').trim().startsWith('Mode:'));
+      if(!hit && !looksLike) return;
+      e.preventDefault();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      e.stopPropagation();
+      toggleMode(hit || e.target);
+    }catch(_){}
+  }, true);
+
+  // Keyboard: Enter/Space on the button or bar
+  document.addEventListener('keydown', function(e){
+    const active = document.activeElement;
+    if(!active) return;
+    if((active.id==='entryModeBtn' || active.id==='centerModeBar') && (e.key==='Enter' || e.key===' ')){
+      e.preventDefault();
+      toggleMode(active);
+    }
+  }, true);
+})();
 </script>
 
 </body>

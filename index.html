@@ -4106,9 +4106,151 @@ deleteSubjectBtn?.addEventListener('click', deleteSubject);
 subjectSelect?.addEventListener('change', (e)=>{ selectedSubject = e.target.value || null; renderTeachersLists(); });
 attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInput.value));
 
+
 /* === Attach-Teacher Autocomplete (Subjects Modal) === */
-/* === Attach-Teacher Autocomplete (Subjects Modal) === */
+(function(){
+  // Reuse the global suggestions div used by schedule autocomplete
+  // Fallback create if missing
+  if (typeof autocompleteSuggestionsDiv === 'undefined' || !autocompleteSuggestionsDiv) {
+    window.autocompleteSuggestionsDiv = document.createElement('div');
+    autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';
+    document.body.appendChild(autocompleteSuggestionsDiv);
+  }
+
+  const input = document.getElementById('attachTeacherInput');
+  if (!input) return;
+
+  let activeIndex = -1;
+  let currentItems = [];
+
+  function getCandidateNames(){
+    // Prefer current subject session list; fallback to union
+    try { 
+      if (typeof getNamesForSession === 'function') {
+        return getNamesForSession(typeof currentSubjectSession!=='undefined'? currentSubjectSession : 'pagi') || [];
+      }
+    } catch(_) {}
+    const pagi = Array.from(window.namesPagiShared || []);
+    const petang = Array.from(window.namesPetangShared || []);
+    return Array.from(new Set([...pagi, ...petang]));
+  }
+
+  function positionDropdown(anchorEl){
+    const rect = anchorEl.getBoundingClientRect();
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const left = rect.left + scrollLeft;
+    const top = rect.bottom + scrollTop;
+    autocompleteSuggestionsDiv.style.position = 'absolute';
+    autocompleteSuggestionsDiv.style.left = left + 'px';
+    autocompleteSuggestionsDiv.style.top = top + 'px';
+    autocompleteSuggestionsDiv.style.minWidth = rect.width + 'px';
+    autocompleteSuggestionsDiv.style.zIndex = 9999;
+    autocompleteSuggestionsDiv.style.background = '#fff';
+    autocompleteSuggestionsDiv.style.border = '1px solid #ddd';
+    autocompleteSuggestionsDiv.style.borderRadius = '8px';
+    autocompleteSuggestionsDiv.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
+    autocompleteSuggestionsDiv.style.maxHeight = '240px';
+    autocompleteSuggestionsDiv.style.overflowY = 'auto';
+  }
+
+  function clearDropdown(){ autocompleteSuggestionsDiv.innerHTML = ''; activeIndex = -1; currentItems = []; }
+
+  function hideDropdown(){ clearDropdown(); autocompleteSuggestionsDiv.style.display = 'none'; }
+
+  function showDropdown(){ autocompleteSuggestionsDiv.style.display = 'block'; }
+
+  function buildItems(q){
+    const needle = String(q||'').toLowerCase().trim();
+    if (!needle){ hideDropdown(); return; }
+    const words = needle.split(/\s+/).filter(Boolean);
+    const names = getCandidateNames();
+    const filtered = names.filter(n => {
+      const s = String(n).toLowerCase();
+      return words.every(w => s.includes(w)) || s.startsWith(needle);
+    }).slice(0, 50);
+
+    clearDropdown();
+    if (!filtered.length){ hideDropdown(); return; }
+
+    filtered.forEach((name, i) => {
+      const div = document.createElement('div');
+      div.textContent = name;
+      div.style.padding = '8px 10px';
+      div.style.cursor = 'pointer';
+      div.addEventListener('mouseenter', ()=>{ setActive(i); });
+      div.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); // prevent blur
+      div.addEventListener('click', ()=>{
+        input.value = name;
+        hideDropdown();
+        setTimeout(()=> input.focus(), 0);
+      });
+      autocompleteSuggestionsDiv.appendChild(div);
+    });
+    currentItems = Array.from(autocompleteSuggestionsDiv.children);
+    setActive(0);
+    positionDropdown(input);
+    showDropdown();
+  }
+
+  function setActive(i){
+    currentItems.forEach((el, idx)=>{
+      el.style.background = idx===i ? '#eef6ff' : '#fff';
+    });
+    activeIndex = i;
+  }
+
+  function move(delta){
+    if (!currentItems.length) return;
+    let i = activeIndex + delta;
+    if (i < 0) i = currentItems.length - 1;
+    if (i >= currentItems.length) i = 0;
+    setActive(i);
+    const el = currentItems[i];
+    const pTop = autocompleteSuggestionsDiv.scrollTop;
+    const pBottom = pTop + autocompleteSuggestionsDiv.clientHeight;
+    const eTop = el.offsetTop;
+    const eBottom = eTop + el.offsetHeight;
+    if (eTop < pTop) autocompleteSuggestionsDiv.scrollTop = eTop;
+    else if (eBottom > pBottom) autocompleteSuggestionsDiv.scrollTop = eBottom - autocompleteSuggestionsDiv.clientHeight;
+  }
+
+  function acceptActive(){
+    if (activeIndex>=0 && currentItems[activeIndex]){
+      const name = currentItems[activeIndex].textContent;
+      input.value = name;
+      hideDropdown();
+    }
+  }
+
+  // Wire events
+  input.addEventListener('input', ()=> buildItems(input.value));
+  input.addEventListener('keydown', (e)=>{
+    if (e.key === 'ArrowDown'){ e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter'){ if (autocompleteSuggestionsDiv.style.display!=='none'){ e.preventDefault(); acceptActive(); } }
+    else if (e.key === 'Escape'){ hideDropdown(); }
+  });
+
+  // Hide on outside click / scroll
+  document.addEventListener('click', (e)=>{
+    if (e.target !== input && !autocompleteSuggestionsDiv.contains(e.target)){ hideDropdown(); }
+  }, true);
+  window.addEventListener('scroll', ()=>{ if (autocompleteSuggestionsDiv.style.display!=='none') positionDropdown(input); }, true);
+
+  // Also refresh when shared name list updates (from your earlier patch)
+  document.addEventListener('sharedNameListUpdated', ()=>{
+    if (document.activeElement === input){ buildItems(input.value); }
+  });
+
+  // If the modal opens, reset dropdown
+  if (typeof subjectsModal !== 'undefined'){
+    const obs = new MutationObserver(()=>{ if (subjectsModal.style.display === 'flex'){ hideDropdown(); } });
+    obs.observe(subjectsModal, { attributes: true, attributeFilter: ['style'] });
+  }
+})();
 /* === /Attach-Teacher Autocomplete === */
+
 
 
 detachTeacherBtn?.addEventListener('click', async ()=>{

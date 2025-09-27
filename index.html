@@ -844,6 +844,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 <script type="module">
+// === Autocomplete globals (safe) ===
+let autocompleteSuggestionsDiv = typeof autocompleteSuggestionsDiv !== 'undefined' ? autocompleteSuggestionsDiv : null;
+let activeCellForAutocomplete = typeof activeCellForAutocomplete !== 'undefined' ? activeCellForAutocomplete : null;
+let currentAutocompleteIndex = typeof currentAutocompleteIndex !== 'undefined' ? currentAutocompleteIndex : -1;
+
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, getDocs, getDoc, deleteDoc, updateDoc, query, serverTimestamp, orderBy, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -2451,22 +2457,21 @@ function getActiveNameSession(){
   }
 
   
-// === Subject list helpers ===
+// === Subject data helpers ===
+// Expect window.subjectsBySession = {pagi:[...], petang:[...]}
+// and window.subjectTeachersMap = {pagi:{'Math':['ALI','BEE']}, petang:{...}}
 function getSubjectSession(){
-  // use current active name session if available; default 'pagi'
   try {
     if (typeof currentNameListSession !== 'undefined') return currentNameListSession;
   } catch(e){}
   return 'pagi';
 }
 function subjectListForSession(sess){
-  // Expect window.subjectsBySession = {pagi: [...], petang:[...]}
   const sb = (window.subjectsBySession||{});
   const arr = Array.isArray(sb[sess]) ? sb[sess] : [];
   return arr;
 }
 function teachersForSubject(sess, subject){
-  // Expect window.subjectTeachersMap = {'pagi': {'Math':['Ali','Bee'], ...}, 'petang': {...}}
   const m = (window.subjectTeachersMap||{});
   const bucket = m[sess] || {};
   const arr = bucket[subject] || [];
@@ -3399,6 +3404,142 @@ function addNewIndependentTable() {
         initializeEventListeners(); // This should now work as functions are defined
         handleNameListSessionSwitch('pagi'); // Set default session for name list
     });
+
+
+// === Entry Mode helpers (Teacher / Subject) ===
+const ENTRY_MODE_KEY = 'entryMode';
+function getEntryMode() {
+  try { return (localStorage.getItem(ENTRY_MODE_KEY) || 'teacher'); } catch(e){ return 'teacher'; }
+}
+function setEntryMode(mode) {
+  try { localStorage.setItem(ENTRY_MODE_KEY, mode); } catch(e){}
+  updateEntryModeUI();
+}
+function updateEntryModeUI(){
+  const btn = document.getElementById('entryModeBtn');
+  const mode = getEntryMode();
+  if (btn) btn.textContent = 'Mode: ' + (mode === 'subject' ? 'Subject' : 'Teacher');
+}
+function toggleEntryMode() {
+  const next = getEntryMode() === 'teacher' ? 'subject' : 'teacher';
+  setEntryMode(next);
+}
+
+
+
+// === Legacy compat: hide suggestions ===
+function hideCellAutocompleteSuggestions() {
+  try {
+    if (autocompleteSuggestionsDiv) { autocompleteSuggestionsDiv.style.display = 'none'; }
+    currentAutocompleteIndex = -1;
+    activeCellForAutocomplete = null;
+  } catch(e){ console.warn('hideCellAutocompleteSuggestions:', e); }
+}
+
+
+
+function showCellAutocompleteSuggestions(cell, textForMatching) {
+  try {
+    if (!autocompleteSuggestionsDiv) {
+      autocompleteSuggestionsDiv = document.createElement('div');
+      autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';
+      document.body.appendChild(autocompleteSuggestionsDiv);
+    }
+    const rect = cell.getBoundingClientRect();
+    autocompleteSuggestionsDiv.style.left = (window.scrollX + rect.left) + 'px';
+    autocompleteSuggestionsDiv.style.top = (window.scrollY + rect.bottom) + 'px';
+
+    const mode = getEntryMode();
+    const t = String(textForMatching || '').toLowerCase().trim();
+    let suggestions = [];
+
+    if (mode === 'subject') {
+      const sess = getSubjectSession();
+      const subjects = subjectListForSession(sess);
+      suggestions = subjects
+        .filter(sub => String(sub||'').toLowerCase().startsWith(t) && String(sub||'').toLowerCase() !== t)
+        .slice(0, 14)
+        .map(sub => {
+          const arr = teachersForSubject(sess, sub);
+          return (arr && arr.length === 1) ? (sub + ' > ' + arr[0]) : (sub + ' > ');
+        });
+    } else {
+      const sess = getSubjectSession();
+      const names = (sess === 'pagi') ? (window.namesPagiShared||[]) : (window.namesPetangShared||[]);
+      suggestions = names
+        .filter(name => {
+          const nameStr = String(name||'').toLowerCase().trim();
+          return nameStr.startsWith(t) && nameStr !== t;
+        })
+        .slice(0, 12);
+    }
+
+    if (!suggestions || suggestions.length === 0) {
+      hideCellAutocompleteSuggestions();
+      return;
+    }
+
+    autocompleteSuggestionsDiv.innerHTML = suggestions.map((s, idx) => 
+      `<div class="suggestion-item" data-idx="${idx}">${s}</div>`
+    ).join('');
+    autocompleteSuggestionsDiv.style.display = 'block';
+    activeCellForAutocomplete = cell;
+    currentAutocompleteIndex = -1;
+
+    autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const val = e.currentTarget.textContent;
+        selectCellAutocompleteSuggestion(val);
+      });
+    });
+  } catch (err) {
+    console.error('showCellAutocompleteSuggestions error:', err);
+  }
+}
+
+
+
+function selectCellAutocompleteSuggestion(value) {
+  try {
+    if (!activeCellForAutocomplete) return;
+    let finalText = String(value||'');
+
+    if (getEntryMode() === 'subject' && finalText.includes('>')) {
+      finalText = finalText.split('>')[0].trim();
+    }
+
+    activeCellForAutocomplete.textContent = finalText;
+    hideCellAutocompleteSuggestions();
+
+    if (typeof updateSummaryTable === 'function') {
+      try { updateSummaryTable(); } catch(e){}
+    }
+  } catch (err) {
+    console.error('selectCellAutocompleteSuggestion error:', err);
+  }
+}
+
+
+
+// === Autocomplete typing handler (TD contenteditable) ===
+document.addEventListener('input', (e) => {
+  const target = e.target;
+  if (target && target.isContentEditable && target.tagName === 'TD') {
+    const txt = target.textContent || '';
+    const needle = txt.split(/\s+/).pop();
+    if (needle && needle.length >= 1) {
+      showCellAutocompleteSuggestions(target, needle);
+    } else {
+      hideCellAutocompleteSuggestions();
+    }
+  }
+});
+document.addEventListener('click', (e) => {
+  if (autocompleteSuggestionsDiv && !autocompleteSuggestionsDiv.contains(e.target)) {
+    hideCellAutocompleteSuggestions();
+  }
+});
+
 </script>
 
 <!-- ### Added by ChatGPT 2025‑06‑17 ### -->
@@ -4485,164 +4626,6 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   function attachSummaryHooks(){ let isProcessing=false, timer=null; const run=()=>{ if(isProcessing) return; isProcessing=true; try{ expandSummarySubjectsToTeachers(); } finally { try{ if(typeof window.detectAndMarkClashes==='function') window.detectAndMarkClashes(); }catch(_){ } isProcessing=false; } }; if(typeof window.rebuildAndRenderSummary==='function'){ const old=window.rebuildAndRenderSummary; window.rebuildAndRenderSummary=async function(...args){ const res=await old.apply(this,args); run(); return res; }; } const target=document.getElementById('summaryTable'); if(target){ const obs=new MutationObserver(()=>{ clearTimeout(timer); if(isProcessing) return; timer=setTimeout(run,150); }); obs.observe(target,{childList:true,subtree:true}); } run(); }
   document.addEventListener('DOMContentLoaded', attachSummaryHooks);
 })();
-
-
-// === Entry Mode helpers (Teacher / Subject) ===
-function getEntryMode() {
-  try { return (localStorage.getItem('entryMode') || 'teacher'); } catch(e){ return 'teacher'; }
-}
-function setEntryMode(mode) {
-  try { localStorage.setItem('entryMode', mode); } catch(e){}
-  const btn = document.getElementById('entryModeBtn');
-  if (btn) btn.textContent = 'Mode: ' + (mode.charAt(0).toUpperCase() + mode.slice(1));
-}
-function toggleEntryMode() {
-  const next = getEntryMode() === 'teacher' ? 'subject' : 'teacher';
-  setEntryMode(next);
-}
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('entryModeBtn');
-  if (btn) {
-    setEntryMode(getEntryMode());
-    btn.addEventListener('click', toggleEntryMode);
-  }
-});
-
-
-
-function showCellAutocompleteSuggestions(cell, textForMatching) {
-  try {
-    if (!autocompleteSuggestionsDiv) {
-      autocompleteSuggestionsDiv = document.createElement('div');
-      autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';
-      document.body.appendChild(autocompleteSuggestionsDiv);
-    }
-    const rect = cell.getBoundingClientRect();
-    autocompleteSuggestionsDiv.style.left = (window.scrollX + rect.left) + 'px';
-    autocompleteSuggestionsDiv.style.top = (window.scrollY + rect.bottom) + 'px';
-
-    const mode = (typeof getEntryMode === 'function') ? getEntryMode() : 'teacher';
-    const t = String(textForMatching || '').toLowerCase().trim();
-    let suggestions = [];
-
-    if (mode === 'subject') {
-      const sess = (typeof getSubjectSession === 'function') ? getSubjectSession() : 'pagi';
-      const subjects = (typeof subjectListForSession === 'function') ? subjectListForSession(sess) : [];
-      suggestions = subjects
-        .filter(sub => String(sub||'').toLowerCase().startsWith(t) && String(sub||'').toLowerCase() !== t)
-        .slice(0, 14)
-        .map(sub => {
-          const arr = (typeof teachersForSubject === 'function') ? teachersForSubject(sess, sub) : [];
-          return arr && arr.length === 1 ? (sub + ' > ' + arr[0]) : (sub + ' > ');
-        });
-    } else {
-      const sess = (typeof getSubjectSession === 'function') ? getSubjectSession() : 'pagi';
-      const names = (sess === 'pagi') ? (window.namesPagiShared||[]) : (window.namesPetangShared||[]);
-      suggestions = names
-        .filter(name => {
-          const nameStr = String(name||'').toLowerCase().trim();
-          return nameStr.startsWith(t) && nameStr !== t;
-        })
-        .slice(0, 10);
-    }
-
-    if (!suggestions || suggestions.length === 0) {
-      autocompleteSuggestionsDiv.style.display = 'none';
-      activeCellForAutocomplete = null;
-      return;
-    }
-
-    autocompleteSuggestionsDiv.innerHTML = suggestions.map((s, idx) => 
-      `<div class="suggestion-item" data-idx="${idx}">${s}</div>`
-    ).join('');
-    autocompleteSuggestionsDiv.style.display = 'block';
-    activeCellForAutocomplete = cell;
-    currentAutocompleteIndex = -1;
-
-    // click handler
-    autocompleteSuggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const val = e.currentTarget.textContent;
-        selectCellAutocompleteSuggestion(val);
-      });
-    });
-  } catch (err) {
-    console.error('showCellAutocompleteSuggestions error:', err);
-  }
-}
-
-
-
-function selectCellAutocompleteSuggestion(value) {
-  try {
-    if (!activeCellForAutocomplete) return;
-    let finalText = String(value||'');
-
-    // If suggestion came as "Subject > Teacher", write only the left part to the cell in Subject mode
-    const mode = (typeof getEntryMode === 'function') ? getEntryMode() : 'teacher';
-    if (mode === 'subject' && finalText.includes('>')) {
-      finalText = finalText.split('>')[0].trim();
-    }
-
-    activeCellForAutocomplete.textContent = finalText;
-    autocompleteSuggestionsDiv.style.display = 'none';
-    currentAutocompleteIndex = -1;
-    activeCellForAutocomplete = null;
-
-    if (typeof updateSummaryTable === 'function') {
-      try { updateSummaryTable(); } catch(e){}
-    }
-  } catch (err) {
-    console.error('selectCellAutocompleteSuggestion error:', err);
-  }
-}
-
-
-
-// === Autocomplete typing handler ===
-document.addEventListener('input', (e) => {
-  const target = e.target;
-  if (target && target.isContentEditable && target.tagName === 'TD') {
-    const txt = target.textContent || '';
-    const needle = txt.split(/\s+/).pop(); // last token
-    if (needle && needle.length >= 1) {
-      showCellAutocompleteSuggestions(target, needle);
-    } else if (typeof autocompleteSuggestionsDiv !== 'undefined' && autocompleteSuggestionsDiv) {
-      autocompleteSuggestionsDiv.style.display = 'none';
-    }
-  }
-});
-// Hide suggestions on click outside
-document.addEventListener('click', (e) => {
-  if (autocompleteSuggestionsDiv && !autocompleteSuggestionsDiv.contains(e.target)) {
-    autocompleteSuggestionsDiv.style.display = 'none';
-  }
-});
-
-
-
-// === Autocomplete globals: safe init (compat) ===
-try {
-  if (typeof autocompleteSuggestionsDiv === 'undefined') { var autocompleteSuggestionsDiv = null; }
-  if (typeof activeCellForAutocomplete === 'undefined') { var activeCellForAutocomplete = null; }
-  if (typeof currentAutocompleteIndex === 'undefined') { var currentAutocompleteIndex = -1; }
-} catch(e){}
-
-// === Legacy helper for callers (switchTable, etc.) ===
-function hideCellAutocompleteSuggestions() {
-  try {
-    if (typeof autocompleteSuggestionsDiv !== 'undefined' && autocompleteSuggestionsDiv) {
-      autocompleteSuggestionsDiv.style.display = 'none';
-      // optional: clear items to avoid stale click handlers
-      // autocompleteSuggestionsDiv.innerHTML = '';
-    }
-    if (typeof currentAutocompleteIndex !== 'undefined') currentAutocompleteIndex = -1;
-    if (typeof activeCellForAutocomplete !== 'undefined') activeCellForAutocomplete = null;
-  } catch (err) {
-    console.warn('hideCellAutocompleteSuggestions error:', err);
-  }
-}
-
 </script>
 </body>
 </html>

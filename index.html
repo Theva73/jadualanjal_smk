@@ -4498,7 +4498,6 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
   const setMode = (m) => localStorage.setItem(MODE_KEY, m);
-
   function placeButton() {
     const bars = document.querySelectorAll('.bar');
     const topBar = Array.from(bars).find(b => b.querySelector('#subjectListBtn'));
@@ -4506,22 +4505,12 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     const btn = document.createElement('button');
     btn.id = 'entryModeBtn';
     btn.title = 'Toggle scheduling input method';
-    function label() {
-      const m = getMode();
-      btn.textContent = (m === 'subject') ? 'Mode: Subject' : 'Mode: Teacher';
-    }
-    btn.addEventListener('click', () => {
-      const next = (getMode() === 'subject') ? 'teacher' : 'subject';
-      setMode(next);
-      label();
-      try { window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`, 'success'); } catch(_) {}
-    });
+    function label(){ btn.textContent = (getMode()==='subject') ? 'Mode: Subject' : 'Mode: Teacher'; }
+    btn.addEventListener('click', () => { const next=(getMode()==='subject')?'teacher':'subject'; setMode(next); label(); try{window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`,'success');}catch(_){}});
     label();
     const subjectsBtn = topBar.querySelector('#subjectListBtn');
     subjectsBtn ? subjectsBtn.after(btn) : topBar.appendChild(btn);
   }
-
-  // place now and also after panel re-renders
   placeButton();
   const obs = new MutationObserver(() => placeButton());
   obs.observe(document.body, { childList:true, subtree:true });
@@ -4534,36 +4523,29 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
 (function(){
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
-
   function getCurrentSessionForSubjects(){
     const tab = document.querySelector('.name-session-tabs button.active');
     return (window.currentSubjectSession) || tab?.dataset?.session || 'pagi';
   }
-
   function getSubjectsForSession(sess){
     try { return Object.keys((window.subjectsState?.[sess]) || {}).sort((a,b)=>a.localeCompare(b)); }
     catch(_) { return []; }
   }
-
   function getPairsForSession(sess){
     const map = (window.subjectsState?.[sess]) || {};
     const pairs = [];
     Object.keys(map).forEach(sub => (map[sub]||[]).forEach(t => pairs.push(`${sub} > ${t}`)));
     return pairs.sort((a,b)=>a.localeCompare(b));
   }
-
   window.showCellAutocompleteSuggestions = function(cell, inputText){
     if (!window.autocompleteSuggestionsDiv) return;
-
     const mode = getMode();
     const sessForNames = (window.currentNameListSession === 'petang') ? 'petang' : 'pagi';
     const textBeforeRemarks = String(inputText || '').split(' // ')[0];
     const wordsNoStars = textBeforeRemarks.split(/\s+/).filter(w => !w.startsWith('*'));
     const needle = wordsNoStars.join(' ').toLowerCase().trim();
     if (!needle) { hideCellAutocompleteSuggestions(); return; }
-
     let suggestions = [];
-
     if (mode === 'teacher') {
       const names = (sessForNames === 'pagi' ? (window.namesPagiShared||[]) : (window.namesPetangShared||[]));
       suggestions = names.filter(n => String(n).toLowerCase().startsWith(needle) && String(n).toLowerCase() !== needle);
@@ -4571,7 +4553,6 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
       const sess = getCurrentSessionForSubjects();
       const subjects = getSubjectsForSession(sess);
       const pairs    = getPairsForSession(sess);
-
       const subMatches = subjects.filter(s => String(s).toLowerCase().startsWith(needle));
       const map = (window.subjectsState?.[sess]) || {};
       const expanded = [];
@@ -4583,7 +4564,6 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
       const pairMatches = pairs.filter(p => String(p).toLowerCase().startsWith(needle));
       suggestions = Array.from(new Set([...expanded, ...pairMatches]));
     }
-
     if (suggestions.length > 0) {
       window.activeCellForAutocomplete = cell;
       const box = window.autocompleteSuggestionsDiv;
@@ -4600,16 +4580,13 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
             const arr = Array.from((window.subjectsState?.[sess]?.[s]) || []);
             const finalText = (arr.length === 1) ? `${s} > ${arr[0]}` : `${s} > `;
             window.selectCellAutocompleteSuggestion(finalText);
-            if (arr.length > 1) {
-              try { window.showMessage?.(`Select teacher for "${s}": ${arr.join(', ')}`, 'info', 4000); } catch(_) {}
-            }
+            if (arr.length > 1) { try { window.showMessage?.(`Select teacher for "${s}": ${arr.join(', ')}`, 'info', 4000); } catch(_) {} }
           } else {
             window.selectCellAutocompleteSuggestion(txt);
           }
         });
         box.appendChild(item);
       });
-
       const r = cell.getBoundingClientRect();
       box.style.left = `${r.left + window.scrollX}px`;
       box.style.top =  `${r.bottom + window.scrollY}px`;
@@ -4624,7 +4601,7 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
 </script>
 
 
-<!-- === Subject-only cells, teacher-expanded summary (PATCH) === -->
+<!-- === Subject-only cells, teacher-expanded summary (safer observer) === -->
 <script type="module">
 (() => {
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
@@ -4675,9 +4652,10 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
       for (let c=1; c<row.cells.length; c++){
         const cell = row.cells[c];
         if(cell.style.display==='none') continue;
-        const raw = clean(cell.textContent);
+        const raw = clean(cell.getAttribute('data-expanded-from') || cell.textContent);
         if(!raw) continue;
-        if(/\)\s*(,|$)/.test(raw) || /\(.+\)/.test(raw)) continue;
+        const alreadyPretty = /\(.+\)/.test(cell.textContent);
+        if(alreadyPretty && cell.hasAttribute('data-expanded-from')) continue;
         const entries = parseSubjectsAndTeachersFromCellText(raw, session);
         if(!entries.length) continue;
         const pretty = entries.map(e => e.teachers?.length ? `${e.subject} (${e.teachers.join(', ')})` : e.subject).join(', ');
@@ -4735,10 +4713,15 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     if (typeof window.bubbleProblemRows === 'function') window.bubbleProblemRows();
   }
   function attachSummaryHooks(){
+    let isProcessing = false;
+    let timer = null;
     const runPostProcess = () => {
-      expandSummarySubjectsToTeachers();
-      if (typeof window.detectAndMarkClashes === 'function') {
-        try { window.detectAndMarkClashes(); } catch(_) {}
+      if (isProcessing) return;
+      isProcessing = true;
+      try { expandSummarySubjectsToTeachers(); }
+      finally {
+        try { if (typeof window.detectAndMarkClashes === 'function') window.detectAndMarkClashes(); } catch(_) {}
+        isProcessing = false;
       }
     };
     if (typeof window.rebuildAndRenderSummary === 'function'){
@@ -4751,7 +4734,11 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     }
     const target = document.getElementById('summaryTable');
     if(target){
-      const obs = new MutationObserver(() => runPostProcess());
+      const obs = new MutationObserver(() => {
+        clearTimeout(timer);
+        if (isProcessing) return;
+        timer = setTimeout(runPostProcess, 150);
+      });
       obs.observe(target, { childList:true, subtree:true });
     }
     runPostProcess();

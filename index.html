@@ -701,8 +701,8 @@
   #entryModeBtn.top-action-btn{background:#0d6efd;color:#fff;font-weight:700;border-radius:9999px;padding:10px 18px;min-width:240px;box-shadow:0 2px 6px rgba(0,0,0,.12);}
   #entryModeBtn.top-action-btn:active{transform:translateY(1px);}
 </style>
-<div id="centerModeBar" data-mode-btn="1" style="cursor:pointer">
-  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method" type="button" style="cursor:pointer; position:relative; z-index:9; pointer-events:auto;">Mode: Teacher</button>
+<div id="centerModeBar" data-mode-btn="1" style="cursor:pointer" data-mode-btn="1" style="cursor:pointer">
+  <button id="entryModeBtn" class="top-action-btn" title="Toggle scheduling input method" type="button" style="cursor:pointer; position:relative; z-index:9; pointer-events:auto;" type="button" style="cursor:pointer; position:relative; z-index:9; pointer-events:auto;">Mode: Teacher</button>
 </div>
 
 <div id="collapsibleButtonBars">
@@ -4486,74 +4486,106 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
 </script>
 
 
-<!-- === Mode Toggle + Subject Hijack === -->
+
+<!-- === Mode Toggle + Subject Hijack (FIXED) === -->
 <script>
 (function(){
   const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
   const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
   const setMode = (m) => localStorage.setItem(MODE_KEY, m);
 
-  function setLabel(btn){ const m=getMode(); btn.textContent=(m==='subject')?'Mode: Subject':'Mode: Teacher'; }
+  function setLabel(btn){
+    const m = getMode();
+    btn.textContent = (m === 'subject') ? 'Mode: Subject' : 'Mode: Teacher';
+  }
 
   function initModeBtn(){
-    const btn=document.getElementById('entryModeBtn'); if(!btn) return;
+    const btn = document.getElementById('entryModeBtn'); if(!btn) return;
     setLabel(btn);
-    btn.addEventListener('click', ()=>{ const next=(getMode()==='subject')?'teacher':'subject'; setMode(next); setLabel(btn); try{window.showMessage?.(`Scheduling mode: ${next.toUpperCase()}`,'success');}catch(_){}});
+    btn.addEventListener('click', ()=>{
+      const next = (getMode() === 'subject') ? 'teacher' : 'subject';
+      setMode(next);
+      setLabel(btn);
+      try { document.dispatchEvent(new CustomEvent('mode-changed', { detail: { mode: next }})); } catch(_) {}
+      try { if(window.autocompleteSuggestionsDiv){ window.autocompleteSuggestionsDiv.style.display='none'; } } catch(_) {}
+    }, true);
   }
 
   if(!localStorage.getItem(MODE_KEY)){ localStorage.setItem(MODE_KEY,'subject'); }
   document.addEventListener('DOMContentLoaded', initModeBtn);
 
   // ==== SUBJECT SUGGESTION HIJACK ====
-  function subjectList(sess){ try{ return Object.keys((subjectsState?.[sess])||{}); }catch(_){ return []; } }); }catch(_){ return []; }
+  function subjectList(sess){
+    try{
+      const map = (window.subjectsState && window.subjectsState[sess]) || {};
+      return Object.keys(map);
+    }catch(_){
+      return [];
+    }
   }
+
   function currentSubjectSession(){
-    const tab=document.querySelector('.name-session-tabs button.active');
-    return (window.currentSubjectSession)||tab?.dataset?.session||'pagi';
+    const tab = document.querySelector('.name-session-tabs button.active');
+    return (window.currentSubjectSession) || tab?.dataset?.session || 'pagi';
   }
+
   function renderSubjectMatches(cell, typed){
-    const box=window.autocompleteSuggestionsDiv; if(!box) return;
-    const sess=currentSubjectSession();
-    const list=subjectList(sess);
-    const needle=(typed||'').toLowerCase();
-    const matches=list.filter(s=>String(s).toLowerCase().startsWith(needle)).slice(0,14);
-    box.innerHTML='';
+    const box = window.autocompleteSuggestionsDiv; if(!box) return;
+    const sess = currentSubjectSession();
+    const list = subjectList(sess);
+
+    const needle = (typed||'').toLowerCase();
+    const matches = list
+      .filter(s => String(s).toLowerCase().startsWith(needle))
+      .slice(0, 14);
+
+    box.innerHTML = '';
+    if(!matches.length){
+      const div = document.createElement('div');
+      div.className = 'suggestion-item disabled';
+      div.textContent = 'No subjects defined';
+      box.appendChild(div);
+    }
     matches.forEach(sub=>{
-      const div=document.createElement('div'); div.className='suggestion-item'; div.textContent=sub;
+      const div = document.createElement('div');
+      div.className = 'suggestion-item';
+      div.textContent = sub;
+
       div.addEventListener('mousedown', (e)=>{
         e.preventDefault();
-        const val = sub;
-        try { window.selectCellAutocompleteSuggestion(val); } catch(_) {}
+        try { window.selectCellAutocompleteSuggestion(sub); } catch(_) {}
         try{
-          const arr = Array.from((subjectsState?.[sess]?.[sub])||[]);
-          if(arr.length){ window.showMessage && window.showMessage(`Teachers for "${sub}": ${arr.join(', ')}`, 'info', 3000); }
+          const arr = Array.from((window.subjectsState?.[sess]?.[sub]) || []);
+          if(arr.length){ window.showMessage?.(`Teachers for "${sub}": ${arr.join(', ')}`, 'info', 3000); }
         }catch(_){}
       });
       box.appendChild(div);
     });
-    const r=cell.getBoundingClientRect();
+
+    const r = cell.getBoundingClientRect();
     box.style.left = (r.left + window.scrollX) + 'px';
     box.style.top  = (r.bottom + window.scrollY) + 'px';
     box.style.minWidth = r.width + 'px';
     box.style.display='block';
-    window.currentAutocompleteIndex=-1;
+    window.currentAutocompleteIndex = -1;
   }
 
   function typedFromCell(cell){
-    const el=cell?.querySelector('[contenteditable="true"]')||cell;
+    const el = cell?.querySelector('[contenteditable="true"]') || cell;
     return (el?.textContent||'').split(' // ')[0].replace(/\s+/g,' ').trim();
   }
 
   function hijack(){
-    if(getMode()!=='subject') return;
-    const box=window.autocompleteSuggestionsDiv; if(!box || box.style.display==='none') return;
-    const cell=window.activeCellForAutocomplete || document.activeElement?.closest?.('td');
+    if(getMode() !== 'subject') return;
+    const box = window.autocompleteSuggestionsDiv;
+    if(!box || box.style.display === 'none') return;
+    const cell = window.activeCellForAutocomplete || document.activeElement?.closest?.('td');
     if(!cell) return;
-    const txt=typedFromCell(cell);
+    const txt = typedFromCell(cell);
     renderSubjectMatches(cell, txt);
   }
 
-  const ensureHijack = () => { try{ hijack(); }catch(_){}};
+  const ensureHijack = () => { try{ hijack(); }catch(_){} };
 
   document.addEventListener('input', ensureHijack, true);
   document.addEventListener('keyup', ensureHijack, true);
@@ -4562,12 +4594,17 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
   const boxReady = setInterval(()=>{
     if(window.autocompleteSuggestionsDiv){
       clearInterval(boxReady);
-      const obs=new MutationObserver(()=>ensureHijack());
-      obs.observe(window.autocompleteSuggestionsDiv, {childList:true, attributes:true, attributeFilter:['style']});
+      const obs = new MutationObserver(()=>ensureHijack());
+      obs.observe(window.autocompleteSuggestionsDiv, {
+        childList:true,
+        attributes:true,
+        attributeFilter:['style']
+      });
     }
   }, 120);
 })();
 </script>
+
 
 <!-- === Summary expansion & conflicts (unchanged) === -->
 <script>
@@ -4625,6 +4662,41 @@ document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
     if((active.id==='entryModeBtn' || active.id==='centerModeBar') && (e.key==='Enter' || e.key===' ')){
       e.preventDefault();
       toggleMode(active);
+    }
+  }, true);
+})();
+</script>
+
+
+<script>
+(function(){
+  function toggleMode(){
+    const MODE_KEY = `scheduleEntryMode_${window.appId || 'default'}`;
+    const getMode = () => localStorage.getItem(MODE_KEY) || 'teacher';
+    const setMode = (m) => localStorage.setItem(MODE_KEY, m);
+    const next = (getMode()==='subject') ? 'teacher' : 'subject';
+    setMode(next);
+    try{
+      const btn = document.getElementById('entryModeBtn');
+      if(btn) btn.textContent = (next==='subject') ? 'Mode: Subject' : 'Mode: Teacher';
+      document.dispatchEvent(new CustomEvent('mode-changed', { detail: { mode: next }}));
+      if(window.autocompleteSuggestionsDiv){ window.autocompleteSuggestionsDiv.style.display='none'; }
+    }catch(_){}
+  }
+
+  document.addEventListener('click', function(e){
+    const hit = e.target.closest && e.target.closest('#entryModeBtn, #centerModeBar, [data-mode-btn]');
+    if(!hit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleMode();
+  }, true);
+
+  document.addEventListener('keydown', function(e){
+    const active = document.activeElement;
+    if((active?.id==='entryModeBtn' || active?.id==='centerModeBar') && (e.key==='Enter' || e.key===' ')){
+      e.preventDefault();
+      toggleMode();
     }
   }, true);
 })();

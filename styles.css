@@ -1,7 +1,4 @@
-/* styles.css */
-/* All of your original CSS rules from the <style> block go here. */
-/* This keeps your HTML clean and your styles easy to manage. */
-
+/* All of your original CSS from the <style> block is now in this file. */
 body {
     font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
     margin: 0;
@@ -13,7 +10,6 @@ body {
     box-sizing: border-box;
     min-height: 100vh;
 }
-
 .main-container {
     width: 100%;
     max-width: 1400px;
@@ -23,30 +19,126 @@ body {
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
     box-sizing: border-box;
 }
+h2, h3 {
+    color: #1c1e21;
+    text-align: center;
+    margin-bottom: 20px;
+}
+#scheduleTitle {
+    font-size: 2em;
+    color: #0056b3;
+    border-bottom: 2px solid #0056b3;
+    padding-bottom: 10px;
+}
+#userIdDisplay {
+    text-align: center;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+    min-height: 1.2em;
+    word-break: break-all;
+}
 
 /* --- Top Action Buttons Bar --- */
 #topActionButtonsBar {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: stretch;
+    justify-content: center;
     margin-bottom: 20px;
+    width: 100%;
 }
 
 .top-action-btn {
     padding: 10px 15px;
     font-size: 0.9em;
+    font-weight: 500;
     border-radius: 8px;
     cursor: pointer;
-    border: none;
+    border: 1px solid transparent;
     color: #ffffff;
-    /* ... other styles for top buttons ... */
+    transition: all 0.25s ease-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex-grow: 1;
+    flex-basis: 150px;
+    text-align: center;
+    min-height: 40px;
+    box-sizing: border-box;
 }
 
+#controlsToggler.top-action-btn {
+    background-image: linear-gradient(to right, #007bff 0%, #0056b3 100%);
+}
+#controlsToggler.top-action-btn:hover {
+    background-image: linear-gradient(to right, #0069d9 0%, #004085 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+
+#manualSaveBtn.top-action-btn {
+    background-image: linear-gradient(to right, #17a2b8 0%, #117a8b 100%);
+}
+#manualSaveBtn.top-action-btn:hover {
+    background-image: linear-gradient(to right, #138496 0%, #0c6270 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+
+#downloadPdfBtn.top-action-btn {
+     background-image: linear-gradient(to right, #28a745 0%, #1e7e34 100%);
+}
+#downloadPdfBtn.top-action-btn:hover {
+     background-image: linear-gradient(to right, #218838 0%, #155724 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+
+#clearScheduledNamesBtn.top-action-btn {
+    background-image: linear-gradient(to right, #6f42c1 0%, #563d7c 100%);
+}
+#clearScheduledNamesBtn.top-action-btn:hover {
+    background-image: linear-gradient(to right, #5a2a9e 0%, #452863 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+
+.top-action-btn:active {
+    transform: translateY(0px);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#controlsToggler .toggler-icon {
+    transition: transform 0.3s ease-out;
+    width: 18px;
+    height: 18px;
+}
+#controlsToggler[aria-expanded="false"] .toggler-icon {
+    transform: rotate(180deg);
+}
+ #controlsToggler[aria-expanded="true"] .toggler-icon {
+    transform: rotate(0deg);
+}
+
+/* --- Collapsible Button Bars --- */
 #collapsibleButtonBars {
-    /* ... styles ... */
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out, margin-top 0.4s ease-in-out, padding-top 0.4s ease-in-out, padding-bottom 0.4s ease-in-out;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    width: 100%;
 }
-
 #collapsibleButtonBars.hidden {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
     display: none;
 }
 
@@ -55,7 +147,78 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 15px;
+    align-items: stretch;
+    justify-content: center;
 }
+.bar button {
+    padding: 10px 15px;
+    font-size: 0.9em;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+    color: #212529;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-grow: 1;
+    flex-basis: 120px;
+    text-align: center;
+    min-width: 100px;
+}
+/* ... All other styles from your original file ... */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background-color: #fff;
+    table-layout: auto;
+}
+#tablesContainer, #summaryTableContainer {
+    overflow-x: auto;
+    position: relative;
+    width: 100%;
+}
+#tablesContainer > table { display: none; }
+#tablesContainer > table.active { display: table; }
+#summaryTable { margin-top: 25px; }
 
-/* ... and so on for all your other styles ... */
+th, td {
+    border: 1px solid #dee2e6;
+    padding: 10px 12px;
+    text-align: center;
+    min-width: 90px;
+    box-sizing: border-box;
+    position: relative;
+    font-size: 0.9em;
+}
+.modal {
+    display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+    width: 100%; height: 100%; overflow: hidden;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center; justify-content: center;
+    pointer-events: none;
+}
+.modal-content {
+    background-color: #fff; padding: 25px; border: 1px solid #ccc;
+    width: 90%; max-width: 650px; border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3); position: relative;
+    pointer-events: auto; max-height: 90vh; overflow-y: auto;
+    box-sizing: border-box;
+}
+.spinner {
+    border: 5px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px;
+    border-radius: 50%; border-left-color: #007bff;
+    animation: spin 1s ease infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* ... and so on for the rest of your CSS ... */
+
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.1, maximum-scale=5.0">
     <title>Jadual Anjal - Modular</title>
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -12,113 +12,132 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- This is the full, correct HTML structure from your original file -->
     <div class="main-container">
         <h2 contenteditable="true" id="scheduleTitle">Jadual Anjal</h2>
         <div id="userIdDisplay">User ID: Loading...</div>
 
-        <!-- Top Action Buttons Bar -->
         <div id="topActionButtonsBar">
-             <!-- NOTE: The content of these buttons is now just text, icons will be added by main.js if needed -->
-            <button id="controlsToggler" class="top-action-btn" aria-expanded="false" aria-controls="collapsibleButtonBars">Show Controls</button>
-            <button id="manualSaveBtn" class="top-action-btn">Save Page</button>
-            <button id="downloadPdfBtn" class="top-action-btn">PDF</button>
-            <button id="clearScheduledNamesBtn" class="top-action-btn">Clear Names (All Tables)</button>
-            <button id="searchTimetableBtn" class="top-action-btn">Search Timetable</button>
+            <button id="controlsToggler" class="top-action-btn" aria-expanded="false" aria-controls="collapsibleButtonBars" title="Toggle button controls visibility">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggler-icon"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>Show Controls</span>
+            </button>
+            <button id="manualSaveBtn" class="top-action-btn" title="Manually save current page state to Cloud (also creates a backup)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <span>Save Page</span>
+            </button>
+            <button id="downloadPdfBtn" class="top-action-btn" title="Download schedule tables as PDF">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>PDF</span>
+            </button>
+            <button id="clearScheduledNamesBtn" class="top-action-btn" title="Clear scheduled names from ALL tables (retains merged cell content)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="8" x2="22" y2="13"></line><line x1="22" y1="8" x2="17" y2="13"></line></svg>
+                <span>Clear Names (All Tables)</span>
+            </button>
+            <button id="searchTimetableBtn" class="top-action-btn" title="Open searchable timetable">🔍 Search Timetable</button>
         </div>
 
-        <!-- Collapsible Button Bars -->
         <div id="collapsibleButtonBars" class="hidden">
             <div class="bar">
-                <button id="directCopyFullHtmlBtn">Copy HTML</button>
+                <button id="directCopyFullHtmlBtn" title="Copy the entire page's HTML to clipboard">📋 Copy HTML</button>
             </div>
             <div class="bar">
-                <button id="excelBtnTrigger">Export Excel</button>
-                <button id="importExcelBtn">Import Excel</button>
+                <button id="excelBtnTrigger" title="Export the currently active table to an Excel file">💾 Export Excel</button>
+                <button id="importExcelBtn" title="Import data from an Excel file into a new table">📂 Import Excel</button>
                 <input type="file" id="fileInput" accept=".xlsx, .xls" style="display:none">
             </div>
             <div class="bar">
-                <button id="saveSharedScheduleBtn">Save Shared</button>
-                <button id="loadSharedScheduleBtn">Load Shared</button>
-                <button id="restoreBackupBtn">Restore Backup</button>
-                <button id="exportSharedSchedulesBtn">Export All</button>
-                <button id="importSharedSchedulesBtn">Import All</button>
+                <button id="saveSharedScheduleBtn" title="Save current schedule to the shared Cloud space (also creates a backup)">💠 Save Shared</button>
+                <button id="loadSharedScheduleBtn" title="Show list of shared schedules from Cloud to load">☁️ Load Shared</button>
+                <button id="restoreBackupBtn" title="Restore a schedule from a backup copy">🛡️ Restore Backup</button>
+                <button id="exportSharedSchedulesBtn" title="Export all shared schedules from Cloud to a JSON file">📤 Export All</button>
+                <button id="importSharedSchedulesBtn" title="Import schedules from a JSON file to the shared Cloud space">📥 Import All</button>
                 <input type="file" id="sharedScheduleImportFile" accept=".json" style="display:none;">
-                <button id="clearAndResetScheduleBtn">Clear & New</button>
+                <button id="clearAndResetScheduleBtn" title="Clear all data and start a new schedule">🧹 Clear & New</button>
             </div>
             <div class="bar">
-                <button id="selectBtn">Select Cells</button>
-                <button id="mergeBtn">Merge</button>
-                <button id="deselectBtn">Deselect</button>
-                <button id="unmergeBtn">Unmerge</button>
+                <button id="selectBtn" title="Toggle cell selection mode on/off">✨ Select Cells</button>
+                <button id="mergeBtn" title="Merge the currently selected cells">🔗 Merge</button>
+                <button id="deselectBtn" title="Clear current cell selection">🚫 Deselect</button>
+                <button id="unmergeBtn" title="Unmerge the cell that was last clicked if it's part of a merge">💔 Unmerge</button>
             </div>
             <div class="bar">
-                <button id="addTableBtn">Add Table</button>
-                <button id="addIndependentTableBtn">Add Standalone Table</button>
-                <button id="renameTableBtn">Rename Table</button>
-                <button id="deleteTableBtn">Delete Table</button>
-                <button id="nameListBtn">Names</button>
+                <button id="addTableBtn" title="Add a new, empty table/sheet">➕ Add Table</button>
+                <button id="addIndependentTableBtn" title="Add a standalone table (excluded from summary)">➕ Add Standalone Table</button>
+                <button id="renameTableBtn" title="Rename the currently active table/sheet">📝 Rename Table</button>
+                <button id="deleteTableBtn" title="Delete the currently active table/sheet">❌ Delete Table</button>
+                <button id="nameListBtn" title="Open a dialog to manage the shared list of names (Firestore)">👥 Names</button>
             </div>
             <div class="bar" id="rowColManipulationBar">
-                <button id="addRowAboveBtn">Row Above</button>
-                <button id="addRowBelowBtn">Row Below</button>
-                <button id="addColLeftBtn">Col Left</button>
-                <button id="addColRightBtn">Col Right</button>
-                <button id="deleteRowBtn" class="delete-btn">Del Row</button>
-                <button id="deleteColBtn" class="delete-btn">Del Col</button>
+                <button id="addRowAboveBtn" title="Add a new row above the currently selected/clicked row">⬆️ Row Above</button>
+                <button id="addRowBelowBtn" title="Add a new row below the currently selected/clicked row">⬇️ Row Below</button>
+                <button id="addColLeftBtn" title="Add a new column to the left of the currently selected/clicked column">⬅️ Col Left</button>
+                <button id="addColRightBtn" title="Add a new column to the right of the currently selected/clicked column">➡️ Col Right</button>
+                <button id="deleteRowBtn" class="delete-btn" title="Delete the currently selected/clicked row">🗑️ Del Row</button>
+                <button id="deleteColBtn" class="delete-btn" title="Delete the currently selected/clicked column">🗑️ Del Col</button>
+            </div>
+        </div>
+        <div id="sharedScheduleListContainer" style="display:none;"></div>
+        
+        <div id="restoreBackupModal" class="modal">
+            <div class="modal-content" id="restoreBackupModalContent">
+                <div class="modal-header" id="restoreBackupModalHeader">
+                    <h3 id="restoreBackupModalTitle">Restore Schedule from Backup</h3>
+                    <button type="button" class="modal-close-btn" id="closeRestoreBackupModalBtn" title="Close restore backup">×</button>
+                </div>
+                <div id="restoreBackupListContainer"></div>
+                <div id="loadingIndicatorRestoreModal" style="display:none;"><div class="spinner"></div></div>
             </div>
         </div>
 
-        <!-- Containers for dynamic content -->
-        <div id="sharedScheduleListContainer" style="display:none;"></div>
         <div class="bar table-tabs" id="tableTabs"></div>
         <div id="tablesContainer">
-            <!-- Tables are dynamically loaded here -->
+            <!-- Default table from original file. Will be replaced by loaded data. -->
+            <table id="tbl_1" class="active" data-table-name="Kelas 3 & 5">
+            </table>
+        </div>
+
+        <div id="nameModal" class="modal">
+            <div class="modal-content" id="nameModalContent">
+                <div class="modal-header" id="nameModalHeader">
+                    <h3 id="nameModalTitle">Shared Name List Manager</h3>
+                    <button type="button" class="modal-close-btn" id="closeNameModalBtnStandard" title="Close name manager">×</button>
+                </div>
+                <div class="name-session-tabs">
+                    <button id="namePagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
+                    <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
+                </div>
+                 <div class="input-group">
+                    <input id="newNameInput" placeholder="Add new name to current shared session">
+                    <button id="addNameBtnInModal" title="Add the name to the shared list">Add</button>
+                 </div>
+                <button id="importNameListBtn" title="Import names from a .txt file (one name per line) to current shared session">📂 Import Names (.txt) to Shared Session</button>
+                <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
+                <input type="text" id="searchNameInput" placeholder="🔍 Search names in current shared session..." title="Filter the list of names">
+                <div id="nameList"></div>
+                <div id="loadingIndicatorModal" style="display:none;"><div class="spinner"></div></div>
+            </div>
         </div>
 
         <h3 style="margin-top:32px">Teacher/Subject Attendance Summary</h3>
         <div id="summaryTableContainer">
             <table id="summaryTable"></table>
         </div>
-
-        <!-- Modals and other hidden elements (Full structure from your original file) -->
-        <div id="restoreBackupModal" class="modal">
-            <div class="modal-content" id="restoreBackupModalContent">
-                <div class="modal-header" id="restoreBackupModalHeader">
-                    <h3 id="restoreBackupModalTitle">Restore Schedule from Backup</h3>
-                    <button type="button" class="modal-close-btn" id="closeRestoreBackupModalBtn">×</button>
-                </div>
-                <div id="restoreBackupListContainer"></div>
-                <div id="loadingIndicatorRestoreModal" style="display:none;"><div class="spinner"></div></div>
-            </div>
-        </div>
-        <div id="nameModal" class="modal">
-             <div class="modal-content" id="nameModalContent">
-                <div class="modal-header" id="nameModalHeader">
-                    <h3 id="nameModalTitle">Shared Name List Manager</h3>
-                    <button type="button" class="modal-close-btn" id="closeNameModalBtnStandard">×</button>
-                </div>
-                <div class="name-session-tabs">
-                    <button id="namePagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
-                    <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
-                </div>
-                <div class="input-group">
-                    <input id="newNameInput" placeholder="Add new name...">
-                    <button id="addNameBtnInModal">Add</button>
-                </div>
-                <button id="importNameListBtn">Import Names (.txt)</button>
-                <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
-                <input type="text" id="searchNameInput" placeholder="Search names...">
-                <div id="nameList"></div>
-                <div id="loadingIndicatorModal" style="display:none;"><div class="spinner"></div></div>
-            </div>
-        </div>
-
         <div id="customMessageBox" class="custom-message-box"></div>
         <div id="generalLoadingIndicator" style="display:none;"><div class="spinner"></div></div>
-        <div id="pdfContent"></div>
     </div>
 
-    <!-- This is the only script in the HTML. It loads all other JS. -->
+    <div id="pdfContent"></div>
+    
+    <div id="timetablePanel" class="panel hidden" data-x="0" data-y="0">
+      <div class="panel-header" id="timetableHandle">
+          ☰ Searchable Timetable
+          <button id="closeTimetablePanel" aria-label="Close timetable">×</button>
+      </div>
+      <iframe id="timetableIframe" src="./timetable.html" loading="lazy" style="width:100%;height:100%;border:none;"></iframe>
+      <div id="timetableGrip" class="panel-grip"></div>
+    </div>
+
     <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -23,7 +23,7 @@
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow-md">
-            <!-- All buttons are included here, same as before -->
+             <!-- All buttons are included here, same as before -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <button id="savePageBtn" class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
                 <button id="pdfBtn" class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -64,8 +64,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
@@ -76,17 +76,13 @@
           appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
         };
 
-        // --- Global Variables ---
         let db;
-
-        // --- UI Elements ---
         const userIdDisplay = document.getElementById('userIdDisplay');
         const timetableContainer = document.getElementById('timetableContainer');
         const loadingMessage = document.getElementById('loadingMessage');
 
         function renderTimetable(data) {
             timetableContainer.innerHTML = '';
-            // TODO: Add your real timetable rendering logic here
             const dataPreview = document.createElement('pre');
             dataPreview.textContent = `SUCCESS! Your timetable data was loaded.\n\n${JSON.stringify(data, null, 2)}`;
             timetableContainer.appendChild(dataPreview);
@@ -101,29 +97,25 @@
             if (!db || !userId) return;
             loadingMessage.textContent = `Loading timetable for user: ${userId}`;
             
-            const rootDocId = firebaseConfig.appId;
-            const docRef = doc(db, `${rootDocId}/users/${userId}/timetables`, 'main_schedule');
-
             try {
+                // *** THIS IS THE CORRECTED PATH ***
+                // This is the standard way to structure user data and creates a valid path.
+                const docRef = doc(db, 'users', userId, 'timetables', 'main_schedule');
+                console.log("Attempting to load from standard path:", docRef.path);
+
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     renderTimetable(docSnap.data());
                 } else {
-                    loadingMessage.textContent = 'No saved timetable found for this user. A new one will be created when you save.';
+                    loadingMessage.textContent = 'No saved timetable found for this user. Your old data may be at a different path.';
                 }
             } catch (error) {
                 renderError('Failed to load timetable data. Check Firestore rules and the console for details.', error);
             }
         }
 
-        // --- Event Listeners Setup (runs immediately) ---
         function setupEventListeners() {
-             // This function will wire up ALL your buttons.
-             // For now, only Save and Toggle are fully implemented.
-            document.getElementById('savePageBtn').addEventListener('click', () => {
-                alert("Save button clicked! Save functionality needs to be re-connected.");
-            });
-
+            document.getElementById('savePageBtn').addEventListener('click', () => alert("Save button is working!"));
             const toggleControlsBtn = document.getElementById('toggleControlsBtn');
             const hiddenControls = document.getElementById('hiddenControls');
             toggleControlsBtn.addEventListener('click', () => {
@@ -135,31 +127,25 @@
             console.log("All buttons are now responsive.");
         }
 
-        // --- Main App Logic ---
         async function main() {
             try {
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 db = getFirestore(app);
 
-                // For this test, we are forcing the app to use your OLD User ID
                 const testUserId = "077WGD1EYDUX6n3DQCVkqU2C213";
                 userIdDisplay.textContent = testUserId;
                 
-                // We need to sign in (even anonymously) to be allowed to read data
                 await signInAnonymously(auth);
-                
-                // Now, load the data for your specific, hardcoded user ID
                 await loadTimetableData(testUserId);
 
             } catch (error) {
-                renderError('Failed to initialize Firebase connection.', error);
+                renderError('A critical error occurred during Firebase setup.', error);
             }
         }
         
-        // --- Run the App ---
-        setupEventListeners(); // Run this first to make sure UI is responsive
-        main(); // Then, run the main async logic
+        setupEventListeners();
+        main();
 
     </script>
 </body>

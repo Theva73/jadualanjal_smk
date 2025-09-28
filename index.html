@@ -23,7 +23,6 @@
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow-md">
-             <!-- All buttons are included here, same as before -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <button id="savePageBtn" class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
                 <button id="pdfBtn" class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -82,9 +81,21 @@
         const loadingMessage = document.getElementById('loadingMessage');
 
         function renderTimetable(data) {
+            // *** THIS IS WHERE YOUR OLD CODE GOES ***
+            // You need to take the javascript from your old project that builds the
+            // HTML table and put it here. This function receives the loaded data.
             timetableContainer.innerHTML = '';
+            
+            // For now, we just show a success message and the raw data.
+            const successMessage = document.createElement('h2');
+            successMessage.className = 'text-2xl font-bold text-green-600 text-center mb-4';
+            successMessage.textContent = 'SUCCESS! Your Timetable Has Loaded!';
+            
             const dataPreview = document.createElement('pre');
-            dataPreview.textContent = `SUCCESS! Your timetable data was loaded.\n\n${JSON.stringify(data, null, 2)}`;
+            dataPreview.className = 'bg-gray-100 p-4 rounded-lg text-sm';
+            dataPreview.textContent = JSON.stringify(data, null, 2);
+            
+            timetableContainer.appendChild(successMessage);
             timetableContainer.appendChild(dataPreview);
         }
 
@@ -95,22 +106,22 @@
 
         async function loadTimetableData(userId) {
             if (!db || !userId) return;
-            loadingMessage.textContent = `Loading timetable for user: ${userId}`;
+            loadingMessage.textContent = `Loading timetable...`;
             
             try {
-                // *** THIS IS THE CORRECTED PATH ***
-                // This is the standard way to structure user data and creates a valid path.
-                const docRef = doc(db, 'users', userId, 'timetables', 'main_schedule');
-                console.log("Attempting to load from standard path:", docRef.path);
+                // *** THE FINAL, CORRECT PATH TO YOUR DATA ***
+                const appId = "1:496526436851:web:78ff48b28bfc8c31f14a86"; // As seen in your screenshot
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'timetables', 'main_schedule');
+                console.log("Attempting to load from path:", docRef.path);
 
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     renderTimetable(docSnap.data());
                 } else {
-                    loadingMessage.textContent = 'No saved timetable found for this user. Your old data may be at a different path.';
+                    loadingMessage.textContent = 'Connection successful, but no timetable was found for this User ID.';
                 }
             } catch (error) {
-                renderError('Failed to load timetable data. Check Firestore rules and the console for details.', error);
+                renderError('Failed to load timetable. Please check Firestore security rules and the console.', error);
             }
         }
 
@@ -133,11 +144,12 @@
                 const auth = getAuth(app);
                 db = getFirestore(app);
 
-                const testUserId = "077WGD1EYDUX6n3DQCVkqU2C213";
-                userIdDisplay.textContent = testUserId;
+                // We will still use your original User ID to fetch the correct data
+                const originalUserId = "077WGD1EYDUX6n3DQCVkqU2C213";
+                userIdDisplay.textContent = originalUserId;
                 
                 await signInAnonymously(auth);
-                await loadTimetableData(testUserId);
+                await loadTimetableData(originalUserId);
 
             } catch (error) {
                 renderError('A critical error occurred during Firebase setup.', error);

@@ -4185,6 +4185,7 @@ document.addEventListener('click', (e)=>{
 </script>
 
 
+
 <!-- Injected: Mode Toggle Logic -->
 <script>
 (function(){
@@ -4200,19 +4201,36 @@ document.addEventListener('click', (e)=>{
     return 'pagi';
   }
 
-  // Suggestions provider by mode
+  function getSubjectsList(){
+    const ssKey = getCurrentSessionKeyForSubjects();
+    const bucket = (window.subjectsState && window.subjectsState[ssKey]) ? window.subjectsState[ssKey] : {};
+    let fromState = Object.keys(bucket||{});
+    // fallback: try cached localStorage arrays if present
+    try {
+      const cacheKey = ssKey === 'petang' ? 'subjects_petang' : 'subjects_pagi';
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || "[]");
+      fromState = fromState.concat(Array.isArray(cached) ? cached : []);
+    } catch(e){}
+    return Array.from(new Set(fromState.map(s=>String(s||'').trim()).filter(Boolean)))
+           .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+  }
+
+  function cacheSubjectsList(){
+    try {
+      const pagi = (window.subjectsState && window.subjectsState['pagi']) ? Object.keys(window.subjectsState['pagi']) : [];
+      const petang = (window.subjectsState && window.subjectsState['petang']) ? Object.keys(window.subjectsState['petang']) : [];
+      localStorage.setItem('subjects_pagi', JSON.stringify(pagi));
+      localStorage.setItem('subjects_petang', JSON.stringify(petang));
+    } catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', cacheSubjectsList);
+
+  // Suggestions provider by mode (single flat list if needed elsewhere)
   window.getSuggestionsForActiveMode = function(){
-    try{
-      if (currentEntryMode === 'subject') {
-        const ssKey = getCurrentSessionKeyForSubjects();
-        const bucket = (window.subjectsState && window.subjectsState[ssKey]) ? window.subjectsState[ssKey] : {};
-        return Object.keys(bucket || {}).sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-      } else {
-        const list = (typeof currentNameListSession!=='undefined' && currentNameListSession==='petang') ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]);
-        return Array.from(new Set((list||[]).map(x=>String(x||'').trim()).filter(Boolean)))
-               .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-      }
-    }catch(e){ return []; }
+    if (currentEntryMode === 'subject') return getSubjectsList();
+    const list = (typeof currentNameListSession!=='undefined' && currentNameListSession==='petang') ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]);
+    return Array.from(new Set((list||[]).map(x=>String(x||'').trim()).filter(Boolean)))
+           .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
   }
 
   // Toggle visuals
@@ -4228,11 +4246,9 @@ document.addEventListener('click', (e)=>{
     currentEntryMode = (mode==='subject') ? 'subject' : 'teacher';
     localStorage.setItem('entryMode', currentEntryMode);
     applyModeButtonsVisual();
-    // Rebuild summary according to mode
     if(typeof rebuildAndRenderSummary === 'function') rebuildAndRenderSummary();
   }
 
-  // Place toggle into DOM if HTML injection failed
   function ensureToggleExists(){
     if(document.getElementById('entryModeToggle')) return;
     const wrap = document.createElement('span');
@@ -4255,81 +4271,99 @@ document.addEventListener('click', (e)=>{
     if(s) s.addEventListener('click', ()=>setEntryMode('subject'));
   });
 
-  // ===== Override: showCellAutocompleteSuggestions (mode-aware) =====
-  try {
-    window._orig_showCellAutocompleteSuggestions = window.showCellAutocompleteSuggestions;
-  } catch(e){}
+  // ===== Override: showCellAutocompleteSuggestions (sectioned Subjects + Teachers) =====
+  try { window._orig_showCellAutocompleteSuggestions = window.showCellAutocompleteSuggestions; } catch(e){}
+
+  function makeSectionHeader(label){
+    const h = document.createElement('div');
+    h.className = 'suggestion-section';
+    h.textContent = label;
+    h.style.fontSize = '12px';
+    h.style.fontWeight = '600';
+    h.style.padding = '6px 8px';
+    h.style.opacity = '0.7';
+    return h;
+  }
+  function makeItem(text, type){
+    const d = document.createElement('div');
+    d.className = 'suggestion-item';
+    d.textContent = text;
+    d.dataset.type = type; // 'subject' | 'teacher'
+    d.addEventListener('mousedown', (e)=>{
+      e.preventDefault();
+      selectCellAutocompleteSuggestion(text);
+    });
+    return d;
+  }
+
   window.showCellAutocompleteSuggestions = function(cell, inputText){
     try{
       if (!window.autocompleteSuggestionsDiv) return;
-      const suggestionsSource = getSuggestionsForActiveMode();
+      // Build BOTH lists
+      const teachersList = (typeof currentNameListSession!=='undefined' && currentNameListSession==='petang') ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]);
+      const uniqTeachers = Array.from(new Set((teachersList||[]).map(x=>String(x||'').trim()).filter(Boolean)));
+      const subjectsList = getSubjectsList();
+
       let textForMatchingInput = String(inputText || '').split(' // ')[0];
       const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*'));
-      const textForMatching = wordsForMatching.join(' ').toLowerCase().trim();
-      if (!textForMatching) { hideCellAutocompleteSuggestions(); return; }
+      const q = wordsForMatching.join(' ').toLowerCase().trim();
+      if (!q) { hideCellAutocompleteSuggestions(); return; }
 
-      const filteredSuggestions = suggestionsSource.filter(name => {
-          const nameStr = String(name || '').toLowerCase().trim();
-          return nameStr.startsWith(textForMatching) && nameStr !== textForMatching;
-      });
+      const startsWith = v => v.toLowerCase().startsWith(q) && v.toLowerCase() !== q;
 
-      if (filteredSuggestions.length > 0) {
-          window.activeCellForAutocomplete = cell;
-          autocompleteSuggestionsDiv.innerHTML = '';
-          filteredSuggestions.slice(0, 10).forEach(suggestion => {
-              const item = document.createElement('div');
-              item.className = 'suggestion-item';
-              item.textContent = suggestion;
-              item.addEventListener('mousedown', (e) => {
-                  e.preventDefault();
-                  selectCellAutocompleteSuggestion(suggestion);
-              });
-              autocompleteSuggestionsDiv.appendChild(item);
-          });
-          const cellRect = cell.getBoundingClientRect();
-          autocompleteSuggestionsDiv.style.left = `${cellRect.left + window.scrollX}px`;
-          autocompleteSuggestionsDiv.style.top = `${cellRect.bottom + window.scrollY}px`;
-          autocompleteSuggestionsDiv.style.minWidth = `${cellRect.width}px`;
-          autocompleteSuggestionsDiv.style.display = 'block';
-          window.currentAutocompleteIndex = -1;
+      const subFiltered = subjectsList.filter(startsWith);
+      const teaFiltered = uniqTeachers.filter(startsWith);
+
+      if (subFiltered.length + teaFiltered.length > 0) {
+        window.activeCellForAutocomplete = cell;
+        const el = autocompleteSuggestionsDiv;
+        el.innerHTML = '';
+
+        // order sections: active mode first
+        const first = (currentEntryMode==='subject') ? 'subject' : 'teacher';
+        const second = (first==='subject') ? 'teacher' : 'subject';
+
+        const addSection = (type, arr) => {
+          if(arr.length === 0) return;
+          el.appendChild(makeSectionHeader(type==='subject' ? 'Subjects' : 'Teachers'));
+          arr.slice(0, 10).forEach(v => el.appendChild(makeItem(v, type)));
+        };
+
+        addSection(first, first==='subject' ? subFiltered : teaFiltered);
+        addSection(second, second==='subject' ? subFiltered : teaFiltered);
+
+        const cellRect = cell.getBoundingClientRect();
+        el.style.left = `${cellRect.left + window.scrollX}px`;
+        el.style.top = `${cellRect.bottom + window.scrollY}px`;
+        el.style.minWidth = `${cellRect.width}px`;
+        el.style.display = 'block';
+        window.currentAutocompleteIndex = -1;
       } else {
-          hideCellAutocompleteSuggestions();
+        hideCellAutocompleteSuggestions();
       }
     } catch(e){
-      // Fallback to original if something goes wrong
       if (typeof window._orig_showCellAutocompleteSuggestions === 'function') {
         return window._orig_showCellAutocompleteSuggestions(cell, inputText);
       }
     }
   };
 
-  // ===== Summary: Mode-aware wrapper =====
-
-  // compute labels
+  // ===== Summary: Mode-aware (same as prior injection) =====
   function computeSummaryRowLabelsForMode(){
     if (currentEntryMode === 'subject') {
-      const ssKey = getCurrentSessionKeyForSubjects();
-      const bucket = (window.subjectsState && window.subjectsState[ssKey]) ? window.subjectsState[ssKey] : {};
-      return Object.keys(bucket||{}).sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+      return getSubjectsList();
     } else {
-      // teachers from shared list
       const list = (typeof currentNameListSession!=='undefined' && currentNameListSession==='petang') ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]);
       return Array.from(new Set((list||[]).map(x=>String(x||'').trim()).filter(Boolean)))
              .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
     }
   }
-
-  // helpers copied from your code space (used in populate)
   function normalizeHeaderForLookup(label) {
     return String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
   }
-
-  // subject-mode fill
   function updateSummaryTableData_BySubject(subjectList){
     if (!window.summaryTableElement?.tBodies?.[0] || !summaryTableElement.tHead?.rows?.[0]) return;
     const summaryBody = summaryTableElement.tBodies[0];
-
-    // clear existing per-row cells
     Array.from(summaryBody.rows).forEach(row=>{
       for(let i=1;i<row.cells.length;i++){
         const c = row.cells[i];
@@ -4337,7 +4371,6 @@ document.addEventListener('click', (e)=>{
         c.classList.remove('highlight-conflict','summary-merged-cell'); c.removeAttribute('data-temp-classes');
       }
     });
-
     const summaryHeaderCells = Array.from(summaryTableElement.tHead.rows[0].cells);
     const headerLabels = summaryHeaderCells.map(th => String(th.textContent||'').trim());
     const normalizedSummaryHeadersForLookup = headerLabels.map(normalizeHeaderForLookup);
@@ -4350,7 +4383,6 @@ document.addEventListener('click', (e)=>{
         .filter(t => t.dataset.independent !== 'true')
         .forEach(scheduleTable=>{
           if(!scheduleTable.tHead || !scheduleTable.tBodies[0]) return;
-
           const timeSlotHeaderRow = Array.from(scheduleTable.tHead.rows).find(row => !row.classList.contains('date-header-row'));
           if(!timeSlotHeaderRow) return;
           const scheduleHeaders = Array.from(timeSlotHeaderRow.cells).map(th => String(th.textContent||'').trim());
@@ -4358,24 +4390,18 @@ document.addEventListener('click', (e)=>{
           scheduleTable.tBodies[0].querySelectorAll('tr').forEach(scheduleDataRow=>{
             const classIdentifier = String(scheduleDataRow.cells[0]?.textContent||'').trim();
             if(!classIdentifier) return;
-
             let idx = 1;
             while(idx < scheduleDataRow.cells.length){
               const scheduleCell = scheduleDataRow.cells[idx];
               if(!scheduleCell){ idx++; continue; }
-
               const overlay = scheduleCell.querySelector?.('.merged-cell-overlay');
               const raw = String(overlay ? overlay.textContent : scheduleCell.textContent || '').trim();
               const main = raw.includes('//') ? raw.slice(0, raw.indexOf('//')).trim() : raw;
-
-              const matched = main.toLowerCase().split(/\s+/).includes(subjectName.toLowerCase())
-                             || main.toLowerCase().includes(subjectName.toLowerCase());
-
+              const matched = main.toLowerCase().includes(subjectName.toLowerCase());
               const originalColIdxStart = idx;
               let originalColIdxEnd = idx;
               const colspan = parseInt(scheduleCell.getAttribute('colspan')||'1');
               if(colspan>1) originalColIdxEnd = idx + (colspan - 1);
-
               if(matched){
                 const firstHeader = scheduleHeaders[originalColIdxStart] || '';
                 const lastHeader  = scheduleHeaders[originalColIdxEnd]   || '';
@@ -4424,25 +4450,19 @@ document.addEventListener('click', (e)=>{
     if (typeof bubbleProblemRows === 'function') bubbleProblemRows();
   }
 
-  // keep original teacher rebuild
   let _orig_rebuild = (typeof rebuildAndRenderSummary === 'function') ? rebuildAndRenderSummary : null;
-
   window.rebuildAndRenderSummary = function(){
     if (currentEntryMode !== 'subject') {
       if (typeof _orig_rebuild === 'function') return _orig_rebuild();
-      // If original not found, do nothing
       return;
     }
-    // SUBJECT mode rebuild:
     const labels = computeSummaryRowLabelsForMode();
     if (typeof buildSummaryTableSkeleton === 'function') {
       buildSummaryTableSkeleton(labels);
     }
     updateSummaryTableData_BySubject(labels);
   };
-
 })(); 
 </script>
-
 </body>
 </html>

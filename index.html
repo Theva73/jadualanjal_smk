@@ -633,24 +633,24 @@
   cursor:se-resize;
 }
 
-/* === Subjects Manager V6 (diagnostics + robust add) === */
-#jjSubjectsPanelV6 *{box-sizing:border-box}
-#jjSubjectsPanelV6{position:relative;z-index:2;width:100%;clear:both;font-size:0.92em;
+/* === Subjects Manager V7 (auto-init Firebase if missing) === */
+#jjSubjectsPanelV7 *{box-sizing:border-box}
+#jjSubjectsPanelV7{position:relative;z-index:2;width:100%;clear:both;font-size:0.92em;
   border:1px solid #e9ecef;border-radius:10px;padding:10px;margin:10px 0 12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-#jjSubjectsPanelV6 .jj-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
-#jjSubjectsPanelV6 .jj-title{font-size:1em;font-weight:600}
-#jjSubjectsPanelV6 .jj-tabs{display:flex;gap:6px;flex-wrap:wrap}
-#jjSubjectsPanelV6 .jj-tabs button{padding:5px 10px;font-size:.85em;border:1px solid #cfd4da;background:#f8f9fa;border-radius:8px;cursor:pointer}
-#jjSubjectsPanelV6 .jj-tabs button.active{background:#e8f0ff;border-color:#9ec5fe}
-#jjSubjectsPanelV6 .jj-row{display:flex;gap:8px;margin-top:6px;align-items:center}
-#jjSubjectsPanelV6 .jj-row input[type=text]{flex:1;min-width:0;padding:10px 12px;border:1px solid #ced4da;border-radius:8px;font-size:.95em}
-#jjSubjectsPanelV6 .jj-addbtn{flex:0 0 78px;padding:10px 10px;font-size:.85em;border-radius:8px;background:#198754;color:#fff;border:none;cursor:pointer}
-#jjSubjectsPanelV6 .jj-addbtn[disabled]{opacity:.6;cursor:not-allowed}
-#jjSubjectsPanelV6 .jj-list{margin-top:8px;max-height:210px;overflow:auto;border:1px solid #f1f3f5;border-radius:8px;background:#fff}
-#jjSubjectsPanelV6 .jj-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #f1f3f5}
-#jjSubjectsPanelV6 .jj-item:last-child{border-bottom:none}
-#jjSubjectsPanelV6 .jj-del{padding:6px 10px;font-size:.8em;border-radius:8px;background:#dc3545;color:#fff;border:none;cursor:pointer}
-#jjSubjectsPanelV6 .jj-note{margin-top:6px;font-size:.75em;color:#6c757d}
+#jjSubjectsPanelV7 .jj-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
+#jjSubjectsPanelV7 .jj-title{font-size:1em;font-weight:600}
+#jjSubjectsPanelV7 .jj-tabs{display:flex;gap:6px;flex-wrap:wrap}
+#jjSubjectsPanelV7 .jj-tabs button{padding:5px 10px;font-size:.85em;border:1px solid #cfd4da;background:#f8f9fa;border-radius:8px;cursor:pointer}
+#jjSubjectsPanelV7 .jj-tabs button.active{background:#e8f0ff;border-color:#9ec5fe}
+#jjSubjectsPanelV7 .jj-row{display:flex;gap:8px;margin-top:6px;align-items:center}
+#jjSubjectsPanelV7 .jj-row input[type=text]{flex:1;min-width:0;padding:10px 12px;border:1px solid #ced4da;border-radius:8px;font-size:.95em}
+#jjSubjectsPanelV7 .jj-addbtn{flex:0 0 78px;padding:10px 10px;font-size:.85em;border-radius:8px;background:#198754;color:#fff;border:none;cursor:pointer}
+#jjSubjectsPanelV7 .jj-addbtn[disabled]{opacity:.6;cursor:not-allowed}
+#jjSubjectsPanelV7 .jj-list{margin-top:8px;max-height:210px;overflow:auto;border:1px solid #f1f3f5;border-radius:8px;background:#fff}
+#jjSubjectsPanelV7 .jj-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #f1f3f5}
+#jjSubjectsPanelV7 .jj-item:last-child{border-bottom:none}
+#jjSubjectsPanelV7 .jj-del{padding:6px 10px;font-size:.8em;border-radius:8px;background:#dc3545;color:#fff;border:none;cursor:pointer}
+#jjSubjectsPanelV7 .jj-note{margin-top:6px;font-size:.75em;color:#6c757d}
 .jj-compact-modal .input-group input,.jj-compact-modal .input-group button{font-size:.95em;padding:9px 10px}
 .jj-compact-modal .name-session-tabs button{font-size:.95em;padding:7px 10px}
 </style>
@@ -3708,17 +3708,57 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- === Injected: Subjects Manager V6 (diagnostics) === -->
-<script>
+<!-- === Injected: Subjects Manager V7 (auto-init Firebase if missing) === -->
+<script type="module">
 (function(){
-  if (window.__JJ_SubjectsV6) return; window.__JJ_SubjectsV6 = true;
+  if (window.__JJ_SubjectsV7) return; window.__JJ_SubjectsV7 = true;
 
-  function getAppId(){
+  const CDN = "https://www.gstatic.com/firebasejs/10.12.5";
+  async function ensureFirebaseReady(){
+    if (window.fbDb && window.setDoc && window.doc && window.onSnapshot && typeof window.fbIsAuthReady !== 'undefined'){
+      return true;
+    }
+    const cfg = window.firebaseConfig || window.fbConfig || null;
+    if (!cfg){
+      console.warn('[Subjects:auto-init] No firebaseConfig/fbConfig found on window.');
+      return false;
+    }
+    try{
+      let app, auth, db;
+      const { initializeApp, getApp } = await import(`${CDN}/firebase-app.js`);
+      try{ app = getApp(); }catch{ app = initializeApp(cfg); }
+      const { getFirestore, doc, setDoc, onSnapshot, serverTimestamp } = await import(`${CDN}/firebase-firestore.js`);
+      const { getAuth, onAuthStateChanged, signInAnonymously } = await import(`${CDN}/firebase-auth.js`);
+      db = getFirestore(app);
+      auth = getAuth(app);
+
+      window.fbDb = window.fbDb || db;
+      window.doc = window.doc || doc;
+      window.setDoc = window.setDoc || setDoc;
+      window.onSnapshot = window.onSnapshot || onSnapshot;
+      window.serverTimestamp = window.serverTimestamp || serverTimestamp;
+      if (typeof window.fbIsAuthReady === 'undefined') window.fbIsAuthReady = false;
+
+      onAuthStateChanged(auth, (user)=>{
+        window.fbUserId = (user && user.uid) || window.fbUserId || null;
+        window.fbIsAuthReady = true;
+      });
+      if (!auth.currentUser){
+        await signInAnonymously(auth).catch((e)=>console.warn('[Subjects:auto-init] anon sign-in failed', e));
+      }
+      return true;
+    }catch(err){
+      console.error('[Subjects:auto-init] Failed to initialize Firebase', err);
+      return false;
+    }
+  }
+
+  function getAppScopeId(){
     try{
       if (window.appId) return window.appId;
       if (window.__app_id) return window.__app_id;
-      if (window.fbConfig && fbConfig.appId) return fbConfig.appId;
-      if (window.firebaseConfig && firebaseConfig.appId) return firebaseConfig.appId;
+      const cfg = window.firebaseConfig || window.fbConfig || {};
+      return cfg.appId || cfg.projectId || 'default-shared-scheduler-app';
     }catch(e){}
     return 'default-shared-scheduler-app';
   }
@@ -3726,7 +3766,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function diag(){ return {
     fbDb: !!window.fbDb,
     fbIsAuthReady: !!window.fbIsAuthReady,
-    appId: getAppId(),
+    appScopeId: getAppScopeId(),
     hasSetDoc: typeof window.setDoc==='function',
     hasDoc: typeof window.doc==='function',
     hasOnSnapshot: typeof window.onSnapshot==='function'
@@ -3736,13 +3776,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let $panel,$list,$input,$add,$tabP,$tabA,$note;
 
   function ensureMounted(){
-    if (document.getElementById('jjSubjectsPanelV6')){ cacheRefs(); return true; }
+    if (document.getElementById('jjSubjectsPanelV7')){ cacheRefs(); return true; }
     const modal = document.getElementById('nameModalContent') || (window.nameModal ? window.nameModal : document.querySelector('.modal, [role="dialog"], .dialog, .popup'));
     if (!modal) return false;
     modal.classList.add('jj-compact-modal');
 
     const wrap = document.createElement('div');
-    wrap.id='jjSubjectsPanelV6';
+    wrap.id='jjSubjectsPanelV7';
     wrap.innerHTML = `
       <div class="jj-header">
         <div class="jj-title">Subjects (by session)</div>
@@ -3774,7 +3814,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function cacheRefs(){
-    $panel = document.getElementById('jjSubjectsPanelV6');
+    $panel = document.getElementById('jjSubjectsPanelV7');
     $list  = $panel.querySelector('.jj-list');
     $input = $panel.querySelector('input[type=text]');
     $add   = $panel.querySelector('.jj-addbtn');
@@ -3792,12 +3832,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateNote(){
     const d = diag();
-    $note.textContent = `Status — AuthReady:${d.fbIsAuthReady?'yes':'no'} | fbDb:${d.fbDb?'yes':'no'} | appId:${d.appId} | setDoc:${d.hasSetDoc?'yes':'no'}`;
+    $note.textContent = `Status — AuthReady:${d.fbIsAuthReady?'yes':'no'} | fbDb:${d.fbDb?'yes':'no'} | scopeId:${d.appScopeId} | setDoc:${d.hasSetDoc?'yes':'no'}`;
   }
 
   function docRef(sess){
     if (!window.fbDb) return null;
-    return window.doc(window.fbDb, "artifacts", getAppId(), "public/data/sharedSubjectLists", sess);
+    return window.doc(window.fbDb, "artifacts", getAppScopeId(), "public/data/sharedSubjectLists", sess);
   }
 
   function switchSession(sess){
@@ -3809,8 +3849,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function addSubject(v){
     updateNote();
+    const ok = await ensureFirebaseReady();
     const d = diag();
-    if (!d.fbDb || !d.fbIsAuthReady || !d.hasSetDoc || !d.hasDoc){
+    if (!ok || !d.fbDb || !d.fbIsAuthReady || !d.hasSetDoc || !d.hasDoc){
       console.warn('[Subjects:add] prerequisites missing', d);
       toast("Subject add blocked: Firebase not ready (see status line).", "error");
       return;
@@ -3828,13 +3869,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }catch(err){
       console.error('[Subjects:add] setDoc failed', err);
       if (err && (err.code==='permission-denied' || /PERMISSION_DENIED|Missing or insufficient permissions/i.test(err.message||''))){
-        toast("Permission denied writing subjects. Add this rule for testing (check console).", "error");
+        toast("Permission denied writing subjects. Add rule for testing (check console).", "error");
         console.log(`
 TEMPORARY (testing) Firestore rule:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /artifacts/{appId}/public/{document=**} {
+    match /artifacts/{appScopeId}/public/{document=**} {
       allow read, write: if true;
     }
   }
@@ -3849,8 +3890,9 @@ service cloud.firestore {
   }
 
   async function deleteSubject(s){
+    const ok = await ensureFirebaseReady();
     const d = diag();
-    if (!d.fbDb || !d.fbIsAuthReady || !d.hasSetDoc || !d.hasDoc){
+    if (!ok || !d.fbDb || !d.fbIsAuthReady || !d.hasSetDoc || !d.hasDoc){
       toast("Delete blocked: Firebase not ready.", "error");
       return;
     }
@@ -3869,24 +3911,23 @@ service cloud.firestore {
     const arr = (cur==='pagi'?pagi:petang);
     if (!arr.length){ $list.innerHTML = '<div style="padding:8px 10px;color:#6c757d;font-style:italic">No subjects yet</div>'; return; }
     $list.innerHTML = arr.map(s => `<div class="jj-item"><span>${s}</span><button type="button" class="jj-del" data-subj="${s}">Del</button></div>`).join('');
-    $list.querySelectorAll('.jj-del').forEach(btn=>{
-      btn.addEventListener('click', ()=> deleteSubject(btn.dataset.subj));
-    });
+    $list.querySelectorAll('.jj-del').forEach(btn=> btn.addEventListener('click', ()=> deleteSubject(btn.dataset.subj)));
   }
 
   function startListeners(){
-    const d = diag();
-    if (!d.fbDb || !d.fbIsAuthReady || !d.hasOnSnapshot || !d.hasDoc) return;
+    if (!window.fbDb || !window.fbIsAuthReady || !window.onSnapshot || !window.doc) return;
     if (unsubP) unsubP(); if (unsubA) unsubA();
     unsubP = window.onSnapshot(docRef('pagi'), (snap)=>{ pagi = (snap.exists()? (snap.data().subjects||[]) : []); if (cur==='pagi') renderList(); });
     unsubA = window.onSnapshot(docRef('petang'), (snap)=>{ petang = (snap.exists()? (snap.data().subjects||[]) : []); if (cur==='petang') renderList(); });
   }
 
-  function boot(){
-    if (!ensureMounted()) return;
+  async function boot(){
+    ensureMounted();
+    await ensureFirebaseReady();
     startListeners();
     switchSession('pagi');
     setTimeout(()=>{ $input && $input.focus(); }, 50);
+    updateNote();
   }
 
   document.addEventListener('DOMContentLoaded', function(){
@@ -3905,11 +3946,11 @@ service cloud.firestore {
   document.addEventListener('click', (e)=>{
     const t = (e.target && ((e.target.id||'') + ' ' + (e.target.textContent||''))).toLowerCase();
     if (t.includes('names') || t.includes('shared name list')){
-      setTimeout(()=>{ if (ensureMounted()) boot(); }, 250);
+      setTimeout(()=>{ ensureMounted() && boot(); }, 250);
     }
   });
 })();
 </script>
-<!-- === /V6 === -->
+<!-- === /V7 === -->
 </body>
 </html>

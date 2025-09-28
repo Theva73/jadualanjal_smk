@@ -26,21 +26,41 @@
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow-md">
-            <!-- Buttons Section -->
+            <!-- Main visible buttons -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <button id="savePageBtn" class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
                 <button id="pdfBtn" class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
                 <button id="clearNamesBtn" class="control-button bg-purple-500 hover:bg-purple-600"><i class="fas fa-eraser"></i> Clear Names</button>
                 <button id="searchBtn" class="control-button bg-gray-200 text-gray-700 hover:bg-gray-300 col-span-2 sm:col-span-4"><i class="fas fa-search"></i> Search Timetable</button>
             </div>
+            
+            <!-- Toggle button for hidden controls -->
             <button id="toggleControlsBtn" class="w-full bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition duration-300 mb-4">
                 <i class="fas fa-chevron-down mr-2"></i> Show More Controls
             </button>
+            
+            <!-- Container for ALL hidden buttons -->
             <div id="hiddenControls" class="hidden">
                  <div class="grid grid-cols-2 gap-3 border-t pt-4">
                     <button class="control-button bg-gray-700 hover:bg-gray-800 col-span-2"><i class="fas fa-copy"></i> Copy HTML</button>
-                    <!-- Add all other buttons here -->
-                 </div>
+                    <button class="control-button bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel"></i> Export Excel</button>
+                    <button class="control-button bg-green-700 hover:bg-green-800"><i class="fas fa-file-import"></i> Import Excel</button>
+                    <button class="control-button bg-blue-600 hover:bg-blue-700"><i class="fas fa-share-square"></i> Save Shared</button>
+                    <button class="control-button bg-blue-700 hover:bg-blue-800"><i class="fas fa-cloud-download-alt"></i> Load Shared</button>
+                    <button class="control-button bg-orange-500 hover:bg-orange-600"><i class="fas fa-undo"></i> Restore Backup</button>
+                    <button class="control-button bg-orange-600 hover:bg-orange-700"><i class="fas fa-external-link-alt"></i> Export All</button>
+                    <button class="control-button bg-purple-600 hover:bg-purple-700"><i class="fas fa-file-upload"></i> Import All</button>
+                    <button class="control-button bg-purple-700 hover:bg-purple-800"><i class="fas fa-magic"></i> Clear & New</button>
+                    <button class="control-button bg-indigo-500 hover:bg-indigo-600"><i class="fas fa-th-large"></i> Select Cells</button>
+                    <button class="control-button bg-indigo-600 hover:bg-indigo-700"><i class="fas fa-compress-arrows-alt"></i> Merge</button>
+                    <button class="control-button bg-gray-500 hover:bg-gray-600"><i class="fas fa-square"></i> Deselect</button>
+                    <button class="control-button bg-gray-600 hover:bg-gray-700"><i class="fas fa-expand-arrows-alt"></i> Unmerge</button>
+                    <button class="control-button bg-teal-500 hover:bg-teal-600"><i class="fas fa-plus-square"></i> Add Table</button>
+                    <button class="control-button bg-teal-600 hover:bg-teal-700"><i class="fas fa-plus"></i> Add Standalone Table</button>
+                    <button class="control-button bg-yellow-500 text-black hover:bg-yellow-600"><i class="fas fa-edit"></i> Rename Table</button>
+                    <button class="control-button bg-red-500 hover:bg-red-600"><i class="fas fa-trash-alt"></i> Delete Table</button>
+                    <button class="control-button bg-pink-500 hover:bg-pink-600 col-span-2"><i class="fas fa-users"></i> Names</button>
+                </div>
             </div>
         </div>
 
@@ -51,7 +71,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -70,13 +90,14 @@
             if (data && data.html) {
                 timetableContainer.innerHTML = data.html;
             } else {
-                 renderError("Timetable data loaded, but the format was unexpected.", data);
+                 renderError("Timetable data loaded, but it's not in the expected format.", JSON.stringify(data));
             }
         }
 
-        function renderError(message, error) {
-            console.error(message, error);
-            timetableContainer.innerHTML = `<div class="error-message"><strong>Error:</strong> ${message}</div>`;
+        function renderError(message, details) {
+            console.error(message, details);
+            let detailText = details ? `<br><small class="text-gray-500">${details}</small>` : '';
+            timetableContainer.innerHTML = `<div class="error-message"><strong>Error:</strong> ${message}${detailText}</div>`;
         }
 
         async function loadTimetableData() {
@@ -84,24 +105,23 @@
             timetableContainer.innerHTML = `<h3 class="text-center text-gray-500">Loading timetable...</h3>`;
             
             try {
-                // THE 100% CORRECT AND FINAL PATH TO YOUR DATA
-                const dataUserId = "LbWEmh1PmiXiio04VQM5bcj6pI82";
+                // THE ACTUAL PATH TO YOUR DATA, without the incorrect "users" collection
+                const dataId = "LbWEmh1PmiXiio04VQM5bcj6pI82";
                 const collectionName = "scheduleDrafts";
                 const documentName = "cEIyOMtxqmIuUnWiKNS9";
 
-                const docRef = doc(db, 'users', dataUserId, collectionName, documentName);
+                // The doc reference no longer includes "users"
+                const docRef = doc(db, dataId, collectionName, documentName);
                 
-                console.log("Attempting to load from final correct path:", docRef.path);
-
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     console.log("SUCCESS! Document data:", docSnap.data());
                     renderTimetable(docSnap.data());
                 } else {
-                    renderError(`The path is correct, but the document was not found. Path: ${docRef.path}`);
+                    renderError(`The path is correct, but the document was not found.`, `Path: ${docRef.path}`);
                 }
             } catch (error) {
-                renderError('Failed to load timetable. This is likely a Firestore Rules issue. Please ensure the rules are updated.', error);
+                renderError('Failed to load timetable due to a permission issue.', 'Please ensure your Firestore security rules are updated with the final version.');
             }
         }
 
@@ -117,17 +137,24 @@
         }
 
         async function main() {
-            document.getElementById('userIdDisplay').textContent = "077WGD1EYDUX6n3DQCVkqU2C213";
             try {
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 db = getFirestore(app);
                 
-                await signInAnonymously(auth);
-                await loadTimetableData();
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // User is signed in.
+                        document.getElementById('userIdDisplay').textContent = user.uid;
+                        loadTimetableData(); // Now load the data
+                    } else {
+                        // User is signed out.
+                        signInAnonymously(auth);
+                    }
+                });
 
             } catch (error) {
-                renderError('A critical error occurred during Firebase setup.', error);
+                renderError('A critical error occurred during Firebase setup.', error.message);
             }
         }
         

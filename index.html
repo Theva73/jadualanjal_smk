@@ -65,31 +65,22 @@
             <div id="hiddenControls" class="hidden">
                 <div class="grid grid-cols-2 gap-3 border-t pt-4">
                     <button class="control-button bg-gray-700 hover:bg-gray-800 col-span-2"><i class="fas fa-copy"></i> Copy HTML</button>
-
                     <button class="control-button bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel"></i> Export Excel</button>
                     <button class="control-button bg-green-700 hover:bg-green-800"><i class="fas fa-file-import"></i> Import Excel</button>
-
                     <button class="control-button bg-blue-600 hover:bg-blue-700"><i class="fas fa-share-square"></i> Save Shared</button>
                     <button class="control-button bg-blue-700 hover:bg-blue-800"><i class="fas fa-cloud-download-alt"></i> Load Shared</button>
-
                     <button class="control-button bg-orange-500 hover:bg-orange-600"><i class="fas fa-undo"></i> Restore Backup</button>
                     <button class="control-button bg-orange-600 hover:bg-orange-700"><i class="fas fa-external-link-alt"></i> Export All</button>
-
                     <button class="control-button bg-purple-600 hover:bg-purple-700"><i class="fas fa-file-upload"></i> Import All</button>
                     <button class="control-button bg-purple-700 hover:bg-purple-800"><i class="fas fa-magic"></i> Clear & New</button>
-
                     <button class="control-button bg-indigo-500 hover:bg-indigo-600"><i class="fas fa-th-large"></i> Select Cells</button>
                     <button class="control-button bg-indigo-600 hover:bg-indigo-700"><i class="fas fa-compress-arrows-alt"></i> Merge</button>
-
                     <button class="control-button bg-gray-500 hover:bg-gray-600"><i class="fas fa-square"></i> Deselect</button>
                     <button class="control-button bg-gray-600 hover:bg-gray-700"><i class="fas fa-expand-arrows-alt"></i> Unmerge</button>
-
                     <button class="control-button bg-teal-500 hover:bg-teal-600"><i class="fas fa-plus-square"></i> Add Table</button>
                     <button class="control-button bg-teal-600 hover:bg-teal-700"><i class="fas fa-plus"></i> Add Standalone Table</button>
-
                     <button class="control-button bg-yellow-500 text-black hover:bg-yellow-600"><i class="fas fa-edit"></i> Rename Table</button>
                     <button class="control-button bg-red-500 hover:bg-red-600"><i class="fas fa-trash-alt"></i> Delete Table</button>
-                    
                     <button class="control-button bg-pink-500 hover:bg-pink-600 col-span-2"><i class="fas fa-users"></i> Names</button>
                 </div>
             </div>
@@ -106,7 +97,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. UI Elements ---
@@ -125,43 +116,41 @@
         });
 
         // --- 3. Firebase Connection ---
-        let auth, db, userId;
 
-        // These variables are placeholders and will be provided by the environment.
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
+          authDomain: "jadual-3f0aa.firebaseapp.com",
+          projectId: "jadual-3f0aa",
+          storageBucket: "jadual-3f0aa.appspot.com",
+          messagingSenderId: "496526436851",
+          appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
+        };
+
+        let auth, db, userId;
 
         try {
             // Initialize Firebase App
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            setLogLevel('debug'); // For more detailed console logs
+            setLogLevel('debug'); 
 
             // Listen for authentication state changes
             onAuthStateChanged(auth, (user) => {
                 if (user) {
-                    // User is signed in.
                     userId = user.uid;
                     console.log("User is authenticated. UID:", userId);
                     userIdDisplay.textContent = userId;
-                    // You can now perform Firestore operations using this userId
                 } else {
-                    // User is signed out.
                     console.log("User is not authenticated.");
                     userIdDisplay.textContent = "Not Logged In";
                 }
             });
             
-            // Sign in the user
-            if (initialAuthToken) {
-                await signInWithCustomToken(auth, initialAuthToken);
-                 console.log("Signing in with custom token...");
-            } else {
-                await signInAnonymously(auth);
-                 console.log("Signing in anonymously...");
-            }
+            // Sign in the user anonymously for this public page
+            await signInAnonymously(auth);
+            console.log("Attempting to sign in anonymously...");
 
         } catch (error) {
             console.error("Firebase Initialization Error:", error);
@@ -172,4 +161,5 @@
 
 </body>
 </html>
+
 

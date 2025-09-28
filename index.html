@@ -23,6 +23,7 @@
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow-md">
+            <!-- All buttons are included here -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <button id="savePageBtn" class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
                 <button id="pdfBtn" class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -81,20 +82,14 @@
         const loadingMessage = document.getElementById('loadingMessage');
 
         function renderTimetable(data) {
-            // *** THIS IS WHERE YOUR OLD CODE GOES ***
-            // You need to take the javascript from your old project that builds the
-            // HTML table and put it here. This function receives the loaded data.
+            // This is where your old timetable-building logic will go.
             timetableContainer.innerHTML = '';
-            
-            // For now, we just show a success message and the raw data.
             const successMessage = document.createElement('h2');
             successMessage.className = 'text-2xl font-bold text-green-600 text-center mb-4';
             successMessage.textContent = 'SUCCESS! Your Timetable Has Loaded!';
-            
             const dataPreview = document.createElement('pre');
             dataPreview.className = 'bg-gray-100 p-4 rounded-lg text-sm';
             dataPreview.textContent = JSON.stringify(data, null, 2);
-            
             timetableContainer.appendChild(successMessage);
             timetableContainer.appendChild(dataPreview);
         }
@@ -109,19 +104,26 @@
             loadingMessage.textContent = `Loading timetable...`;
             
             try {
-                // *** THE FINAL, CORRECT PATH TO YOUR DATA ***
-                const appId = "1:496526436851:web:78ff48b28bfc8c31f14a86"; // As seen in your screenshot
-                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'timetables', 'main_schedule');
+                // *** ONE FINAL STEP: CHECK THESE TWO NAMES ***
+                // Look inside your database at this path:
+                // artifacts/{appId}/users/077WGD.../
+                // Find the real collection and document names and put them here.
+                const collectionName = "sharedSchedule"; // My best guess
+                const documentName = "main";             // My best guess
+
+                const appId = "1:496526436851:web:78ff48b28bfc8c31f14a86";
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, collectionName, documentName);
+                
                 console.log("Attempting to load from path:", docRef.path);
 
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     renderTimetable(docSnap.data());
                 } else {
-                    loadingMessage.textContent = 'Connection successful, but no timetable was found for this User ID.';
+                    loadingMessage.textContent = `Connection successful, but no document named "${documentName}" was found in the "${collectionName}" collection. Please check the names in the script.`;
                 }
             } catch (error) {
-                renderError('Failed to load timetable. Please check Firestore security rules and the console.', error);
+                renderError('Failed to load timetable. Please check your Firestore path and security rules.', error);
             }
         }
 
@@ -144,7 +146,6 @@
                 const auth = getAuth(app);
                 db = getFirestore(app);
 
-                // We will still use your original User ID to fetch the correct data
                 const originalUserId = "077WGD1EYDUX6n3DQCVkqU2C213";
                 userIdDisplay.textContent = originalUserId;
                 

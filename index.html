@@ -647,28 +647,6 @@
 }
 .chip-teacher { background:#eef9f1; border-color:#cdeedc; color:#1e7e34; }
 </style>
-
-<style>
-/* Compact teacher list styling */
-#teachersInSessionList, #teachersInSubjectList {
-  font-size: 13px;       /* smaller font */
-  line-height: 1.3;      /* tighter line spacing */
-  max-height: 180px;     /* limit height with scroll if too long */
-  overflow-y: auto;      /* add scrollbar if content exceeds max-height */
-  padding: 4px;
-}
-
-#teachersInSessionList li, #teachersInSubjectList li {
-  margin: 2px 0;         /* reduce vertical spacing */
-  padding: 2px 4px;      /* compact padding */
-}
-
-#teachersInSessionList li button, #teachersInSubjectList li button {
-  font-size: 11px;       /* smaller buttons */
-  padding: 2px 6px;      /* tighter button spacing */
-}
-</style>
-
 </head>
 <body>
 <div class="main-container">
@@ -903,8 +881,9 @@ fbAuth = getAuth(fbApp);
     let lastClickedCell = null;
     let selectedNameFromList = null;
     let currentNameListSession = 'pagi';
-    window.namesPagiShared = window.namesPagiShared || [];
-window.namesPetangShared = window.namesPetangShared || [];
+    let namesPagiShared = [];
+    let namesPetangShared = [];
+window.namesPagiShared = namesPagiShared; window.namesPetangShared = namesPetangShared;
 
     let isDraggingModal = false;
     let modalDragOffsetX, modalDragOffsetY;
@@ -1585,7 +1564,7 @@ function detectAndMarkClashes(){
         const trimmedName = String(name || '').trim();
         if (!trimmedName) { showMessage("Name cannot be empty.", "info"); return; }
         showNameModalLoading(true);
-        const sessionNames = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        const sessionNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
         if (sessionNames.map(n => String(n || '').toLowerCase()).includes(trimmedName.toLowerCase())) { showMessage(`"${trimmedName}" already exists.`, "info"); showNameModalLoading(false); return; }
         if (!appId || appId === 'default-shared-scheduler-app') { showMessage("Config error: App ID missing.", "error"); showNameModalLoading(false); return; }
         const updatedNames = [...sessionNames, trimmedName].sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
@@ -1602,7 +1581,7 @@ function detectAndMarkClashes(){
         if (await customConfirm(`Delete "${nameToDeleteStr}" from shared ${currentNameListSession} session? This also removes it from tables.`)) {
             showNameModalLoading(true);
             if (!appId || appId === 'default-shared-scheduler-app') { showMessage("Config error: App ID missing.", "error"); showNameModalLoading(false); return; }
-            const currentNames = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+            const currentNames = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
             const updatedNames = currentNames.filter(name => String(name || '') !== nameToDeleteStr);
             const docRef = doc(fbDb, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
             try {
@@ -1631,11 +1610,9 @@ function detectAndMarkClashes(){
             showNameModalLoading(true);
             const namesFromDb = docSnap.exists() ? (docSnap.data().names || []) : [];
             const sanitizedNames = namesFromDb.map(name => String(name || '').trim()).filter(name => name.length > 0);
-            if (sessionToListen === 'pagi') window.namesPagiShared = sanitizedNames; else window.namesPetangShared = sanitizedNames;
+            if (sessionToListen === 'pagi') namesPagiShared = sanitizedNames; else namesPetangShared = sanitizedNames;
             if (sessionToListen === currentNameListSession && nameModal?.style.display === 'flex' && searchNameInputElement) renderNameListFromFirestore(searchNameInputElement.value);
-            
-        document.dispatchEvent(new CustomEvent('sharedNameListUpdated'));
-        rebuildAndRenderSummary(); showNameModalLoading(false);
+            rebuildAndRenderSummary(); showNameModalLoading(false);
         }, (error) => { console.error(`Error listening to ${sessionToListen} names:`, error); showMessage(`Error fetching ${sessionToListen} names.`, "error"); showNameModalLoading(false); });
     }
 
@@ -2429,7 +2406,7 @@ function detectAndMarkClashes(){
     // --- Autocomplete Functions ---
     function showCellAutocompleteSuggestions(cell, inputText) {
         if (!autocompleteSuggestionsDiv) return;
-        const namesForAutocomplete = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        const namesForAutocomplete = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
         let textForMatchingInput = String(inputText || '').split(' // ')[0]; 
         const wordsForMatching = textForMatchingInput.split(/\s+/).filter(word => !word.startsWith('*')); 
         const textForMatching = wordsForMatching.join(' ').toLowerCase().trim(); 
@@ -2957,7 +2934,7 @@ function addNewIndependentTable() {
     }
     function renderNameListFromFirestore(filterText = '') {
         if (!nameListContainer) return; if (!fbIsAuthReady) { nameListContainer.innerHTML = '<p>Loading names...</p>'; return; }
-        nameListContainer.innerHTML = ''; const namesToRender = currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared;
+        nameListContainer.innerHTML = ''; const namesToRender = currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared;
         const normalizedFilterText = String(filterText || '').toLowerCase().trim();
         if (!Array.isArray(namesToRender)) { nameListContainer.innerHTML = '<p>Error: Name list invalid.</p>'; return; }
         const filteredNames = namesToRender.filter(name => String(name || '').toLowerCase().trim().includes(normalizedFilterText));
@@ -2977,7 +2954,7 @@ function addNewIndependentTable() {
             try {
                 const importedNames = e.target.result.split(/\r?\n/).map(n => String(n||'').trim()).filter(n => n);
                 if (importedNames.length === 0) { showMessage('No names in file.', 'info'); return; }
-                const currentSessionNames = (currentNameListSession === 'pagi' ? window.namesPagiShared : window.namesPetangShared).map(n => String(n||'').trim());
+                const currentSessionNames = (currentNameListSession === 'pagi' ? namesPagiShared : namesPetangShared).map(n => String(n||'').trim());
                 const combinedNames = [...new Set([...currentSessionNames, ...importedNames])];
                 await saveSharedNameListToFirestore(currentNameListSession, combinedNames);
             } catch (error) { showMessage('Error processing name list file.', 'error'); }
@@ -3831,26 +3808,11 @@ let selectedSubject = null;
 let currentSubjectSession = 'pagi';
 let unsubscribeSubjects = null;
 
-
-
-// Listen for updates to the shared name list from the main script.
-document.addEventListener('sharedNameListUpdated', () => {
-    if (typeof subjectsModal !== 'undefined' && subjectsModal && subjectsModal.style.display === 'flex') {
-        console.log('Shared name list updated, re-rendering teacher list in Subjects modal.');
-        if (typeof renderTeachersLists === 'function') {
-            try { renderTeachersLists(); } catch (e) { console.warn('renderTeachersLists() threw', e); }
-        }
-    }
-});
 const subjectsDocRef = doc(getFirestore(), 'artifacts', appId, 'public', 'data', 'subjects', 'main');
 
 const normalize = s => (s||'').trim();
 function getNamesForSession(session){
-  const pagi = Array.from(window.namesPagiShared||[]);
-  const petang = Array.from(window.namesPetangShared||[]);
-  const current = (session === 'petang') ? petang : pagi;
-  const unionSorted = Array.from(new Set([...pagi, ...petang])).sort((a,b)=>String(a).localeCompare(String(b)));
-  return (Array.isArray(current) && current.length) ? current : unionSorted;
+  return session === 'petang' ? (Array.from(namesPetangShared||[])) : (Array.from(namesPagiShared||[]));
 }
 function ensureSubjectsSessionMap(sess){
   if(!subjectsState[sess]) subjectsState[sess] = {};
@@ -4127,153 +4089,6 @@ deleteSubjectBtn?.addEventListener('click', deleteSubject);
 subjectSelect?.addEventListener('change', (e)=>{ selectedSubject = e.target.value || null; renderTeachersLists(); });
 attachTeacherBtn?.addEventListener('click', ()=> attachTeacher(attachTeacherInput.value));
 
-
-/* === Attach-Teacher Autocomplete (Subjects Modal) === */
-(function(){
-  // Reuse the global suggestions div used by schedule autocomplete
-  // Fallback create if missing
-  if (typeof autocompleteSuggestionsDiv === 'undefined' || !autocompleteSuggestionsDiv) {
-    window.autocompleteSuggestionsDiv = document.createElement('div');
-    autocompleteSuggestionsDiv.id = 'autocompleteSuggestions';
-    document.body.appendChild(autocompleteSuggestionsDiv);
-  }
-
-  const input = document.getElementById('attachTeacherInput');
-  if (!input) return;
-
-  let activeIndex = -1;
-  let currentItems = [];
-
-  function getCandidateNames(){
-    // Prefer current subject session list; fallback to union
-    try { 
-      if (typeof getNamesForSession === 'function') {
-        return getNamesForSession(typeof currentSubjectSession!=='undefined'? currentSubjectSession : 'pagi') || [];
-      }
-    } catch(_) {}
-    const pagi = Array.from(window.namesPagiShared || []);
-    const petang = Array.from(window.namesPetangShared || []);
-    return Array.from(new Set([...pagi, ...petang]));
-  }
-
-  function positionDropdown(anchorEl){
-    const rect = anchorEl.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const left = rect.left + scrollLeft;
-    const top = rect.bottom + scrollTop;
-    autocompleteSuggestionsDiv.style.position = 'absolute';
-    autocompleteSuggestionsDiv.style.left = left + 'px';
-    autocompleteSuggestionsDiv.style.top = top + 'px';
-    autocompleteSuggestionsDiv.style.minWidth = rect.width + 'px';
-    autocompleteSuggestionsDiv.style.zIndex = 9999;
-    autocompleteSuggestionsDiv.style.background = '#fff';
-    autocompleteSuggestionsDiv.style.border = '1px solid #ddd';
-    autocompleteSuggestionsDiv.style.borderRadius = '8px';
-    autocompleteSuggestionsDiv.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-    autocompleteSuggestionsDiv.style.maxHeight = '240px';
-    autocompleteSuggestionsDiv.style.overflowY = 'auto';
-  }
-
-  function clearDropdown(){ autocompleteSuggestionsDiv.innerHTML = ''; activeIndex = -1; currentItems = []; }
-
-  function hideDropdown(){ clearDropdown(); autocompleteSuggestionsDiv.style.display = 'none'; }
-
-  function showDropdown(){ autocompleteSuggestionsDiv.style.display = 'block'; }
-
-  function buildItems(q){
-    const needle = String(q||'').toLowerCase().trim();
-    if (!needle){ hideDropdown(); return; }
-    const words = needle.split(/\s+/).filter(Boolean);
-    const names = getCandidateNames();
-    const filtered = names.filter(n => {
-      const s = String(n).toLowerCase();
-      return words.every(w => s.includes(w)) || s.startsWith(needle);
-    }).slice(0, 50);
-
-    clearDropdown();
-    if (!filtered.length){ hideDropdown(); return; }
-
-    filtered.forEach((name, i) => {
-      const div = document.createElement('div');
-      div.textContent = name;
-      div.style.padding = '8px 10px';
-      div.style.cursor = 'pointer';
-      div.addEventListener('mouseenter', ()=>{ setActive(i); });
-      div.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); // prevent blur
-      div.addEventListener('click', ()=>{
-        input.value = name;
-        hideDropdown();
-        setTimeout(()=> input.focus(), 0);
-      });
-      autocompleteSuggestionsDiv.appendChild(div);
-    });
-    currentItems = Array.from(autocompleteSuggestionsDiv.children);
-    setActive(0);
-    positionDropdown(input);
-    showDropdown();
-  }
-
-  function setActive(i){
-    currentItems.forEach((el, idx)=>{
-      el.style.background = idx===i ? '#eef6ff' : '#fff';
-    });
-    activeIndex = i;
-  }
-
-  function move(delta){
-    if (!currentItems.length) return;
-    let i = activeIndex + delta;
-    if (i < 0) i = currentItems.length - 1;
-    if (i >= currentItems.length) i = 0;
-    setActive(i);
-    const el = currentItems[i];
-    const pTop = autocompleteSuggestionsDiv.scrollTop;
-    const pBottom = pTop + autocompleteSuggestionsDiv.clientHeight;
-    const eTop = el.offsetTop;
-    const eBottom = eTop + el.offsetHeight;
-    if (eTop < pTop) autocompleteSuggestionsDiv.scrollTop = eTop;
-    else if (eBottom > pBottom) autocompleteSuggestionsDiv.scrollTop = eBottom - autocompleteSuggestionsDiv.clientHeight;
-  }
-
-  function acceptActive(){
-    if (activeIndex>=0 && currentItems[activeIndex]){
-      const name = currentItems[activeIndex].textContent;
-      input.value = name;
-      hideDropdown();
-    }
-  }
-
-  // Wire events
-  input.addEventListener('input', ()=> buildItems(input.value));
-  input.addEventListener('keydown', (e)=>{
-    if (e.key === 'ArrowDown'){ e.preventDefault(); move(1); }
-    else if (e.key === 'ArrowUp'){ e.preventDefault(); move(-1); }
-    else if (e.key === 'Enter'){ if (autocompleteSuggestionsDiv.style.display!=='none'){ e.preventDefault(); acceptActive(); } }
-    else if (e.key === 'Escape'){ hideDropdown(); }
-  });
-
-  // Hide on outside click / scroll
-  document.addEventListener('click', (e)=>{
-    if (e.target !== input && !autocompleteSuggestionsDiv.contains(e.target)){ hideDropdown(); }
-  }, true);
-  window.addEventListener('scroll', ()=>{ if (autocompleteSuggestionsDiv.style.display!=='none') positionDropdown(input); }, true);
-
-  // Also refresh when shared name list updates (from your earlier patch)
-  document.addEventListener('sharedNameListUpdated', ()=>{
-    if (document.activeElement === input){ buildItems(input.value); }
-  });
-
-  // If the modal opens, reset dropdown
-  if (typeof subjectsModal !== 'undefined'){
-    const obs = new MutationObserver(()=>{ if (subjectsModal.style.display === 'flex'){ hideDropdown(); } });
-    obs.observe(subjectsModal, { attributes: true, attributeFilter: ['style'] });
-  }
-})();
-/* === /Attach-Teacher Autocomplete === */
-
-
-
 detachTeacherBtn?.addEventListener('click', async ()=>{
   const t = detachTeacherBtn.dataset.teacher;
   if(t) await detachTeacher(t);
@@ -4347,148 +4162,6 @@ document.addEventListener('click', (e)=>{
     if (typeof watchSubjects === 'function') watchSubjects();
   } catch(err){ console.error(err); window.showMessage?.('Unable to open Subjects','error'); }
 });
-
-
-
-// === Row & Column Manipulation Functions (Injected v2) ===
-
-// Guard globals used by existing code
-window.lastClickedCell = window.lastClickedCell || null;
-
-// Safe message helper (fallbacks if showMessage isn't in scope yet)
-const __safeShow = (msg, type='info') => {
-  try { (typeof showMessage === 'function') ? showMessage(msg, type) : alert(msg); }
-  catch (_) { alert(msg); }
-};
-
-function getActiveTable(){
-  return document.querySelector('#tablesContainer table active, #tablesContainer table.active');
-}
-function getSelectedCell(table){
-  if(!table) return null;
-  let sel = table.querySelector('td.selected, th.selected');
-  if(!sel && window.lastClickedCell && window.lastClickedCell.closest('table') === table){
-    sel = window.lastClickedCell;
-  }
-  return sel;
-}
-function getBodyAndRow(table, selected){
-  const tbody = table.tBodies[0] || table.createTBody();
-  // Prefer a row in TBODY; if clicked header, fall back to last body row
-  let row = selected ? selected.closest('tbody tr') : null;
-  if(!row && tbody.rows.length){ row = tbody.rows[tbody.rows.length-1]; }
-  return { tbody, row };
-}
-// how many columns should a new row have?
-function getColumnCountForNewRow(table){
-  const tbody = table.tBodies[0];
-  if(tbody && tbody.rows.length){ return tbody.rows[0].cells.length; }
-  const thead = table.tHead;
-  if(thead){
-    // find the last non-date-header row
-    let rows = Array.from(thead.rows);
-    rows = rows.filter(r => !r.classList.contains('date-header-row'));
-    if(rows.length){ return rows[rows.length-1].cells.length; }
-  }
-  // fallback to first row in table
-  return table.rows[0] ? table.rows[0].cells.length : 1;
-}
-
-// Add Row Above
-document.getElementById('addRowAboveBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  const { tbody, row } = getBodyAndRow(table, selected);
-  if(!row && !tbody) { __safeShow("No table body found.", "error"); return; }
-  const idx = row ? row.sectionRowIndex : 0;
-  const newRow = tbody.insertRow(idx);
-  const cols = getColumnCountForNewRow(table);
-  for(let i=0;i<cols;i++){ const c = newRow.insertCell(i); c.contentEditable = "true"; }
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Add Row Below
-document.getElementById('addRowBelowBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  const { tbody, row } = getBodyAndRow(table, selected);
-  const idx = row ? row.sectionRowIndex + 1 : tbody.rows.length;
-  const newRow = tbody.insertRow(idx);
-  const cols = getColumnCountForNewRow(table);
-  for(let i=0;i<cols;i++){ const c = newRow.insertCell(i); c.contentEditable = "true"; }
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Insert column helper: add at index for all rows in THEAD and TBODY
-function insertColumn(table, insertIndex){
-  const sections = [];
-  if(table.tHead) sections.push(table.tHead);
-  for(const tb of table.tBodies) sections.push(tb);
-  // also include tFoot if used in future
-  if(table.tFoot) sections.push(table.tFoot);
-  for(const sec of sections){
-    for(const r of sec.rows){
-      const idx = Math.min(insertIndex, r.cells.length);
-      const cell = r.insertCell(idx);
-      cell.contentEditable = "true";
-    }
-  }
-}
-
-// Add Column Left
-document.getElementById('addColLeftBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  if(!selected){ __safeShow("Select a column first.", "error"); return; }
-  insertColumn(table, selected.cellIndex);
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Add Column Right
-document.getElementById('addColRightBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  if(!selected){ __safeShow("Select a column first.", "error"); return; }
-  insertColumn(table, selected.cellIndex + 1);
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Delete Row (TBODY only)
-document.getElementById('deleteRowBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  const tbody = table.tBodies[0];
-  if(!tbody){ __safeShow("No rows to delete.", "error"); return; }
-  const row = selected ? selected.closest('tbody tr') : null;
-  if(!row){ __safeShow("Select a body row to delete.", "error"); return; }
-  tbody.deleteRow(row.sectionRowIndex);
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Delete Column (all sections)
-document.getElementById('deleteColBtn')?.addEventListener('click', () => {
-  const table = getActiveTable(); if(!table) return;
-  const selected = getSelectedCell(table);
-  if(!selected){ __safeShow("Select a column first.", "error"); return; }
-  const idx = selected.cellIndex;
-  const sections = [];
-  if(table.tHead) sections.push(table.tHead);
-  for(const tb of table.tBodies) sections.push(tb);
-  if(table.tFoot) sections.push(table.tFoot);
-  for(const sec of sections){
-    for(const r of sec.rows){
-      if(r.cells[idx]) r.deleteCell(idx);
-    }
-  }
-  if(typeof ensureDateHeaderRowExists==='function') ensureDateHeaderRowExists(table);
-});
-
-// Track last clicked cell for usability
-document.getElementById('tablesContainer')?.addEventListener('click', (e) => {
-  const cell = e.target?.closest('td,th');
-  if(cell && cell.closest('table')) window.lastClickedCell = cell;
-});
-// === End Injected v2 ===
 </script>
 
 </body>

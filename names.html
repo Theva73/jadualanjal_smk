@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Name List Manager — Jadual Anjal</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body>
+  <div class="main-container">
+    <h2>Shared Name List Manager</h2>
+
+    <div class="name-session-tabs">
+      <button id="tabPagi" data-session="pagi" class="active">Pagi (Morning)</button>
+      <button id="tabPetang" data-session="petang">Petang (Afternoon)</button>
+    </div>
+
+    <div class="input-group">
+      <input id="newNameInput" placeholder="Add new name to current shared session" />
+      <button id="addNameBtn">Add</button>
+    </div>
+
+    <button id="importNameListBtn">📂 Import Names (.txt) to Shared Session</button>
+    <input type="file" id="nameListImportFile" accept=".txt" style="display:none" />
+
+    <input type="text" id="searchNameInput" placeholder="🔍 Search names in current shared session..." />
+
+    <div id="nameList" class="name-list"></div>
+    <div id="loadingIndicatorModal" style="display:none;"><div class="spinner"></div></div>
+  </div>
+
+  <script type="module">
+    import { initFirebase } from './js/firebase.js';
+    import { ensureAnonymousAuth, onAuthReady } from './js/auth.js';
+    import {
+      setActiveSession, getActiveSession,
+      listNames, addName, removeName, importNamesFromTxt
+    } from './js/names_store.js';
+
+    const tabPagi = document.getElementById('tabPagi');
+    const tabPetang = document.getElementById('tabPetang');
+    const newNameInput = document.getElementById('newNameInput');
+    const addNameBtn = document.getElementById('addNameBtn');
+    const nameListDiv = document.getElementById('nameList');
+    const searchNameInput = document.getElementById('searchNameInput');
+    const importBtn = document.getElementById('importNameListBtn');
+    const importFile = document.getElementById('nameListImportFile');
+    const loading = document.getElementById('loadingIndicatorModal');
+
+    function setLoading(v){
+      loading.style.display = v ? 'flex' : 'none';
+    }
+
+    function setActiveTab(session){
+      tabPagi.classList.toggle('active', session==='pagi');
+      tabPetang.classList.toggle('active', session==='petang');
+    }
+
+    async function refresh(){
+      setLoading(true);
+      const session = getActiveSession();
+      const filter = searchNameInput.value.trim().toLowerCase();
+      const names = await listNames(session);
+      const filtered = filter ? names.filter(n => n.toLowerCase().includes(filter)) : names;
+      nameListDiv.innerHTML = '';
+      filtered.forEach(n => {
+        const row = document.createElement('div');
+        row.className = 'name-item';
+        const span = document.createElement('span');
+        span.textContent = n;
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.addEventListener('click', async () => {
+          await removeName(session, n);
+          await refresh();
+        });
+        row.appendChild(span);
+        row.appendChild(del);
+        nameListDiv.appendChild(row);
+      });
+      setLoading(false);
+    }
+
+    // Setup
+    initFirebase();
+    ensureAnonymousAuth();
+    onAuthReady(async () => {
+      setActiveSession('pagi');
+      setActiveTab('pagi');
+      await refresh();
+    });
+
+    // Handlers
+    tabPagi.addEventListener('click', async () => {
+      setActiveSession('pagi');
+      setActiveTab('pagi');
+      await refresh();
+    });
+    tabPetang.addEventListener('click', async () => {
+      setActiveSession('petang');
+      setActiveTab('petang');
+      await refresh();
+    });
+
+    addNameBtn.addEventListener('click', async () => {
+      const v = (newNameInput.value || '').trim();
+      if (!v) return;
+      await addName(getActiveSession(), v);
+      newNameInput.value = '';
+      await refresh();
+    });
+
+    searchNameInput.addEventListener('input', refresh);
+
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      await importNamesFromTxt(getActiveSession(), file);
+      importFile.value = '';
+      await refresh();
+    });
+  </script>
+</body>
+</html>

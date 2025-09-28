@@ -1,16 +1,11 @@
 // firestore.js - The Database Expert
+// This file handles all communication with Firebase.
 
-// This module handles all communication with Firebase.
-// It imports UI functions to display the data it fetches.
-import * as ui from './ui.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, orderBy, limit, getDocs, addDoc, deleteDoc, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-let db;
-let auth;
-
-// Your Firebase config
+// --- Firebase Config and State ---
 const firebaseConfig = {
   apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
   authDomain: "jadual-3f0aa.firebaseapp.com",
@@ -20,64 +15,81 @@ const firebaseConfig = {
   appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
 };
 
-export function initFirebase(onAuthChange) {
+let db, auth, userId, appId;
+let namesPagiShared = [], namesPetangShared = [];
+
+// --- Initialization ---
+export function initFirebase(onAuthChangeCallback) {
     try {
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
-        
+        appId = firebaseConfig.appId;
+
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                onAuthChange(user);
+                userId = user.uid;
+                onAuthChangeCallback(user);
             } else {
-                signInAnonymously(auth);
+                signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
             }
         });
     } catch (e) {
         console.error("Firebase Init Error:", e);
-        ui.showMessage("Could not connect to Firebase.", "error");
+        // Use the callback to signal an error state if needed
+        onAuthChangeCallback(null); 
     }
 }
 
-export async function loadLatestSchedule() {
-    // Your complex logic to find and load the latest schedule from Firestore.
-    // It should end by calling ui.renderSchedule(data).
-    ui.showMessage("Loading latest schedule...", "info");
+// --- Schedule Functions ---
+export async function loadLatestSchedule(renderCallback, fallbackCallback) {
+    // Your full loadLatestSharedScheduleAsDefault logic goes here
+    // On success, call renderCallback(data)
+    // On failure or if no data, call fallbackCallback()
     try {
         const q = query(
-            collection(db, "schedules"), // Adjust path as needed
+            collection(db, "artifacts", appId, "public/data/sharedSchedules"),
+            where("isBackup", "!=", true),
             orderBy("lastUpdatedAt", "desc"),
             limit(1)
         );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const latestDoc = querySnapshot.docs[0];
-            ui.renderSchedule(latestDoc.data());
-            ui.showMessage("Latest schedule loaded!", "success");
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            const latestDoc = snapshot.docs[0];
+            renderCallback(latestDoc.data());
         } else {
-            // No schedule found, maybe render a default empty one
-            ui.showMessage("No schedule found, starting new.", "info");
+            fallbackCallback();
         }
     } catch (e) {
-        console.error("Error loading schedule:", e);
-        ui.showMessage("Error loading schedule.", "error");
+        console.error("Failed to load latest schedule:", e);
+        fallbackCallback();
     }
 }
 
-export async function manualSave(state) {
-    // Your logic to save the current state to Firestore.
-    ui.showMessage("Saving...", "info");
-    try {
-        // Assume we have a current document ID stored somewhere
-        const docId = "some-current-doc-id"; // You need to manage this ID
-        await setDoc(doc(db, "schedules", docId), state, { merge: true });
-        ui.showMessage("Page Saved!", "success");
-    } catch (e) {
-        console.error("Error saving page:", e);
-        ui.showMessage("Error saving page.", "error");
-    }
+export async function manualSave(state, showMessageCallback) {
+    // Your full manualSaveCurrentPage logic here
+    // Call showMessageCallback('Message', 'type') on success/failure
+    showMessageCallback('Saving...', 'info');
+    // ... logic to save to Firestore ...
 }
 
-// ... Add all other Firestore functions from your original file.
-// (e.g., saveSharedSchedule, loadSharedNames, deleteSchedule, etc.)
+
+// --- Name List Functions ---
+export function listenToSharedNames(session, updateCallback) {
+    const docRef = doc(db, "artifacts", appId, "public/data/sharedNameLists", session);
+    onSnapshot(docRef, (docSnap) => {
+        const names = docSnap.exists() ? docSnap.data().names || [] : [];
+        if (session === 'pagi') namesPagiShared = names;
+        else namesPetangShared = names;
+        updateCallback(session, names);
+    });
+}
+
+export function getSharedNames() {
+    return { pagi: namesPagiShared, petang: namesPetangShared };
+}
+
+// ... All other firestore functions from your original script go here
+// (saveSharedSchedule, addSharedName, deleteSharedName, importSchedules, etc.)
+
 

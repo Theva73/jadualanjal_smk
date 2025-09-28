@@ -10,11 +10,12 @@
         body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         .control-button { display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px; border-radius: 8px; font-weight: 600; color: white; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
         .control-button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .control-button:active { transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .control-button i { margin-right: 8px; }
         .success-message { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 0.5rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; text-align: center; font-weight: bold; }
-        #timetableContainer table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        #timetableContainer th, #timetableContainer td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        #timetableContainer th { background-color: #f2f2f2; }
+        #timetableContainer table, #summaryContainer table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
+        #timetableContainer th, #timetableContainer td, #summaryContainer th, #summaryContainer td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        #timetableContainer th, #summaryContainer th { background-color: #f2f2f2; font-weight: bold; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -26,12 +27,17 @@
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow-md">
+             <!-- NEW IMPORT BUTTON -->
+            <button id="importJsonBtn" class="w-full control-button bg-orange-500 hover:bg-orange-600 mb-4">
+                <i class="fas fa-file-import"></i> Import Timetable from .JSON File
+            </button>
+            
             <!-- Main visible buttons -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <button class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
-                <button class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
-                <button class="control-button bg-purple-500 hover:bg-purple-600"><i class="fas fa-eraser"></i> Clear Names</button>
-                <button class="control-button bg-gray-200 text-gray-700 hover:bg-gray-300 col-span-2 sm:col-span-4"><i class="fas fa-search"></i> Search Timetable</button>
+                <button id="savePageBtn" class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
+                <button id="pdfBtn" class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button id="clearNamesBtn" class="control-button bg-purple-500 hover:bg-purple-600"><i class="fas fa-eraser"></i> Clear Names</button>
+                <button id="searchBtn" class="control-button bg-gray-200 text-gray-700 hover:bg-gray-300 col-span-2 sm:col-span-4"><i class="fas fa-search"></i> Search Timetable</button>
             </div>
             
             <!-- Toggle button for hidden controls -->
@@ -42,84 +48,173 @@
             <!-- Container for ALL hidden buttons -->
             <div id="hiddenControls" class="hidden">
                  <div class="grid grid-cols-2 gap-3 border-t pt-4">
-                    <button class="control-button bg-gray-700 hover:bg-gray-800 col-span-2"><i class="fas fa-copy"></i> Copy HTML</button>
-                    <button class="control-button bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel"></i> Export Excel</button>
-                    <button class="control-button bg-green-700 hover:bg-green-800"><i class="fas fa-file-import"></i> Import Excel</button>
-                    <button class="control-button bg-blue-600 hover:bg-blue-700"><i class="fas fa-share-square"></i> Save Shared</button>
-                    <button class="control-button bg-blue-700 hover:bg-blue-800"><i class="fas fa-cloud-download-alt"></i> Load Shared</button>
-                    <button class="control-button bg-orange-500 hover:bg-orange-600"><i class="fas fa-undo"></i> Restore Backup</button>
-                    <button class="control-button bg-orange-600 hover:bg-orange-700"><i class="fas fa-external-link-alt"></i> Export All</button>
-                    <button class="control-button bg-purple-600 hover:bg-purple-700"><i class="fas fa-file-upload"></i> Import All</button>
-                    <button class="control-button bg-purple-700 hover:bg-purple-800"><i class="fas fa-magic"></i> Clear & New</button>
-                    <button class="control-button bg-indigo-500 hover:bg-indigo-600"><i class="fas fa-th-large"></i> Select Cells</button>
-                    <button class="control-button bg-indigo-600 hover:bg-indigo-700"><i class="fas fa-compress-arrows-alt"></i> Merge</button>
-                    <button class="control-button bg-gray-500 hover:bg-gray-600"><i class="fas fa-square"></i> Deselect</button>
-                    <button class="control-button bg-gray-600 hover:bg-gray-700"><i class="fas fa-expand-arrows-alt"></i> Unmerge</button>
-                    <button class="control-button bg-teal-500 hover:bg-teal-600"><i class="fas fa-plus-square"></i> Add Table</button>
-                    <button class="control-button bg-teal-600 hover:bg-teal-700"><i class="fas fa-plus"></i> Add Standalone Table</button>
-                    <button class="control-button bg-yellow-500 text-black hover:bg-yellow-600"><i class="fas fa-edit"></i> Rename Table</button>
-                    <button class="control-button bg-red-500 hover:bg-red-600"><i class="fas fa-trash-alt"></i> Delete Table</button>
-                    <button class="control-button bg-pink-500 hover:bg-pink-600 col-span-2"><i class="fas fa-users"></i> Names</button>
+                    <button id="copyHtmlBtn" class="control-button bg-gray-700 hover:bg-gray-800 col-span-2"><i class="fas fa-copy"></i> Copy HTML</button>
+                    <button id="exportExcelBtn" class="control-button bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel"></i> Export Excel</button>
+                    <button id="importExcelBtn" class="control-button bg-green-700 hover:bg-green-800"><i class="fas fa-file-import"></i> Import Excel</button>
+                    <button id="saveSharedBtn" class="control-button bg-blue-600 hover:bg-blue-700"><i class="fas fa-share-square"></i> Save Shared</button>
+                    <button id="loadSharedBtn" class="control-button bg-blue-700 hover:bg-blue-800"><i class="fas fa-cloud-download-alt"></i> Load Shared</button>
+                    <button id="restoreBackupBtn" class="control-button bg-orange-500 hover:bg-orange-600"><i class="fas fa-undo"></i> Restore Backup</button>
+                    <button id="exportAllBtn" class="control-button bg-orange-600 hover:bg-orange-700"><i class="fas fa-external-link-alt"></i> Export All</button>
+                    <button id="importAllBtn" class="control-button bg-purple-600 hover:bg-purple-700"><i class="fas fa-file-upload"></i> Import All</button>
+                    <button id="clearNewBtn" class="control-button bg-purple-700 hover:bg-purple-800"><i class="fas fa-magic"></i> Clear & New</button>
+                    <button id="selectCellsBtn" class="control-button bg-indigo-500 hover:bg-indigo-600"><i class="fas fa-th-large"></i> Select Cells</button>
+                    <button id="mergeBtn" class="control-button bg-indigo-600 hover:bg-indigo-700"><i class="fas fa-compress-arrows-alt"></i> Merge</button>
+                    <button id="deselectBtn" class="control-button bg-gray-500 hover:bg-gray-600"><i class="fas fa-square"></i> Deselect</button>
+                    <button id="unmergeBtn" class="control-button bg-gray-600 hover:bg-gray-700"><i class="fas fa-expand-arrows-alt"></i> Unmerge</button>
+                    <button id="addTableBtn" class="control-button bg-teal-500 hover:bg-teal-600"><i class="fas fa-plus-square"></i> Add Table</button>
+                    <button id="addStandaloneBtn" class="control-button bg-teal-600 hover:bg-teal-700"><i class="fas fa-plus"></i> Add Standalone Table</button>
+                    <button id="renameTableBtn" class="control-button bg-yellow-500 text-black hover:bg-yellow-600"><i class="fas fa-edit"></i> Rename Table</button>
+                    <button id="deleteTableBtn" class="control-button bg-red-500 hover:bg-red-600"><i class="fas fa-trash-alt"></i> Delete Table</button>
+                    <button id="namesBtn" class="control-button bg-pink-500 hover:bg-pink-600 col-span-2"><i class="fas fa-users"></i> Names</button>
                 </div>
             </div>
         </div>
 
-        <div id="timetableContainer" class="mt-4 bg-white p-4 rounded-lg shadow-md min-h-[300px]">
-             <!-- Timetable will be loaded here by the script -->
+        <div id="timetableContainer" class="mt-4 bg-white p-4 rounded-lg shadow-md min-h-[200px]">
+             <p class="text-center text-gray-500">Please import a .json file to begin.</p>
+        </div>
+        
+        <!-- DEDICATED CONTAINER FOR THE SUMMARY -->
+        <div id="summaryContainer" class="mt-4 bg-white p-4 rounded-lg shadow-md">
+            <!-- Summary will be generated here -->
         </div>
     </div>
 
     <script>
-        // Your downloaded data is now embedded directly in the app.
-        const localTimetableData = [
-          {
-            "name": "Shared Schedule 9/27/2025 07:36 PM",
-            "html": "<table id=\"tbl_1758971136789_2\" data-table-name=\"Schedule 1\" class=\"active\"><thead><tr class=\"date-header-row\"><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th></tr><tr class=\"\"><th contenteditable=\"true\">Class/Time</th><th contenteditable=\"true\">08:00-09:00</th><th contenteditable=\"true\">09:00-10:00</th><th contenteditable=\"true\">10:00-11:00</th><th contenteditable=\"true\">11:00-12:00</th><th contenteditable=\"true\">12:00-13:00</th></tr></thead><tbody><tr><td contenteditable=\"true\">ISNIN</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">SELASA</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">RABU</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">KHAMIS</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">JUMAAT</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr></tbody></table>",
-            "meta": { "tbl_1758971136789_2": { "name": "Schedule 1", "rowCount": 7, "colCount": 6 } }, "activeTableId": "tbl_1758971136789_2", "scheduleTitle": "Jadual Anjal", "createdAt": "2025-09-27T11:36:15.158Z", "lastUpdatedAt": "2025-09-27T11:36:15.158Z", "lastUpdatedBy": "077WGD1EYDUX6n3DQCvkqU2C213", "isAutoDraft": false
-          },
-          {
-            "name": "Shared Schedule 9/27/2025 07:27 PM",
-            "html": "<table id=\"tbl_1758971136789_2\" data-table-name=\"Schedule 1\" class=\"active\"><thead><tr class=\"date-header-row\"><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th></tr><tr class=\"\"><th contenteditable=\"true\">Class/Time</th><th contenteditable=\"true\">08:00-09:00</th><th contenteditable=\"true\">09:00-10:00</th><th contenteditable=\"true\">10:00-11:00</th><th contenteditable=\"true\">11:00-12:00</th><th contenteditable=\"true\">12:00-13:00</th></tr></thead><tbody><tr><td contenteditable=\"true\">ISNIN</td><td contenteditable=\"true\">SAIDA</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">SELASA</td><td contenteditable=\"true\">S</td><td contenteditable=\"true\"><br></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">RABU</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"><br></td></tr><tr><td contenteditable=\"true\">KHAMIS</td><td contenteditable=\"true\"><br></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">JUMAAT</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr></tbody></table>",
-            "meta": { "tbl_1758971136789_2": { "rowCount": 7, "name": "Schedule 1", "colCount": 6 } }, "activeTableId": "tbl_1758971136789_2", "scheduleTitle": "Jadual Anjal", "createdAt": "2025-09-27T11:27:15.413Z", "lastUpdatedAt": "2025-09-27T21:37:13.356Z", "lastUpdatedBy": "AVxMLD33ycO6XN9NX2sTHv8fpyB3", "isAutoDraft": false
-          }
-        ];
+        // --- CORE FUNCTIONS ---
 
-        function loadTimetableFromLocal() {
+        function generateSummary() {
+            const summaryContainer = document.getElementById('summaryContainer');
+            const mainTable = document.querySelector('#timetableContainer table');
+            summaryContainer.innerHTML = ''; // Clear old summary
+
+            if (!mainTable) return;
+
+            const summary = {};
+            const timeSlots = Array.from(mainTable.querySelectorAll('thead th')).slice(1).map(th => th.textContent);
+
+            mainTable.querySelectorAll('tbody tr').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 2) return;
+                
+                for (let i = 1; i < cells.length; i++) {
+                    const teacherName = cells[i].textContent.trim();
+                    const time = timeSlots[i-1];
+                    const className = cells[0].textContent.trim();
+                    
+                    if (teacherName && time && className) {
+                        if (!summary[teacherName]) {
+                            summary[teacherName] = {};
+                        }
+                        if (!summary[teacherName][time]) {
+                            summary[teacherName][time] = [];
+                        }
+                        summary[teacherName][time].push(className);
+                    }
+                }
+            });
+
+            if (Object.keys(summary).length === 0) {
+                 summaryContainer.innerHTML = '<p class="text-center text-gray-500">No data found to generate summary.</p>';
+                 return;
+            }
+
+            let summaryHtml = '<h3 class="text-xl font-bold mb-2 text-center">Teacher/Subject Attendance Summary</h3>';
+            summaryHtml += '<table class="w-full"><thead><tr><th>Nama/Masa</th>';
+            timeSlots.forEach(time => { summaryHtml += `<th>${time}</th>`; });
+            summaryHtml += '</tr></thead><tbody>';
+
+            for (const teacher in summary) {
+                summaryHtml += `<tr><td>${teacher}</td>`;
+                timeSlots.forEach(time => {
+                    const classes = summary[teacher][time] ? summary[teacher][time].join(', ') : '';
+                    summaryHtml += `<td>${classes}</td>`;
+                });
+                summaryHtml += '</tr>';
+            }
+            summaryHtml += '</tbody></table>';
+            summaryContainer.innerHTML = summaryHtml;
+        }
+
+        function loadSchedule(schedule) {
             const timetableContainer = document.getElementById('timetableContainer');
-            // Find the specific schedule from your screenshot.
-            const scheduleToLoad = localTimetableData.find(s => s.name === "Shared Schedule 9/27/2025 07:27 PM");
-
-            if (scheduleToLoad && scheduleToLoad.html) {
-                // Add a success message
+            if (schedule && schedule.html) {
                 const successDiv = document.createElement('div');
                 successDiv.className = 'success-message';
-                successDiv.textContent = `Schedule "${scheduleToLoad.name}" loaded!`;
+                successDiv.textContent = `Schedule "${schedule.name}" loaded!`;
                 
-                timetableContainer.innerHTML = ''; // Clear previous content
+                timetableContainer.innerHTML = ''; 
                 timetableContainer.appendChild(successDiv);
-                
-                // Append the table HTML
-                timetableContainer.insertAdjacentHTML('beforeend', scheduleToLoad.html);
+                timetableContainer.insertAdjacentHTML('beforeend', schedule.html);
+
+                // IMPORTANT: Generate the summary AFTER loading the table
+                generateSummary();
             } else {
-                timetableContainer.innerHTML = `<div class="error-message">Could not find the specified schedule in the local data.</div>`;
+                timetableContainer.innerHTML = `<div class="text-red-600 p-4 bg-red-100 rounded-lg">Error: Invalid schedule format.</div>`;
             }
         }
 
+        function handleJsonImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const schedules = JSON.parse(e.target.result);
+                    if (Array.isArray(schedules) && schedules.length > 0) {
+                        // For now, let's load the specific one from your screenshot.
+                        // In the future, we could show a list to choose from.
+                        const scheduleToLoad = schedules.find(s => s.name === "Shared Schedule 9/27/2025 07:27 PM") || schedules[0];
+                        loadSchedule(scheduleToLoad);
+                    } else {
+                        alert("Error: JSON file is not in the expected format (array of schedules).");
+                    }
+                } catch (error) {
+                    alert("Error reading or parsing JSON file: " + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- EVENT LISTENERS SETUP ---
+
         function setupEventListeners() {
-            const toggleControlsBtn = document.getElementById('toggleControlsBtn');
-            const hiddenControls = document.getElementById('hiddenControls');
-            toggleControlsBtn.addEventListener('click', () => {
+            // New Import Button
+            document.getElementById('importJsonBtn').addEventListener('click', () => {
+                console.log("Import JSON button clicked!");
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.json, .txt';
+                fileInput.onchange = handleJsonImport;
+                fileInput.click();
+            });
+
+            // Toggle Controls
+            document.getElementById('toggleControlsBtn').addEventListener('click', () => {
+                const hiddenControls = document.getElementById('hiddenControls');
                 const isHidden = hiddenControls.classList.toggle('hidden');
-                toggleControlsBtn.innerHTML = isHidden 
+                document.getElementById('toggleControlsBtn').innerHTML = isHidden 
                     ? `<i class="fas fa-chevron-down mr-2"></i> Show More Controls`
                     : `<i class="fas fa-chevron-up mr-2"></i> Hide Controls`;
             });
+
+            // Add console logs to ALL buttons to prove they work
+            const allButtons = document.querySelectorAll('.control-button');
+            allButtons.forEach(button => {
+                if (button.id !== 'importJsonBtn' && button.id !== 'toggleControlsBtn') {
+                    button.addEventListener('click', () => {
+                        console.log(`Button "${button.textContent.trim()}" was clicked.`);
+                        // You can add the specific logic for each button here.
+                    });
+                }
+            });
         }
         
-        // Run everything when the page loads.
+        // --- INITIALIZATION ---
+        
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
-            loadTimetableFromLocal();
         });
 
     </script>

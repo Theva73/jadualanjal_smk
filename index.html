@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadual Anjal - Modular Version</title>
+    <title>Jadual Anjal - Modular</title>
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -16,24 +16,25 @@
         <h2 contenteditable="true" id="scheduleTitle">Jadual Anjal</h2>
         <div id="userIdDisplay">User ID: Loading...</div>
 
-        <!-- Top Action Buttons -->
+        <!-- Top Action Buttons Bar -->
         <div id="topActionButtonsBar">
-            <button id="controlsToggler" class="top-action-btn">Show Controls</button>
+             <!-- NOTE: The content of these buttons is now just text, icons will be added by main.js if needed -->
+            <button id="controlsToggler" class="top-action-btn" aria-expanded="false" aria-controls="collapsibleButtonBars">Show Controls</button>
             <button id="manualSaveBtn" class="top-action-btn">Save Page</button>
             <button id="downloadPdfBtn" class="top-action-btn">PDF</button>
             <button id="clearScheduledNamesBtn" class="top-action-btn">Clear Names (All Tables)</button>
             <button id="searchTimetableBtn" class="top-action-btn">Search Timetable</button>
         </div>
 
-        <!-- Collapsible Controls -->
+        <!-- Collapsible Button Bars -->
         <div id="collapsibleButtonBars" class="hidden">
-            <!-- All your other buttons from the original file go here -->
-             <div class="bar">
+            <div class="bar">
                 <button id="directCopyFullHtmlBtn">Copy HTML</button>
             </div>
             <div class="bar">
                 <button id="excelBtnTrigger">Export Excel</button>
                 <button id="importExcelBtn">Import Excel</button>
+                <input type="file" id="fileInput" accept=".xlsx, .xls" style="display:none">
             </div>
             <div class="bar">
                 <button id="saveSharedScheduleBtn">Save Shared</button>
@@ -41,6 +42,7 @@
                 <button id="restoreBackupBtn">Restore Backup</button>
                 <button id="exportSharedSchedulesBtn">Export All</button>
                 <button id="importSharedSchedulesBtn">Import All</button>
+                <input type="file" id="sharedScheduleImportFile" accept=".json" style="display:none;">
                 <button id="clearAndResetScheduleBtn">Clear & New</button>
             </div>
             <div class="bar">
@@ -65,32 +67,58 @@
                 <button id="deleteColBtn" class="delete-btn">Del Col</button>
             </div>
         </div>
-        
-        <!-- Table and Summary Containers -->
+
+        <!-- Containers for dynamic content -->
+        <div id="sharedScheduleListContainer" style="display:none;"></div>
         <div class="bar table-tabs" id="tableTabs"></div>
         <div id="tablesContainer">
-             <!-- Tables will be loaded here -->
+            <!-- Tables are dynamically loaded here -->
         </div>
 
-        <h3>Teacher/Subject Attendance Summary</h3>
+        <h3 style="margin-top:32px">Teacher/Subject Attendance Summary</h3>
         <div id="summaryTableContainer">
             <table id="summaryTable"></table>
         </div>
 
-        <!-- Modals and other hidden elements -->
-        <div id="nameModal" class="modal">
-            <!-- Name modal content from original file -->
-        </div>
+        <!-- Modals and other hidden elements (Full structure from your original file) -->
         <div id="restoreBackupModal" class="modal">
-            <!-- Restore backup modal content from original file -->
+            <div class="modal-content" id="restoreBackupModalContent">
+                <div class="modal-header" id="restoreBackupModalHeader">
+                    <h3 id="restoreBackupModalTitle">Restore Schedule from Backup</h3>
+                    <button type="button" class="modal-close-btn" id="closeRestoreBackupModalBtn">×</button>
+                </div>
+                <div id="restoreBackupListContainer"></div>
+                <div id="loadingIndicatorRestoreModal" style="display:none;"><div class="spinner"></div></div>
+            </div>
         </div>
+        <div id="nameModal" class="modal">
+             <div class="modal-content" id="nameModalContent">
+                <div class="modal-header" id="nameModalHeader">
+                    <h3 id="nameModalTitle">Shared Name List Manager</h3>
+                    <button type="button" class="modal-close-btn" id="closeNameModalBtnStandard">×</button>
+                </div>
+                <div class="name-session-tabs">
+                    <button id="namePagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
+                    <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
+                </div>
+                <div class="input-group">
+                    <input id="newNameInput" placeholder="Add new name...">
+                    <button id="addNameBtnInModal">Add</button>
+                </div>
+                <button id="importNameListBtn">Import Names (.txt)</button>
+                <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
+                <input type="text" id="searchNameInput" placeholder="Search names...">
+                <div id="nameList"></div>
+                <div id="loadingIndicatorModal" style="display:none;"><div class="spinner"></div></div>
+            </div>
+        </div>
+
         <div id="customMessageBox" class="custom-message-box"></div>
         <div id="generalLoadingIndicator" style="display:none;"><div class="spinner"></div></div>
         <div id="pdfContent"></div>
-
     </div>
 
-    <!-- The magic happens here: we load our JavaScript as modules -->
+    <!-- This is the only script in the HTML. It loads all other JS. -->
     <script type="module" src="main.js"></script>
 </body>
 </html>

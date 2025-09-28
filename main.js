@@ -1,100 +1,87 @@
 // main.js - The Conductor
 // This file connects the HTML to the logic in the other modules.
 
+// Import the full UI and Firestore modules
 import * as ui from './ui.js';
 import * as firestore from './firestore.js';
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialize the UI (find all DOM elements)
-    ui.initUI();
+    // 1. Initialize the UI module (which finds all DOM elements)
+    ui.init();
     
-    // 2. Initialize Firebase and define what happens on authentication change
-    firestore.initFirebase((user) => {
+    // 2. Initialize Firebase. The callback defines what happens after auth.
+    firestore.init((user) => {
         if (user) {
             ui.setUserId(user.uid);
-            // After successful auth, listen for name lists and load the schedule
-            firestore.listenToSharedNames('pagi', ui.updateNameList);
-            firestore.listenToSharedNames('petang', ui.updateNameList);
-            firestore.loadLatestSchedule(ui.renderSchedule, ui.setupInitialTable);
+            // Once authenticated, start listening to real-time name list updates
+            firestore.listenToSharedNameList('pagi');
+            firestore.listenToSharedNameList('petang');
+            // Then, load the user's latest schedule from the database
+            firestore.loadLatestSharedScheduleAsDefault();
         } else {
+            // This runs if auth is in progress or fails
             ui.setUserId('Authenticating...');
+            ui.setupInitialTableState(); // Show a blank table while waiting
         }
     });
 
-    // 3. Setup all button event listeners
+    // 3. Setup all button and input event listeners
     setupEventListeners();
 });
 
 // --- Event Listeners Setup ---
 function setupEventListeners() {
-    // This function connects every button to its action in either ui.js or firestore.js
+    // This function connects every button to its corresponding action.
     const listeners = {
-        // Top Bar
-        'controlsToggler': ui.toggleButtonBars,
-        'manualSaveBtn': () => firestore.manualSave(ui.captureCurrentState(), ui.showMessage),
-        'downloadPdfBtn': ui.generatePdf,
-        'clearScheduledNamesBtn': () => ui.clearAllScheduledNames(firestore.getSharedNames()),
-
-        // Collapsible Controls
-        'directCopyFullHtmlBtn': ui.copyFullHtml,
+        'controlsToggler': ui.toggleButtonBarsVisibility,
+        'manualSaveBtn': firestore.manualSaveCurrentPage,
+        'downloadPdfBtn': ui.generateSchedulePdf,
+        'clearScheduledNamesBtn': ui.clearScheduledNamesFromAllTables,
+        'searchTimetableBtn': ui.toggleTimetablePanel,
+        'directCopyFullHtmlBtn': ui.attemptDirectCopyToClipboard,
         'excelBtnTrigger': ui.exportActiveTableToExcel,
         'importExcelBtn': () => document.getElementById('fileInput').click(),
-        'saveSharedScheduleBtn': () => firestore.saveSharedSchedule(ui.captureCurrentState(), ui.showMessage),
-        'loadSharedScheduleBtn': () => firestore.loadAndRenderSharedSchedules(ui.renderSharedScheduleList),
-        'restoreBackupBtn': ui.toggleRestoreBackupModal,
-        'exportSharedSchedulesBtn': () => firestore.exportAllSchedules(ui.showMessage),
+        'saveSharedScheduleBtn': firestore.saveSharedScheduleToFirestore,
+        'loadSharedScheduleBtn': firestore.loadAndRenderSharedSchedulesFromFirestore,
+        'restoreBackupBtn': ui.toggleRestoreBackupModalVisibility,
+        'exportSharedSchedulesBtn': firestore.exportAllSharedSchedulesFromFirestore,
         'importSharedSchedulesBtn': () => document.getElementById('sharedScheduleImportFile').click(),
-        'clearAndResetScheduleBtn': ui.clearAndReset,
-
-        // Cell/Table Manipulation
+        'clearAndResetScheduleBtn': ui.confirmAndResetSchedule,
         'selectBtn': ui.toggleCellSelectionMode,
-        'mergeBtn': ui.mergeSelectedCells,
-        'deselectBtn': ui.deselectAllCells,
-        'unmergeBtn': ui.unmergeActiveCell,
-        'addTableBtn': ui.addNewTable,
+        'mergeBtn': ui.mergeSelectedTableCells,
+        'deselectBtn': ui.deselectAllTableCells,
+        'unmergeBtn': ui.unmergeActiveCellIfMerged,
+        'addTableBtn': () => ui.addNewTable(),
         'addIndependentTableBtn': ui.addNewIndependentTable,
-        'renameTableBtn': ui.renameActiveTable,
-        'deleteTableBtn': ui.deleteActiveTable,
-        'nameListBtn': ui.toggleNameModal,
-
-        // Row/Col Manipulation
-        'addRowAboveBtn': ui.addRowAbove,
-        'addRowBelowBtn': ui.addRowBelow,
-        'addColLeftBtn': ui.addColLeft,
-        'addColRightBtn': ui.addColRight,
-        'deleteRowBtn': ui.deleteRow,
-        'deleteColBtn': ui.deleteCol,
-
-        // Modals
-        'closeRestoreBackupModalBtn': ui.toggleRestoreBackupModal,
-        'closeNameModalBtnStandard': ui.toggleNameModal,
-        'addNameBtnInModal': () => {
-            const input = document.getElementById('newNameInput');
-            if(input.value) firestore.addSharedName(input.value, ui.showMessage);
-            input.value = '';
-        },
+        'renameTableBtn': ui.promptAndRenameActiveTable,
+        'deleteTableBtn': ui.confirmAndDeleteActiveTable,
+        'nameListBtn': ui.toggleNameListModalVisibility,
+        'addRowAboveBtn': ui.addRowAboveToActiveTable,
+        'addRowBelowBtn': ui.addRowBelowToActiveTable,
+        'addColLeftBtn': ui.addColumnLeftToActiveTable,
+        'addColRightBtn': ui.addColumnRightToActiveTable,
+        'deleteRowBtn': ui.deleteClickedRowFromActiveTable,
+        'deleteColBtn': ui.deleteClickedColumnFromActiveTable,
+        'closeRestoreBackupModalBtn': ui.toggleRestoreBackupModalVisibility,
+        'closeNameModalBtnStandard': ui.toggleNameListModalVisibility,
+        'addNameBtnInModal': firestore.addNameToSharedSessionInFirestore,
         'importNameListBtn': () => document.getElementById('nameListImportFile').click(),
-        'namePagiTab': () => ui.switchNameListTab('pagi'),
-        'namePetangTab': () => ui.switchNameListTab('petang'),
+        'namePagiTab': () => ui.handleNameListSessionSwitch('pagi'),
+        'namePetangTab': () => ui.handleNameListSessionSwitch('petang'),
+        'closeTimetablePanel': ui.toggleTimetablePanel,
     };
 
     for (const id in listeners) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('click', listeners[id]);
-        } else {
-            console.warn(`Element with ID '${id}' not found for event listener.`);
-        }
+        document.getElementById(id)?.addEventListener('click', listeners[id]);
     }
     
     // File inputs
-    document.getElementById('fileInput').addEventListener('change', ui.handleExcelImport);
-    document.getElementById('sharedScheduleImportFile').addEventListener('change', (e) => firestore.importSchedules(e, ui.showMessage));
-    document.getElementById('nameListImportFile').addEventListener('change', (e) => firestore.importNameList(e, ui.showMessage));
+    document.getElementById('fileInput')?.addEventListener('change', ui.handleExcelFileImport);
+    document.getElementById('sharedScheduleImportFile')?.addEventListener('change', firestore.handleSharedSchedulesImport);
+    document.getElementById('nameListImportFile')?.addEventListener('change', firestore.handleNameListImportFirestore);
 
-    // Other dynamic listeners (for tables, etc.) are handled in ui.js
-    console.log("All event listeners have been set up.");
+    console.log("All event listeners set up from main.js.");
 }
 
 

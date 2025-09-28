@@ -4478,65 +4478,6 @@ document.addEventListener('click', (e)=>{
   };
 })();
 
-/* ==== Combined Teacher + Subject entry (override) ==== */
-(function initCombinedNameSubject(){
-  function attachHandler(){
-    const btn = document.getElementById("addNameBtnInModal");
-    const teacherInput = document.getElementById("newTeacherInput");
-    const subjectInput = document.getElementById("newSubjectInput");
-    if(!btn || !subjectInput){ return false; }
-
-    btn.onclick = async function(){
-      try{
-        const teacher = (teacherInput && teacherInput.value || "").trim();
-        const subject = (subjectInput && subjectInput.value || "").trim();
-        if(!teacher && !subject){
-          if(window.showMessage) window.showMessage("Please enter at least a teacher or a subject", "error");
-          return;
-        }
-        let displayEntry = "";
-        if(teacher && subject) displayEntry = `${teacher} – ${subject}`;
-        else if(subject) displayEntry = subject;
-        else displayEntry = teacher;
-
-        const sessionKey = (typeof currentNameListSession!=="undefined" && currentNameListSession) ? currentNameListSession : "pagi";
-        const targetArray = (sessionKey === "pagi") ? (window.namesPagiShared || []) : (window.namesPetangShared || []);
-        targetArray.push(displayEntry);
-        if(sessionKey === "pagi") window.namesPagiShared = targetArray; else window.namesPetangShared = targetArray;
-
-        // Persist to Firestore (sharedNameList collection)
-        if(typeof fbDb !== "undefined"){
-          try{
-            const docId = `${sessionKey}_${displayEntry}`.replace(/[.#$/\[\]]/g,"_"); // sanitize
-            const ref = doc(fbDb, "sharedNameList", docId);
-            await setDoc(ref, { value: displayEntry, session: sessionKey, createdAt: serverTimestamp() });
-          }catch(e){
-            console.error("Firestore write failed:", e);
-          }
-        }
-
-        if(teacherInput) teacherInput.value = "";
-        if(subjectInput) subjectInput.value = "";
-        if(window.showMessage) window.showMessage(`Added: ${displayEntry}`, "success");
-
-        // Re-render the list if renderer exists
-        if(typeof renderNameList === "function") renderNameList();
-      }catch(err){
-        console.error("Add combined entry error:", err);
-        if(window.showMessage) window.showMessage("Failed to add entry", "error");
-      }
-    };
-    return true;
-  }
-
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", attachHandler);
-  } else {
-    attachHandler();
-  }
-})();
-/* ==== End Combined Teacher + Subject override ==== */
-
 /* Compatibility alias for legacy `newNameInput` */
 (function aliasNewNameInput(){
   function doAlias(){
@@ -4551,6 +4492,73 @@ document.addEventListener('click', (e)=>{
     document.addEventListener("DOMContentLoaded", doAlias);
   } else {
     doAlias();
+  }
+})();
+
+/* ==== Combined Teacher + Subject entry (primary handler) ==== */
+(function forceUnifiedAdd(){
+  function wire(){
+    var oldBtn = document.getElementById('addNameBtnInModal');
+    if(!oldBtn) return false;
+    var btn = oldBtn.cloneNode(true);            // remove previous listeners
+    oldBtn.parentNode.replaceChild(btn, oldBtn); // swap in clean button
+
+    btn.addEventListener('click', async function(e){
+      e.preventDefault(); e.stopImmediatePropagation();
+      try{
+        var teacherInput = document.getElementById('newTeacherInput');
+        var subjectInput = document.getElementById('newSubjectInput');
+        var teacher = (teacherInput && teacherInput.value || '').trim();
+        var subject = (subjectInput && subjectInput.value || '').trim();
+        if(!teacher && !subject){
+          window.showMessage && window.showMessage('Please enter at least a teacher or a subject','error');
+          return;
+        }
+        var displayEntry = (teacher && subject) ? (teacher + ' – ' + subject) : (teacher || subject);
+
+        var sessionKey = (window.currentNameListSession === 'petang') ? 'petang' : 'pagi';
+        var arr;
+        if(sessionKey === 'petang'){
+          window.namesPetangShared = window.namesPetangShared || [];
+          arr = window.namesPetangShared;
+        } else {
+          window.namesPagiShared = window.namesPagiShared || [];
+          arr = window.namesPagiShared;
+        }
+        if(!arr.includes(displayEntry)) arr.push(displayEntry);
+
+        // Persist to Firestore if available
+        try{
+          if(window.fbDb){
+            const ref = doc(fbDb, 'sharedNameList', (sessionKey + '_' + displayEntry).replace(/[.#$/\[\]]/g,'_'));
+            await setDoc(ref, { value: displayEntry, session: sessionKey, createdAt: serverTimestamp() });
+          }
+        }catch(err){ console.error('Firestore write failed:', err); }
+
+        if(teacherInput) teacherInput.value = '';
+        if(subjectInput) subjectInput.value = '';
+        window.showMessage && window.showMessage('Added: ' + displayEntry, 'success');
+
+        if(typeof renderNameList === 'function'){
+          renderNameList();
+        } else {
+          var list = document.getElementById('nameList');
+          if(list){
+            var items = (sessionKey==='petang' ? window.namesPetangShared : window.namesPagiShared) || [];
+            list.innerHTML = items.map(v => '<div class="name-item"><span>'+v+'</span></div>').join('');
+          }
+        }
+      }catch(err){
+        console.error('Unified Add error:', err);
+        window.showMessage && window.showMessage('Failed to add entry','error');
+      }
+    }, {capture:true});
+    return true;
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
   }
 })();
 </script>

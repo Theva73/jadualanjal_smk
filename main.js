@@ -89,3 +89,4 @@ function setupEventListeners() {
     console.log("All event listeners set up from main.js.");
 }
 
+

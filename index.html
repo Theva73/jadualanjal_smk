@@ -1,153 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jadual Anjal — Module Base</title>
-  <link rel="stylesheet" href="./assets/styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadual Anjal SMK</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for a consistent, modern look */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .control-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .control-button i {
+            margin-right: 8px;
+        }
+    </style>
 </head>
-<body>
-  <div class="main-container">
-    <h2 id="scheduleTitle" contenteditable="true">Jadual Anjal</h2>
-    <div id="userIdDisplay">User ID: Loading...</div>
+<body class="bg-gray-100 min-h-screen">
 
-    <!-- Top action bar -->
-    <div id="topActionButtonsBar">
-      <button id="controlsToggler" class="top-action-btn" aria-expanded="false" aria-controls="collapsibleButtonBars">Show Controls</button>
-      <button id="manualSaveBtn" class="top-action-btn">Save Page</button>
-      <button id="downloadPdfBtn" class="top-action-btn">PDF</button>
-      <button id="clearScheduledNamesBtn" class="top-action-btn">Clear Names (All Tables)</button>
+    <div class="container mx-auto p-4 max-w-4xl">
+
+        <!-- Header: User ID Display -->
+        <div class="bg-white p-3 mb-4 rounded-lg shadow-md text-center">
+            <h2 class="text-lg font-bold text-gray-700">User ID</h2>
+            <p id="userIdDisplay" class="text-sm text-gray-500 font-mono bg-gray-100 p-2 rounded-md break-all">Connecting...</p>
+        </div>
+
+        <!-- Main Controls Section -->
+        <div class="bg-white p-4 rounded-lg shadow-md">
+
+            <!-- Always Visible Controls -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <button class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
+                <button class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button class="control-button bg-purple-500 hover:bg-purple-600"><i class="fas fa-eraser"></i> Clear Names</button>
+                <button class="control-button bg-gray-200 text-gray-700 hover:bg-gray-300 col-span-2 sm:col-span-4"><i class="fas fa-search"></i> Search Timetable</button>
+            </div>
+
+            <!-- Toggle Button for Hidden Controls -->
+            <button id="toggleControlsBtn" class="w-full bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition duration-300 mb-4">
+                <i class="fas fa-chevron-down mr-2"></i> Show More Controls
+            </button>
+
+            <!-- Hidden Controls Container -->
+            <div id="hiddenControls" class="hidden">
+                <div class="grid grid-cols-2 gap-3 border-t pt-4">
+                    <button class="control-button bg-gray-700 hover:bg-gray-800 col-span-2"><i class="fas fa-copy"></i> Copy HTML</button>
+
+                    <button class="control-button bg-green-600 hover:bg-green-700"><i class="fas fa-file-excel"></i> Export Excel</button>
+                    <button class="control-button bg-green-700 hover:bg-green-800"><i class="fas fa-file-import"></i> Import Excel</button>
+
+                    <button class="control-button bg-blue-600 hover:bg-blue-700"><i class="fas fa-share-square"></i> Save Shared</button>
+                    <button class="control-button bg-blue-700 hover:bg-blue-800"><i class="fas fa-cloud-download-alt"></i> Load Shared</button>
+
+                    <button class="control-button bg-orange-500 hover:bg-orange-600"><i class="fas fa-undo"></i> Restore Backup</button>
+                    <button class="control-button bg-orange-600 hover:bg-orange-700"><i class="fas fa-external-link-alt"></i> Export All</button>
+
+                    <button class="control-button bg-purple-600 hover:bg-purple-700"><i class="fas fa-file-upload"></i> Import All</button>
+                    <button class="control-button bg-purple-700 hover:bg-purple-800"><i class="fas fa-magic"></i> Clear & New</button>
+
+                    <button class="control-button bg-indigo-500 hover:bg-indigo-600"><i class="fas fa-th-large"></i> Select Cells</button>
+                    <button class="control-button bg-indigo-600 hover:bg-indigo-700"><i class="fas fa-compress-arrows-alt"></i> Merge</button>
+
+                    <button class="control-button bg-gray-500 hover:bg-gray-600"><i class="fas fa-square"></i> Deselect</button>
+                    <button class="control-button bg-gray-600 hover:bg-gray-700"><i class="fas fa-expand-arrows-alt"></i> Unmerge</button>
+
+                    <button class="control-button bg-teal-500 hover:bg-teal-600"><i class="fas fa-plus-square"></i> Add Table</button>
+                    <button class="control-button bg-teal-600 hover:bg-teal-700"><i class="fas fa-plus"></i> Add Standalone Table</button>
+
+                    <button class="control-button bg-yellow-500 text-black hover:bg-yellow-600"><i class="fas fa-edit"></i> Rename Table</button>
+                    <button class="control-button bg-red-500 hover:bg-red-600"><i class="fas fa-trash-alt"></i> Delete Table</button>
+                    
+                    <button class="control-button bg-pink-500 hover:bg-pink-600 col-span-2"><i class="fas fa-users"></i> Names</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholder for your timetable content -->
+        <div class="mt-4 bg-white p-4 rounded-lg shadow-md min-h-[300px]">
+             <h3 class="text-center text-gray-500">Your timetable content will go here.</h3>
+        </div>
+
     </div>
 
-    <!-- Collapsible toolbars -->
-    <div id="collapsibleButtonBars" class="open">
-      <div class="bar">
-        <button id="directCopyFullHtmlBtn">📋 Copy HTML</button>
-      </div>
-      <div class="bar">
-        <button id="excelBtnTrigger">💾 Export Excel</button>
-        <button id="importExcelBtn">📂 Import Excel</button>
-        <input type="file" id="fileInput" accept=".xlsx, .xls" style="display:none" />
-      </div>
-      <div class="bar">
-        <button id="saveSharedScheduleBtn">💠 Save Shared</button>
-        <button id="loadSharedScheduleBtn">☁️ Load Shared</button>
-        <button id="restoreBackupBtn">🛡️ Restore Backup</button>
-        <button id="exportSharedSchedulesBtn">📤 Export All</button>
-        <button id="importSharedSchedulesBtn">📥 Import All</button>
-        <input type="file" id="sharedScheduleImportFile" accept=".json" style="display:none" />
-        <button id="clearAndResetScheduleBtn">🧹 Clear & New</button>
-      </div>
-      <div class="bar">
-        <button id="selectBtn">✨ Select Cells</button>
-        <button id="mergeBtn">🔗 Merge</button>
-        <button id="deselectBtn">🚫 Deselect</button>
-        <button id="unmergeBtn">💔 Unmerge</button>
-      </div>
-      <div class="bar">
-        <button id="addTableBtn">➕ Add Table</button>
-        <button id="addIndependentTableBtn">➕ Add Standalone Table</button>
-        <button id="renameTableBtn">📝 Rename Table</button>
-        <button id="deleteTableBtn">❌ Delete Table</button>
-        <!-- IMPORTANT: Name List Manager is now a separate page -->
-        <a class="link-btn" href="./names.html" target="_blank" rel="noopener">👥 Open Name List Manager</a>
-      </div>
-    </div>
+    <!-- Firebase and App Logic -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <div class="bar table-tabs" id="tableTabs"></div>
+        // --- 1. UI Elements ---
+        const toggleBtn = document.getElementById('toggleControlsBtn');
+        const hiddenControlsDiv = document.getElementById('hiddenControls');
+        const userIdDisplay = document.getElementById('userIdDisplay');
 
-    <div id="tablesContainer">
-      <!-- Starter table -->
-      <table id="tbl_1" class="active" data-table-name="Kelas 3 & 5">
-        <thead>
-          <tr class="date-header-row">
-            <th class="date-header-cell" contenteditable="true">Thursday, 22 May 2025</th>
-            <th class="date-header-cell" contenteditable="true"></th>
-            <th class="date-header-cell" contenteditable="true"></th>
-            <th class="date-header-cell" contenteditable="true"></th>
-            <th class="date-header-cell" contenteditable="true"></th>
-            <th class="date-header-cell" contenteditable="true"></th>
-            <th class="date-header-cell" contenteditable="true"></th>
-            <th class="date-header-cell" contenteditable="true"></th>
-          </tr>
-          <tr>
-            <th contenteditable="true">Class</th>
-            <th contenteditable="true">08:00</th>
-            <th contenteditable="true">09:00</th>
-            <th contenteditable="true">10:00</th>
-            <th contenteditable="true">11:00</th>
-            <th contenteditable="true">12:00</th>
-            <th contenteditable="true">13:00</th>
-            <th contenteditable="true">14:00</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td contenteditable="true">5S1</td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-          </tr>
-          <tr>
-            <td contenteditable="true">5S2</td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        // --- 2. UI Logic ---
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = hiddenControlsDiv.classList.toggle('hidden');
+            if (isHidden) {
+                toggleBtn.innerHTML = `<i class="fas fa-chevron-down mr-2"></i> Show More Controls`;
+            } else {
+                toggleBtn.innerHTML = `<i class="fas fa-chevron-up mr-2"></i> Hide Controls`;
+            }
+        });
 
-    <h3 style="margin-top: 32px">Teacher/Subject Attendance Summary</h3>
-    <div id="summaryTableContainer">
-      <table id="summaryTable"></table>
-    </div>
+        // --- 3. Firebase Connection ---
+        let auth, db, userId;
 
-    <div id="customMessageBox" class="custom-message-box"></div>
-    <div id="generalLoadingIndicator" style="display:none;"><div class="spinner"></div></div>
-  </div>
+        // These variables are placeholders and will be provided by the environment.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-  <!-- PDF stub -->
-  <div id="pdfContent" style="display:none;"></div>
+        try {
+            // Initialize Firebase App
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            setLogLevel('debug'); // For more detailed console logs
 
-  <!-- InteractJS (for future drag/resize; optional) -->
-  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+            // Listen for authentication state changes
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is signed in.
+                    userId = user.uid;
+                    console.log("User is authenticated. UID:", userId);
+                    userIdDisplay.textContent = userId;
+                    // You can now perform Firestore operations using this userId
+                } else {
+                    // User is signed out.
+                    console.log("User is not authenticated.");
+                    userIdDisplay.textContent = "Not Logged In";
+                }
+            });
+            
+            // Sign in the user
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
+                 console.log("Signing in with custom token...");
+            } else {
+                await signInAnonymously(auth);
+                 console.log("Signing in anonymously...");
+            }
 
-  <!-- App modules -->
-  <script type="module">
-    import { initFirebase } from './js/firebase.js';
-    import { ensureAnonymousAuth, onAuthReady } from './js/auth.js';
-    import { initScheduleUI } from './js/schedule_ui.js';
-    import { loadNamesForSession } from './js/names_store.js';
+        } catch (error) {
+            console.error("Firebase Initialization Error:", error);
+            userIdDisplay.textContent = "Connection Error";
+        }
 
-    // Initialize Firebase
-    initFirebase();
+    </script>
 
-    // Sign-in anonymously then boot the UI
-    ensureAnonymousAuth();
-    onAuthReady(async (user) => {
-      const uid = user ? user.uid : 'UNKNOWN';
-      const el = document.getElementById('userIdDisplay');
-      if (el) el.textContent = 'User ID: ' + uid;
-
-      // optional: preload pagi names for autocomplete hooks
-      try {
-        await loadNamesForSession('pagi');
-      } catch (e) {
-        console.warn('Preload names failed:', e);
-      }
-
-      // init schedule UI (basic wiring; extend as needed)
-      initScheduleUI();
-    });
-  </script>
 </body>
 </html>
+

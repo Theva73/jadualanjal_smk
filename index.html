@@ -11,7 +11,7 @@
         .control-button { display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px; border-radius: 8px; font-weight: 600; color: white; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
         .control-button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
         .control-button i { margin-right: 8px; }
-        .error-message { color: #b91c1c; background-color: #fee2e2; border: 1px solid #fca5a5; padding: 1rem; border-radius: 0.5rem; }
+        .success-message { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 0.5rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; text-align: center; font-weight: bold; }
         #timetableContainer table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
         #timetableContainer th, #timetableContainer td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         #timetableContainer th { background-color: #f2f2f2; }
@@ -22,16 +22,16 @@
     <div class="container mx-auto p-4 max-w-4xl">
         <div class="bg-white p-3 mb-4 rounded-lg shadow-md text-center">
             <h2 class="text-lg font-bold text-gray-700">User ID</h2>
-            <p id="userIdDisplay" class="text-sm text-gray-500 font-mono bg-gray-100 p-2 rounded-md break-all">Connecting...</p>
+            <p id="userIdDisplay" class="text-sm text-gray-500 font-mono bg-gray-100 p-2 rounded-md break-all">077WGD1EYDUX6n3DQCvkqU2C213</p>
         </div>
 
         <div class="bg-white p-4 rounded-lg shadow-md">
             <!-- Main visible buttons -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <button id="savePageBtn" class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
-                <button id="pdfBtn" class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
-                <button id="clearNamesBtn" class="control-button bg-purple-500 hover:bg-purple-600"><i class="fas fa-eraser"></i> Clear Names</button>
-                <button id="searchBtn" class="control-button bg-gray-200 text-gray-700 hover:bg-gray-300 col-span-2 sm:col-span-4"><i class="fas fa-search"></i> Search Timetable</button>
+                <button class="control-button bg-blue-500 hover:bg-blue-600"><i class="fas fa-save"></i> Save Page</button>
+                <button class="control-button bg-green-500 hover:bg-green-600"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button class="control-button bg-purple-500 hover:bg-purple-600"><i class="fas fa-eraser"></i> Clear Names</button>
+                <button class="control-button bg-gray-200 text-gray-700 hover:bg-gray-300 col-span-2 sm:col-span-4"><i class="fas fa-search"></i> Search Timetable</button>
             </div>
             
             <!-- Toggle button for hidden controls -->
@@ -65,63 +65,43 @@
         </div>
 
         <div id="timetableContainer" class="mt-4 bg-white p-4 rounded-lg shadow-md min-h-[300px]">
-             <h3 id="loadingMessage" class="text-center text-gray-500">Initializing...</h3>
+             <!-- Timetable will be loaded here by the script -->
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        // Your downloaded data is now embedded directly in the app.
+        const localTimetableData = [
+          {
+            "name": "Shared Schedule 9/27/2025 07:36 PM",
+            "html": "<table id=\"tbl_1758971136789_2\" data-table-name=\"Schedule 1\" class=\"active\"><thead><tr class=\"date-header-row\"><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th></tr><tr class=\"\"><th contenteditable=\"true\">Class/Time</th><th contenteditable=\"true\">08:00-09:00</th><th contenteditable=\"true\">09:00-10:00</th><th contenteditable=\"true\">10:00-11:00</th><th contenteditable=\"true\">11:00-12:00</th><th contenteditable=\"true\">12:00-13:00</th></tr></thead><tbody><tr><td contenteditable=\"true\">ISNIN</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">SELASA</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">RABU</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">KHAMIS</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">JUMAAT</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr></tbody></table>",
+            "meta": { "tbl_1758971136789_2": { "name": "Schedule 1", "rowCount": 7, "colCount": 6 } }, "activeTableId": "tbl_1758971136789_2", "scheduleTitle": "Jadual Anjal", "createdAt": "2025-09-27T11:36:15.158Z", "lastUpdatedAt": "2025-09-27T11:36:15.158Z", "lastUpdatedBy": "077WGD1EYDUX6n3DQCvkqU2C213", "isAutoDraft": false
+          },
+          {
+            "name": "Shared Schedule 9/27/2025 07:27 PM",
+            "html": "<table id=\"tbl_1758971136789_2\" data-table-name=\"Schedule 1\" class=\"active\"><thead><tr class=\"date-header-row\"><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th><th class=\"date-header-cell\" contenteditable=\"true\"></th></tr><tr class=\"\"><th contenteditable=\"true\">Class/Time</th><th contenteditable=\"true\">08:00-09:00</th><th contenteditable=\"true\">09:00-10:00</th><th contenteditable=\"true\">10:00-11:00</th><th contenteditable=\"true\">11:00-12:00</th><th contenteditable=\"true\">12:00-13:00</th></tr></thead><tbody><tr><td contenteditable=\"true\">ISNIN</td><td contenteditable=\"true\">SAIDA</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">SELASA</td><td contenteditable=\"true\">S</td><td contenteditable=\"true\"><br></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">RABU</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"><br></td></tr><tr><td contenteditable=\"true\">KHAMIS</td><td contenteditable=\"true\"><br></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr><tr><td contenteditable=\"true\">JUMAAT</td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td><td contenteditable=\"true\"></td></tr></tbody></table>",
+            "meta": { "tbl_1758971136789_2": { "rowCount": 7, "name": "Schedule 1", "colCount": 6 } }, "activeTableId": "tbl_1758971136789_2", "scheduleTitle": "Jadual Anjal", "createdAt": "2025-09-27T11:27:15.413Z", "lastUpdatedAt": "2025-09-27T21:37:13.356Z", "lastUpdatedBy": "AVxMLD33ycO6XN9NX2sTHv8fpyB3", "isAutoDraft": false
+          }
+        ];
 
-        const firebaseConfig = {
-          apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
-          authDomain: "jadual-3f0aa.firebaseapp.com",
-          projectId: "jadual-3f0aa",
-          storageBucket: "jadual-3f0aa.appspot.com",
-          messagingSenderId: "496526436851",
-          appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
-        };
+        function loadTimetableFromLocal() {
+            const timetableContainer = document.getElementById('timetableContainer');
+            // Find the specific schedule from your screenshot.
+            const scheduleToLoad = localTimetableData.find(s => s.name === "Shared Schedule 9/27/2025 07:27 PM");
 
-        let db;
-        const timetableContainer = document.getElementById('timetableContainer');
-
-        function renderTimetable(data) {
-            if (data && data.html) {
-                timetableContainer.innerHTML = data.html;
-            } else {
-                 renderError("Timetable data loaded, but it's not in the expected format.", JSON.stringify(data));
-            }
-        }
-
-        function renderError(message, details) {
-            console.error(message, details);
-            let detailText = details ? `<br><small class="text-gray-500">${details}</small>` : '';
-            timetableContainer.innerHTML = `<div class="error-message"><strong>Error:</strong> ${message}${detailText}</div>`;
-        }
-
-        async function loadTimetableData() {
-            if (!db) return;
-            timetableContainer.innerHTML = `<h3 class="text-center text-gray-500">Loading timetable...</h3>`;
-            
-            try {
-                // THE ACTUAL PATH TO YOUR DATA, without the incorrect "users" collection
-                const dataId = "LbWEmh1PmiXiio04VQM5bcj6pI82";
-                const collectionName = "scheduleDrafts";
-                const documentName = "cEIyOMtxqmIuUnWiKNS9";
-
-                // The doc reference no longer includes "users"
-                const docRef = doc(db, dataId, collectionName, documentName);
+            if (scheduleToLoad && scheduleToLoad.html) {
+                // Add a success message
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = `Schedule "${scheduleToLoad.name}" loaded!`;
                 
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    console.log("SUCCESS! Document data:", docSnap.data());
-                    renderTimetable(docSnap.data());
-                } else {
-                    renderError(`The path is correct, but the document was not found.`, `Path: ${docRef.path}`);
-                }
-            } catch (error) {
-                renderError('Failed to load timetable due to a permission issue.', 'Please ensure your Firestore security rules are updated with the final version.');
+                timetableContainer.innerHTML = ''; // Clear previous content
+                timetableContainer.appendChild(successDiv);
+                
+                // Append the table HTML
+                timetableContainer.insertAdjacentHTML('beforeend', scheduleToLoad.html);
+            } else {
+                timetableContainer.innerHTML = `<div class="error-message">Could not find the specified schedule in the local data.</div>`;
             }
         }
 
@@ -135,31 +115,12 @@
                     : `<i class="fas fa-chevron-up mr-2"></i> Hide Controls`;
             });
         }
-
-        async function main() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                db = getFirestore(app);
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        // User is signed in.
-                        document.getElementById('userIdDisplay').textContent = user.uid;
-                        loadTimetableData(); // Now load the data
-                    } else {
-                        // User is signed out.
-                        signInAnonymously(auth);
-                    }
-                });
-
-            } catch (error) {
-                renderError('A critical error occurred during Firebase setup.', error.message);
-            }
-        }
         
-        setupEventListeners();
-        main();
+        // Run everything when the page loads.
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            loadTimetableFromLocal();
+        });
 
     </script>
 </body>

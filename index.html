@@ -67,6 +67,30 @@
                 <div id="subject-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
         </div>
+        <div class="mt-6 border-t pt-6">
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">5. Manage Time Slots</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3 text-gray-700">Add New Time Slot</h4>
+                    <form id="add-timeslot-form" class="space-y-3">
+                        <div class="flex gap-2 items-center">
+                            <input type="time" id="timeslot-start" class="w-full p-2 text-sm border rounded-md" required>
+                            <span>-</span>
+                            <input type="time" id="timeslot-end" class="w-full p-2 text-sm border rounded-md" required>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                            <label for="timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add Time Slot</button>
+                    </form>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3 text-gray-700">Current Time Slots</h4>
+                    <div id="timeslot-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div id="tab-content-versions" class="tab-panel hidden">
@@ -111,14 +135,17 @@
     };
     
     let db, auth, userId;
-    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, versions = {};
+    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, versions = {}, timeslots = {};
     let selectedClassId = null;
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
-    const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
-    const REHAT_TIME = "10:15-10:30";
 
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
+
+    function getSortedTimeSlots() {
+        if (!timeslots || Object.keys(timeslots).length === 0) return [];
+        return Object.values(timeslots).sort((a, b) => a.start.localeCompare(b.start));
+    }
 
     function renderAll() {
         renderClasses();
@@ -126,6 +153,7 @@
         renderLocations();
         renderSubjects();
         renderVersions();
+        renderTimeSlots();
         renderClassSelector();
         renderScheduleForClass();
         renderSummaryGrid();
@@ -187,6 +215,22 @@
             </div>`;
         }).join('') : `<p class="text-sm text-gray-500">No subjects created yet.</p>`;
     }
+
+    function renderTimeSlots() {
+        const listDiv = document.getElementById('timeslot-list');
+        const sortedTimeSlots = getSortedTimeSlots();
+        listDiv.innerHTML = sortedTimeSlots.length ? sortedTimeSlots.map(slot => `
+            <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                <div>
+                    <span class="font-semibold">${slot.start} - ${slot.end}</span>
+                    ${slot.isBreak ? '<span class="ml-2 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Break</span>' : ''}
+                </div>
+                <div class="flex gap-2">
+                    <button data-id="${slot.id}" class="edit-timeslot text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${slot.id}" class="delete-timeslot text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No time slots defined.</p>`;
+    }
     
     function renderVersions() {
         const versionListDiv = document.getElementById('version-list');
@@ -215,11 +259,19 @@
     function renderScheduleForClass() {
         const scheduleView = document.getElementById('schedule-view');
         if (!selectedClassId) { scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>'; return; }
+        
+        const sortedTimeSlots = getSortedTimeSlots();
+        if (sortedTimeSlots.length === 0) {
+            scheduleView.innerHTML = '<p class="text-gray-500 py-8 text-center">Please define time slots in the Management tab first.</p>';
+            return;
+        }
+
         const locationOptions = `<option value="">-- Lokasi --</option>` + Object.entries(locations).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
         const classSchedule = Object.values(schedule).filter(entry => entry.classId === selectedClassId);
 
-        const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${TIME_SLOTS.map(time => {
-            if (time === REHAT_TIME) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">Rehat</td>`;
+        const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${sortedTimeSlots.map(slot => {
+            const time = `${slot.start}-${slot.end}`;
+            if (slot.isBreak) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">${time}<br>Rehat</td>`;
             const slotId = `${day}_${time}`;
             const entry = classSchedule.find(e => e.slotId === slotId);
             const subjectNames = entry?.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '<span class="text-gray-400">Not set</span>';
@@ -231,7 +283,9 @@
             </div></td>`;
         }).join('')}</tr>`).join('');
 
-        scheduleView.innerHTML = `<table class="min-w-full border-collapse"><thead><tr class="bg-gray-100"><th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Class/Time</th>${TIME_SLOTS.map(ts => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${ts}</th>`).join('')}</tr></thead><tbody>${tableBody}</tbody></table>`;
+        const timeHeaders = sortedTimeSlots.map(slot => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
+
+        scheduleView.innerHTML = `<table class="min-w-full border-collapse"><thead><tr class="bg-gray-100"><th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Class/Time</th>${timeHeaders}</tr></thead><tbody>${tableBody}</tbody></table>`;
         
         classSchedule.forEach(entry => {
             const locationSelect = scheduleView.querySelector(`select[data-slot-id='${entry.slotId}'][data-type='location']`);
@@ -241,15 +295,18 @@
 
     function renderSummaryGrid() {
         const summaryDiv = document.getElementById('summary-grid');
+        const sortedTimeSlots = getSortedTimeSlots();
+
         if (!Object.keys(teachers).length) { summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No teachers to display.</p>`; return; }
-        
+        if (sortedTimeSlots.length === 0) { summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No time slots defined.</p>`; return; }
+
         const teacherSchedules = {};
         Object.keys(teachers).forEach(tid => {
             teacherSchedules[tid] = {};
             DAYS.forEach(day => {
                 teacherSchedules[tid][day] = {};
-                TIME_SLOTS.forEach(time => {
-                    teacherSchedules[tid][day][time] = [];
+                sortedTimeSlots.forEach(slot => {
+                    teacherSchedules[tid][day][`${slot.start}-${slot.end}`] = [];
                 });
             });
         });
@@ -265,27 +322,26 @@
                     subject.teacherIds.forEach(tid => {
                         if (teacherSchedules[tid]?.[entry.day]?.[entry.time]) {
                             const text = `${subject.name} @ ${className} ${locationName ? `(${locationName})` : ''}`;
-                            teacherSchedules[tid][entry.day][entry.time].push({
-                                text,
-                                proceededWithClash: entry.proceededWithClash
-                            });
+                            teacherSchedules[tid][entry.day][entry.time].push({ text, proceededWithClash: entry.proceededWithClash });
                         }
                     });
                 }
             });
         });
         
+        const timeHeaders = sortedTimeSlots.map(slot => `<th class="p-2 border font-semibold whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
+        const dayHeaders = DAYS.map(day => `<th colspan="${sortedTimeSlots.length}" class="p-2 border font-semibold text-center">${day}</th>`).join('');
+        
         const summaryHtml = `
             <p class="text-xs text-gray-500 mb-2">Organic clashes (multiple assignments in one slot) are highlighted in <span class="text-red-600 font-semibold">red</span>. Overridden clashes are highlighted in <span class="text-yellow-600 font-semibold">yellow</span>.</p>
             <table class="min-w-full border-collapse text-xs">
                 <thead>
                     <tr class="bg-gray-100">
-                        <th class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Teacher</th>
-                        ${DAYS.map(day => `<th class="p-2 border text-center font-semibold" colspan="${TIME_SLOTS.length}">${day}</th>`).join('')}
+                        <th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Teacher</th>
+                        ${dayHeaders}
                     </tr>
                     <tr class="bg-gray-100">
-                        <th class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Time</th>
-                        ${DAYS.map(() => TIME_SLOTS.map(ts => `<th class="p-2 border font-semibold whitespace-nowrap">${ts}</th>`).join('')).join('')}
+                        ${DAYS.map(() => timeHeaders).join('')}
                     </tr>
                 </thead>
                 <tbody>
@@ -293,8 +349,10 @@
                         <tr class="even:bg-gray-50">
                             <td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${teacher.name}</td>
                             ${DAYS.map(day => 
-                                TIME_SLOTS.map(time => {
-                                    if (time === REHAT_TIME) return `<td class="p-1 border bg-green-50"></td>`;
+                                sortedTimeSlots.map(slot => {
+                                    const time = `${slot.start}-${slot.end}`;
+                                    if (slot.isBreak) return `<td class="p-1 border bg-green-50"></td>`;
+                                    
                                     const assignments = teacherSchedules[tid]?.[day]?.[time] || [];
                                     const hasOverride = assignments.some(a => a.proceededWithClash);
                                     const isOrganicClash = assignments.length > 1;
@@ -434,7 +492,7 @@
     
     async function saveVersion(name) {
         if (!name) return;
-        const versionData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule } };
+        const versionData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule, timeslots } };
         await addDoc(collection(db, getPath('versions')), versionData);
     }
 
@@ -444,11 +502,11 @@
         
         openConfirmationModal(
             `Load Schedule: "${version.name}"?`,
-            "This will overwrite all current classes, teachers, subjects, locations, and the schedule. This action cannot be undone.",
+            "This will overwrite all current classes, teachers, subjects, locations, time slots and the schedule. This action cannot be undone.",
             "Load Version",
             async () => {
-                const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule } = version.data;
-                const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule'];
+                const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule, timeslots: vTimeslots } = version.data;
+                const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
                 
                 const batch = writeBatch(db);
                 for (const coll of collectionsToClear) {
@@ -470,6 +528,7 @@
                 addDataToBatch('subjects', vSubjects);
                 addDataToBatch('locations', vLocations);
                 addDataToBatch('schedule', vSchedule);
+                addDataToBatch('timeslots', vTimeslots);
 
                 await batch.commit();
                 showToast("Schedule version loaded successfully!");
@@ -493,7 +552,7 @@
     }
 
     // --- UI & Utility Functions ---
-    function toggleModal(modalId, show) { const modal = document.getElementById(modalId); const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
+    function toggleModal(modalId, show) { const modal = document.getElementById(modalId); if (!modal) return; const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
     
     function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false) {
         document.getElementById('confirmation-title').textContent = title;
@@ -536,15 +595,14 @@
         document.getElementById('add-location-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('location-name').value.trim(); if(name) await addDoc(collection(db, getPath('locations')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
         document.getElementById('add-version-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('version-name').value.trim(); if(name) { await saveVersion(name); showToast('Schedule version saved!'); e.target.reset(); } });
+        document.getElementById('add-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const start = document.getElementById('timeslot-start').value; const end = document.getElementById('timeslot-end').value; const isBreak = document.getElementById('timeslot-is-break').checked; if (start && end && start < end) { await addDoc(collection(db, getPath('timeslots')), { start, end, isBreak }); e.target.reset(); } else { showToast("Error: End time must be after start time."); }});
 
         document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
         document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
         document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
+        document.getElementById('timeslot-list').addEventListener('click', e => { if (e.target.classList.contains('delete-timeslot')) deleteDoc(doc(db, getPath('timeslots'), e.target.dataset.id)); if (e.target.classList.contains('edit-timeslot')) openEditTimeSlotModal(e.target.dataset.id);});
         
-        document.getElementById('version-list').addEventListener('click', e => {
-            if (e.target.classList.contains('load-version')) loadVersion(e.target.dataset.id);
-            if (e.target.classList.contains('delete-version')) deleteVersion(e.target.dataset.id);
-        });
+        document.getElementById('version-list').addEventListener('click', e => { if (e.target.classList.contains('load-version')) loadVersion(e.target.dataset.id); if (e.target.classList.contains('delete-version')) deleteVersion(e.target.dataset.id); });
         
         document.getElementById('subject-list').addEventListener('click', e => {
             if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
@@ -571,30 +629,24 @@
 
         // Modal Buttons
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
+        document.getElementById('edit-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-timeslot-id').value; const start = document.getElementById('edit-timeslot-start').value; const end = document.getElementById('edit-timeslot-end').value; const isBreak = document.getElementById('edit-timeslot-is-break').checked; if (id && start && end && start < end) { await updateDoc(doc(db, getPath('timeslots'), id), { start, end, isBreak }); toggleModal('timeslot-edit-modal', false); } else { showToast("Error: End time must be after start time."); }});
+        document.getElementById('cancel-edit-timeslot-btn').addEventListener('click', () => toggleModal('timeslot-edit-modal', false));
         document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); 
         document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
         document.getElementById('edit-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-id').value; const collection = document.getElementById('edit-collection').value; const newName = document.getElementById('edit-name-input').value.trim(); if (id && collection && newName) { await updateDoc(doc(db, getPath(collection), id), { name: newName }); toggleModal('edit-modal', false); } });
         document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
         document.getElementById('confirmation-cancel-btn').addEventListener('click', () => toggleModal('confirmation-modal', false));
         document.getElementById('cancel-subject-selection-btn').addEventListener('click', () => toggleModal('subject-selection-modal', false));
-
     }
     
     function openSubjectSelectionModal(slotId) {
         const [day, time] = slotId.split('_');
         document.getElementById('subject-modal-title').textContent = `Select Subjects for ${day} at ${time}`;
         document.getElementById('modal-slot-id').value = slotId;
-
         const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
         const selectedIds = existingEntry?.subjectIds || [];
-
         const listContainer = document.getElementById('modal-subject-list');
-        listContainer.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => `
-            <label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer">
-                <input type="checkbox" name="subject" value="${id}" ${selectedIds.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                <span>${subject.name}</span>
-            </label>`).join('') : '<p class="text-sm text-gray-500">No subjects found.</p>';
-
+        listContainer.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="subject" value="${id}" ${selectedIds.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${subject.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No subjects found.</p>';
         toggleModal('subject-selection-modal', true);
     }
 
@@ -605,6 +657,16 @@
         document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`;
         toggleModal('edit-modal', true);
     }
+    
+    function openEditTimeSlotModal(id) {
+        const slot = timeslots[id];
+        if (!slot) return;
+        document.getElementById('edit-timeslot-id').value = id;
+        document.getElementById('edit-timeslot-start').value = slot.start;
+        document.getElementById('edit-timeslot-end').value = slot.end;
+        document.getElementById('edit-timeslot-is-break').checked = slot.isBreak;
+        toggleModal('timeslot-edit-modal', true);
+    }
 
     function initModals() {
         document.getElementById('modal-container').innerHTML = `
@@ -613,12 +675,12 @@
             <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0 whitespace-pre-wrap"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
             <div id="subject-selection-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4" id="subject-modal-title">Select Subjects</h3><form id="subject-selection-form"><input type="hidden" id="modal-slot-id"><div id="modal-subject-list" class="space-y-1 max-h-80 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-subject-selection-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Subjects</button></div></form></div></div>
+            <div id="timeslot-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Edit Time Slot</h3><form id="edit-timeslot-form"><input type="hidden" id="edit-timeslot-id"><div class="space-y-3"><div class="flex gap-2 items-center"><input type="time" id="edit-timeslot-start" class="w-full p-2 text-sm border rounded-md" required><span>-</span><input type="time" id="edit-timeslot-end" class="w-full p-2 text-sm border rounded-md" required></div><div class="flex items-center"><input id="edit-timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><label for="edit-timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label></div></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-timeslot-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`; 
-        document.getElementById('cancel-subject-selection-btn').addEventListener('click', () => toggleModal('subject-selection-modal', false));
     }
 
     function setupDataListeners() {
-        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'versions'];
+        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'versions', 'timeslots'];
         collectionsToWatch.forEach(name => {
             onSnapshot(collection(db, getPath(name)), snapshot => {
                 const dataObject = {};
@@ -629,6 +691,7 @@
                 if (name === 'schedule') schedule = dataObject;
                 if (name === 'locations') locations = dataObject;
                 if (name === 'versions') versions = dataObject;
+                if (name === 'timeslots') timeslots = dataObject;
                 renderAll();
             }, err => console.error(`Error fetching ${name}:`, err));
         });
@@ -650,4 +713,5 @@
 </script>
 </body>
 </html>
+
 

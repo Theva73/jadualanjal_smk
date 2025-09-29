@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Standalone Scheduler with Versions</title>
+    <title>Standalone Scheduler with Versions (Auto‑load Latest)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -138,6 +138,9 @@
     let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, versions = {}, timeslots = {};
     let selectedClassId = null;
 
+    // Persist last picked class id across reloads
+    const STORAGE_KEY_SELECTED_CLASS = "scheduler_v2_selectedClassId";
+
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
 
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
@@ -155,6 +158,7 @@
         renderVersions();
         renderTimeSlots();
         renderClassSelector();
+        // Keep the currently selected class in view if possible
         renderScheduleForClass();
         renderSummaryGrid();
     }
@@ -256,6 +260,16 @@
         selector.value = currentSelected;
     }
 
+    function setSelectedClass(id) {
+        selectedClassId = id || null;
+        const selector = document.getElementById('class-selector');
+        if (selector) selector.value = selectedClassId || '';
+        if (selectedClassId) {
+            try { localStorage.setItem(STORAGE_KEY_SELECTED_CLASS, selectedClassId); } catch {}
+        }
+        renderScheduleForClass();
+    }
+
     function renderScheduleForClass() {
         const scheduleView = document.getElementById('schedule-view');
         if (!selectedClassId) { scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>'; return; }
@@ -306,7 +320,7 @@
             DAYS.forEach(day => {
                 teacherSchedules[tid][day] = {};
                 sortedTimeSlots.forEach(slot => {
-                    teacherSchedules[tid][day][`${slot.start}-${slot.end}`] = [];
+                    teacherSchedules[tid][`${day}`][`${slot.start}-${slot.end}`] = [];
                 });
             });
         });
@@ -379,8 +393,8 @@
         const newLocationId = selectEl.value;
         const [day, time] = slotId.split('_');
         
-        const existingEntry = Object.entries(schedule).find(([, entry]) => entry.slotId === slotId && entry.classId === selectedClassId);
-        const existingDocId = existingEntry ? existingEntry[0] : null;
+        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingDocId = existingEntry ? existingEntry.id : null;
         const existingData = existingDocId ? schedule[existingDocId] : {};
         
         let clashFound = false;
@@ -471,10 +485,10 @@
 
     async function saveScheduleEntry(slotId, subjectIds, proceededWithClash) {
         const [day, time] = slotId.split('_');
-        const existingEntry = Object.entries(schedule).find(([, entry]) => entry.slotId === slotId && entry.classId === selectedClassId);
-        const existingDocId = existingEntry ? existingEntry[0] : null;
+        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingDocId = existingEntry ? existingEntry.id : null;
         const schedulePath = getPath('schedule');
-        const locationId = existingEntry ? schedule[existingDocId].locationId : null;
+        const locationId = existingEntry ? existingEntry.locationId : null;
 
         if (subjectIds.length > 0 || locationId) {
             const docRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
@@ -496,36 +510,46 @@
         await addDoc(collection(db, getPath('versions')), versionData);
     }
 
-    async function replaceAllDataWithVersion(versionData) {
+    function updateLocalState(data) {
+        classes = data.classes || {};
+        teachers = data.teachers || {};
+        subjects = data.subjects || {};
+        locations = data.locations || {};
+        schedule = data.schedule || {};
+        timeslots = data.timeslots || {};
+    }
+
+    // Replace all live collections with a version's data (silent: no modal, used at startup)
+    async function replaceAllDataInDBWithVersion(versionData) {
         if (!versionData) return;
-
-        const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule, timeslots: vTimeslots } = versionData;
-        const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
         const batch = writeBatch(db);
-
+        const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
         for (const coll of collectionsToClear) {
             const snapshot = await getDocs(collection(db, getPath(coll)));
-            snapshot.forEach(doc => batch.delete(doc.ref));
+            snapshot.forEach(docSnap => batch.delete(docSnap.ref));
         }
+        await batch.commit();
 
+        const wb = writeBatch(db);
         const addDataToBatch = (coll, data) => {
             if (data) {
                 for (const [id, itemData] of Object.entries(data)) {
-                    if (typeof itemData !== 'object' || itemData === null) continue;
-                    const { id: docId, ...restOfData } = itemData;
-                    batch.set(doc(db, getPath(coll), id), restOfData);
+                    if (typeof itemData === 'object' && itemData !== null) {
+                        const { id: _docId, ...rest } = itemData;
+                        wb.set(doc(db, getPath(coll), id), rest);
+                    }
                 }
             }
         };
 
-        addDataToBatch('classes', vClasses);
-        addDataToBatch('teachers', vTeachers);
-        addDataToBatch('subjects', vSubjects);
-        addDataToBatch('locations', vLocations);
-        addDataToBatch('schedule', vSchedule);
-        addDataToBatch('timeslots', vTimeslots || {});
-
-        await batch.commit();
+        addDataToBatch('classes', versionData.classes);
+        addDataToBatch('teachers', versionData.teachers);
+        addDataToBatch('subjects', versionData.subjects);
+        addDataToBatch('locations', versionData.locations);
+        addDataToBatch('schedule', versionData.schedule);
+        addDataToBatch('timeslots', versionData.timeslots);
+        
+        await wb.commit();
     }
 
     async function loadVersion(versionId) {
@@ -534,10 +558,14 @@
         
         openConfirmationModal(
             `Load Schedule: "${version.name}"?`,
-            "This will overwrite all current classes, teachers, subjects, locations, time slots and the schedule. This action cannot be undone.",
+            "This will overwrite all current data. This action cannot be undone.",
             "Load Version",
             async () => {
-                await replaceAllDataWithVersion(version.data);
+                await replaceAllDataInDBWithVersion(version.data);
+                // The onSnapshot listeners will pick this up, but update instantly:
+                updateLocalState(version.data);
+                renderAll();
+                postInitialSelection();
                 showToast(`Schedule version "${version.name}" loaded successfully!`);
             }
         );
@@ -548,7 +576,7 @@
         if (!version) return;
         openConfirmationModal(
             `Delete Schedule: "${version.name}"?`,
-            "Are you sure you want to permanently delete this schedule version? This action cannot be undone.",
+            "Are you sure you want to permanently delete this schedule version?",
             "Delete",
             async () => {
                 await deleteDoc(doc(db, getPath('versions'), versionId));
@@ -622,7 +650,7 @@
         });
 
         document.getElementById('tab-content-management').addEventListener('click', e => { if (e.target.classList.contains('edit-btn')) { openEditModal(e.target.dataset.id, e.target.dataset.name, e.target.dataset.collection); } });
-        document.getElementById('class-selector').addEventListener('change', e => { selectedClassId = e.target.value; renderScheduleForClass(); });
+        document.getElementById('class-selector').addEventListener('change', e => { setSelectedClass(e.target.value); });
         document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleLocationChange(e); });
         document.getElementById('schedule-view').addEventListener('click', e => { if (e.target.classList.contains('select-subjects-btn')) openSubjectSelectionModal(e.target.dataset.slotId); });
         
@@ -691,8 +719,8 @@
         collectionsToWatch.forEach(name => {
             onSnapshot(collection(db, getPath(name)), snapshot => {
                 const dataObject = {};
-                snapshot.forEach(doc => dataObject[doc.id] = {...doc.data(), id: doc.id});
-
+                snapshot.forEach(docSnap => dataObject[docSnap.id] = {...docSnap.data(), id: docSnap.id});
+                
                 if (name === 'classes') classes = dataObject;
                 if (name === 'teachers') teachers = dataObject;
                 if (name === 'subjects') subjects = dataObject;
@@ -702,12 +730,25 @@
                 if (name === 'timeslots') timeslots = dataObject;
                 
                 renderAll();
+                // After first snapshot(s), ensure a class is selected for display.
+                postInitialSelection();
             }, err => console.error(`Error fetching ${name}:`, err));
         });
     }
 
+    // Choose a class automatically (last viewed, else alphabetically first) for immediate display
+    function postInitialSelection() {
+        if (selectedClassId && classes[selectedClassId]) return;
+        let stored = null;
+        try { stored = localStorage.getItem(STORAGE_KEY_SELECTED_CLASS); } catch {}
+        const all = Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name));
+        const firstId = all.length ? all[0][0] : null;
+        const pick = (stored && classes[stored]) ? stored : firstId;
+        if (pick) setSelectedClass(pick);
+    }
+
     async function initializeAppData() {
-        // 1. Fetch the latest version first, without a real-time listener.
+        // 1) Try to find the latest saved version ("playlist")
         const versionsRef = collection(db, getPath('versions'));
         const q = query(versionsRef, orderBy("createdAt", "desc"), limit(1));
         const querySnapshot = await getDocs(q);
@@ -715,15 +756,34 @@
         if (!querySnapshot.empty) {
             const latestVersionDoc = querySnapshot.docs[0];
             const latestVersion = latestVersionDoc.data();
-            console.log("Found latest version to auto-load:", latestVersion.name);
-            // 2. Overwrite all current data with the data from this version.
-            await replaceAllDataWithVersion(latestVersion.data);
-            showToast(`Automatically loaded schedule: "${latestVersion.name}"`);
-        } else {
-            console.log("No saved versions found to auto-load.");
-        }
 
-        // 3. NOW, after the initial state is set, attach the real-time listeners.
+            // 2) Write it into the live collections so realtime listeners reflect it
+            await replaceAllDataInDBWithVersion(latestVersion.data);
+
+            // 3) Also set local state immediately for instant UI before listeners return
+            updateLocalState(latestVersion.data);
+            showToast(`Auto‑loaded: "${latestVersion.name}"`);
+        } else {
+            // Fallback for users without any saved versions.
+            const collectionsToFetch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'timeslots'];
+            for (const name of collectionsToFetch) {
+                const snapshot = await getDocs(collection(db, getPath(name)));
+                const dataObject = {};
+                snapshot.forEach(docSnap => dataObject[docSnap.id] = { ...docSnap.data(), id: docSnap.id });
+                if (name === 'classes') classes = dataObject;
+                if (name === 'teachers') teachers = dataObject;
+                if (name === 'subjects') subjects = dataObject;
+                if (name === 'schedule') schedule = dataObject;
+                if (name === 'locations') locations = dataObject;
+                if (name === 'timeslots') timeslots = dataObject;
+            }
+        }
+        
+        // 4) Render with loaded state, and pick initial class
+        renderAll();
+        postInitialSelection();
+
+        // 5) NOW attach the realtime listeners
         setupDataListeners();
     }
     
@@ -734,12 +794,12 @@
             initModals(); attachEventListeners();
             onAuthStateChanged(auth, async (user) => {
                 if (user) { 
-                    userId = user.uid; 
-                    // This function now handles the entire startup data flow correctly.
-                    await initializeAppData();
-                } 
-                else { 
-                    signInAnonymously(auth); 
+                    if (!userId) { // Prevents re-running on token refresh
+                        userId = user.uid; 
+                        await initializeAppData();
+                    }
+                } else { 
+                    await signInAnonymously(auth); 
                 }
             });
         } catch (error) { console.error("Firebase initialization failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check console.</div>`; }
@@ -749,5 +809,3 @@
 </script>
 </body>
 </html>
-
-

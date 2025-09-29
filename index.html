@@ -799,10 +799,14 @@
                 <button id="namePagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
                 <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
             </div>
-             <div class="input-group">
-                <input id="newNameInput" placeholder="Add new name to current shared session">
-                <button id="addNameBtnInModal" title="Add the name to the shared list">Add</button>
-             </div>
+             <div class="input-group" style="margin-bottom:8px;">
+  <input id="newTeacherInput" placeholder="Teacher name (optional)">
+</div>
+<div class="input-group">
+  <input id="newSubjectInput" placeholder="Subject (e.g., English, Arab, Maths)">
+  <button id="addNameBtnInModal" title="Add teacher/subject">Add</button>
+</div>
+<input id="newNameInput" style="display:none" value="">
             <button id="importNameListBtn" title="Import names from a .txt file (one name per line) to current shared session">📂 Import Names (.txt) to Shared Session</button>
             <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
             <input type="text" id="searchNameInput" placeholder="🔍 Search names in current shared session..." title="Filter the list of names">
@@ -4472,6 +4476,82 @@ document.addEventListener('click', (e)=>{
     if (typeof _setEntryMode === 'function') _setEntryMode(mode);
     mergeSubjectsIntoNameLists();
   };
+})();
+
+/* ==== Combined Teacher + Subject entry (override) ==== */
+(function initCombinedNameSubject(){
+  function attachHandler(){
+    const btn = document.getElementById("addNameBtnInModal");
+    const teacherInput = document.getElementById("newTeacherInput");
+    const subjectInput = document.getElementById("newSubjectInput");
+    if(!btn || !subjectInput){ return false; }
+
+    btn.onclick = async function(){
+      try{
+        const teacher = (teacherInput && teacherInput.value || "").trim();
+        const subject = (subjectInput && subjectInput.value || "").trim();
+        if(!teacher && !subject){
+          if(window.showMessage) window.showMessage("Please enter at least a teacher or a subject", "error");
+          return;
+        }
+        let displayEntry = "";
+        if(teacher && subject) displayEntry = `${teacher} – ${subject}`;
+        else if(subject) displayEntry = subject;
+        else displayEntry = teacher;
+
+        const sessionKey = (typeof currentNameListSession!=="undefined" && currentNameListSession) ? currentNameListSession : "pagi";
+        const targetArray = (sessionKey === "pagi") ? (window.namesPagiShared || []) : (window.namesPetangShared || []);
+        targetArray.push(displayEntry);
+        if(sessionKey === "pagi") window.namesPagiShared = targetArray; else window.namesPetangShared = targetArray;
+
+        // Persist to Firestore (sharedNameList collection)
+        if(typeof fbDb !== "undefined"){
+          try{
+            const docId = `${sessionKey}_${displayEntry}`.replace(/[.#$/\[\]]/g,"_"); // sanitize
+            const ref = doc(fbDb, "sharedNameList", docId);
+            await setDoc(ref, { value: displayEntry, session: sessionKey, createdAt: serverTimestamp() });
+          }catch(e){
+            console.error("Firestore write failed:", e);
+          }
+        }
+
+        if(teacherInput) teacherInput.value = "";
+        if(subjectInput) subjectInput.value = "";
+        if(window.showMessage) window.showMessage(`Added: ${displayEntry}`, "success");
+
+        // Re-render the list if renderer exists
+        if(typeof renderNameList === "function") renderNameList();
+      }catch(err){
+        console.error("Add combined entry error:", err);
+        if(window.showMessage) window.showMessage("Failed to add entry", "error");
+      }
+    };
+    return true;
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", attachHandler);
+  } else {
+    attachHandler();
+  }
+})();
+/* ==== End Combined Teacher + Subject override ==== */
+
+/* Compatibility alias for legacy `newNameInput` */
+(function aliasNewNameInput(){
+  function doAlias(){
+    try{
+      var subj = document.getElementById("newSubjectInput");
+      if (!window.newNameInput || !window.newNameInput.tagName) {
+        window.newNameInput = subj || document.getElementById("newNameInput");
+      }
+    }catch(e){}
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", doAlias);
+  } else {
+    doAlias();
+  }
 })();
 </script>
 

@@ -2117,9 +2117,10 @@ function detectAndMarkClashes(){
             }
             rebuildAndRenderSummary();
             const lastActiveIdFromSession = sessionStorage.getItem(LAST_ACTIVE_SCHEDULE_ID_KEY); 
-            if (!lastActiveIdFromSession && candidates.length === 0) { 
+            const __candCount = (Array.isArray(typeof candidates !== 'undefined' ? candidates : []) ? candidates.length : 0);
+            if (!lastActiveIdFromSession && __candCount === 0) { 
                  showMessage('No saved schedule found. Starting with a new schedule.', 'info', 5000);
-            } else if (candidates.length > 0 || lastActiveIdFromSession) { 
+            } else if (__candCount > 0 || lastActiveIdFromSession) { 
                  showMessage('Could not load latest schedule. Displaying default. Try "Load Shared".', 'warning', 7000);
             }
         } else {
@@ -4498,7 +4499,7 @@ document.addEventListener('click', (e)=>{
 /* ================== TSCL DATA LAYER (Overrides) ================== */
 (function initTSCL(){
   // Ensure Firestore globals exist
-  if (typeof fbDb === 'undefined') { console.error('Firestore (fbDb) missing'); return; }
+  if (typeof fbDb === 'undefined' || !fbDb) { console.warn('TSCL: Firestore not ready, retrying...'); setTimeout(initTSCL, 500); return; }
 
   const tsclColl = collection(fbDb, 'tscl');
   const pairsDoc = doc(fbDb, 'tscl_meta', 'pairs');

@@ -659,8 +659,8 @@
 </style>
 
 
-<style id="hide-teacher-chip">
-.chip-teacher { display: none !important; }
+<style id="tscl-hide-legacy-buttons">
+  #nameListBtn, #subjectListBtn { display: none !important; pointer-events: none !important; }
 </style>
 
 </head>
@@ -805,13 +805,19 @@
                 <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
             </div>
              <div class="input-group" style="margin-bottom:8px;">
-  <input id="newTeacherInput" placeholder="Teacher name (optional)">
+  <input id="tsclTeacher" placeholder="Teacher (e.g., Remo)">
+</div>
+<div class="input-group" style="margin-bottom:8px;">
+  <input id="tsclSubject" placeholder="Subject (e.g., Arab, Maths)">
+</div>
+<div class="input-group" style="margin-bottom:8px;">
+  <input id="tsclClass" placeholder="Class (optional, e.g., 2 Amal)">
 </div>
 <div class="input-group">
-  <input id="newSubjectInput" placeholder="Subject (e.g., English, Arab, Maths)">
-  <button id="addNameBtnInModal" title="Add teacher/subject">Add</button>
+  <input id="tsclLocation" placeholder="Location (optional, e.g., Lab 1)">
+  <button id="addNameBtnInModal" title="Save to TSCL">Save</button>
 </div>
-<input id="newNameInput" style="display:none" value="">
+<div class="small muted" style="margin-top:6px">This now writes to <code>tscl</code> (Teachers/Subjects/Classes/Locations). Old Name/Subject lists are no longer used.</div>
             <button id="importNameListBtn" title="Import names from a .txt file (one name per line) to current shared session">📂 Import Names (.txt) to Shared Session</button>
             <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
             <input type="text" id="searchNameInput" placeholder="🔍 Search names in current shared session..." title="Filter the list of names">
@@ -4061,10 +4067,10 @@ function enhanceSummaryWithSubjects(){
     const tds = activeTable.querySelectorAll('td');
     tds.forEach(td=>{
       const subEl = td.querySelector('.chip-subject');
-        const tEl   = td.querySelector('.chip-teacher');
-        const sub = subEl ? subEl.textContent.trim() : (td.dataset.subject||'').trim();
-        const tch = tEl ? tEl.textContent.trim() : (td.dataset.teacher||'').trim();
-        if(sub && tch){
+      const tEl   = td.querySelector('.chip-teacher');
+      if(subEl && tEl){
+        const sub = subEl.textContent.trim();
+        const tch = tEl.textContent.trim();
         if(sub && tch){
           teacherToSubject[tch] = teacherToSubject[tch] || new Set();
           teacherToSubject[tch].add(sub);
@@ -4483,188 +4489,275 @@ document.addEventListener('click', (e)=>{
   };
 })();
 
-/* Compatibility alias for legacy `newNameInput` */
-(function aliasNewNameInput(){
-  function doAlias(){
-    try{
-      var subj = document.getElementById("newSubjectInput");
-      if (!window.newNameInput || !window.newNameInput.tagName) {
-        window.newNameInput = subj || document.getElementById("newNameInput");
+/* ================== TSCL DATA LAYER (Overrides) ================== */
+(function initTSCL(){
+  // Ensure Firestore globals exist
+  if (typeof fbDb === 'undefined') { console.error('Firestore (fbDb) missing'); return; }
+
+  const tsclColl = collection(fbDb, 'tscl');
+  const pairsDoc = doc(fbDb, 'tscl_meta', 'pairs');
+
+  // In-memory cache
+  const TSCL = { teachers: [], subjects: [], pairs: {}, all: [] };
+  window.__TSCL = TSCL;
+
+  function computeFromSnapshot(docs){
+    const teachers = new Set(), subjects = new Set();
+    const pairs = {};
+    const all = [];
+    docs.forEach(d => {
+      const data = d.data() || {};
+      const t = String(data.teacher||'').trim();
+      const s = String(data.subject||'').trim();
+      const c = String(data.class||'').trim();
+      const l = String(data.location||'').trim();
+      const paired = !!data.paired;
+      all.push({id:d.id, teacher:t, subject:s, class:c, location:l, paired});
+      if (t) teachers.add(t);
+      if (s) subjects.add(s);
+      if (paired && t && s){
+        pairs[s] = pairs[s] || [];
+        if (!pairs[s].includes(t)) pairs[s].push(t);
       }
-    }catch(e){}
+    });
+    // sort pair lists
+    Object.keys(pairs).forEach(k => pairs[k].sort((a,b)=>a.localeCompare(b)));
+    TSCL.teachers = Array.from(teachers).sort((a,b)=>a.localeCompare(b));
+    TSCL.subjects = Array.from(subjects).sort((a,b)=>a.localeCompare(b));
+    TSCL.pairs    = pairs;
+    TSCL.all      = all;
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", doAlias);
-  } else {
-    doAlias();
-  }
-})();
 
-/* ==== Combined Teacher + Subject entry (primary handler) ==== */
-(function forceUnifiedAdd(){
-  function wire(){
-    var oldBtn = document.getElementById('addNameBtnInModal');
-    if(!oldBtn) return false;
-    var btn = oldBtn.cloneNode(true);
-    oldBtn.parentNode.replaceChild(btn, oldBtn);
+  // Watch tscl records
+  onSnapshot(tsclColl, (qs)=>{
+    computeFromSnapshot(qs.docs);
+    try{ renderNameList && renderNameList(); }catch(e){}
+  });
 
-    btn.addEventListener('click', async function(e){
+  // Watch explicit pairs doc (if you maintain it elsewhere)
+  onSnapshot(pairsDoc, (snap)=>{
+    if(snap.exists()){
+      const map = snap.data()?.map || {};
+      // merge/override pairs while keeping teacher/subject sets
+      TSCL.pairs = Object.fromEntries(Object.entries(map).map(([k,v])=>[k, Array.from(new Set(v||[])).sort((a,b)=>a.localeCompare(b))]));
+    }
+  });
+
+  // ---- Override the old getters with TSCL-backed versions ----
+  window.getTeacherList = function getTeacherList_TSCL(){
+    return Array.from(TSCL.teachers);
+  };
+  window.getSubjectsList = function getSubjectsList_TSCL(){
+    return Array.from(TSCL.subjects);
+  };
+  window.getSubjectTeacherCombos = function(){
+    const out = [];
+    const p = TSCL.pairs;
+    Object.keys(p).forEach(sub => (p[sub]||[]).forEach(t => out.push(`${sub} > ${t}`)));
+    // fallback: derive combos from raw docs if no pairs present
+    if (!out.length) {
+      TSCL.all.forEach(r => {
+        if (r.subject && r.teacher) out.push(`${r.subject} > ${r.teacher}`);
+      });
+    }
+    // unique
+    return Array.from(new Set(out)).sort((a,b)=>a.localeCompare(b));
+  };
+
+  // ---- Override Name List Renderer to show TSCL entries ----
+  window.renderNameList = function renderNameList_TSCL(){
+    const listEl = document.getElementById('nameList');
+    if(!listEl) return;
+    const combos = window.getSubjectTeacherCombos();
+    // show combined "Subject > Teacher" and subject-only + teacher-only lines
+    const soloTeachers = TSCL.teachers.filter(t => !combos.some(ct=>ct.endsWith(`> ${t}`)));
+    const soloSubjects = TSCL.subjects.filter(s => !combos.some(ct=>ct.startsWith(`${s} >`)));
+    const html = []
+      .concat(combos.map(v=>`<div class="name-item"><span>${v}</span></div>`))
+      .concat(soloSubjects.map(v=>`<div class="name-item"><span>${v}</span></div>`))
+      .concat(soloTeachers.map(v=>`<div class="name-item"><span>${v}</span></div>`));
+    listEl.innerHTML = html.join('') || '<div class="muted">No TSCL entries yet</div>';
+  };
+
+  // ---- Force Add button to write into TSCL (NOT old collections) ----
+  function wireAdd(){
+    const btn = document.getElementById('addNameBtnInModal');
+    if(!btn) return;
+    const freshBtn = btn.cloneNode(true); btn.parentNode.replaceChild(freshBtn, btn);
+    freshBtn.addEventListener('click', async (e)=>{
       e.preventDefault(); e.stopImmediatePropagation();
+      const t = (document.getElementById('tsclTeacher')?.value || '').trim();
+      const s = (document.getElementById('tsclSubject')?.value || '').trim();
+      const c = (document.getElementById('tsclClass')?.value || '').trim();
+      const l = (document.getElementById('tsclLocation')?.value || '').trim();
+      const paired = !!(t && s); // auto-pair if both exist
+      if(!t && !s && !c && !l){ window.showMessage && window.showMessage('Please enter at least one field','error'); return; }
       try{
-        var teacherInput = document.getElementById('newTeacherInput');
-        var subjectInput = document.getElementById('newSubjectInput');
-        var teacher = (teacherInput && teacherInput.value || '').trim();
-        var subject = (subjectInput && subjectInput.value || '').trim();
-        if(!teacher && !subject){
-          window.showMessage && window.showMessage('Please enter at least a teacher or a subject','error');
-          return;
+        const ref = doc(tsclColl); // new doc
+        await setDoc(ref, { teacher:t, subject:s, class:c, location:l, paired, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        // also update pairs doc if paired
+        if(paired){
+          await setDoc(pairsDoc, { map: { [s]: arrayUnion(t) } }, { merge: true });
         }
-        var displayEntry = (teacher && subject) ? (teacher + ' – ' + subject) : (teacher || subject);
-
-        var sessionKey = (window.currentNameListSession === 'petang') ? 'petang' : 'pagi';
-        var arr;
-        if(sessionKey === 'petang'){
-          window.namesPetangShared = window.namesPetangShared || [];
-          arr = window.namesPetangShared;
-        } else {
-          window.namesPagiShared = window.namesPagiShared || [];
-          arr = window.namesPagiShared;
-        }
-        if(!arr.includes(displayEntry)) arr.push(displayEntry);
-
-        // Ensure bare teacher exists for Teacher mode
-        if(teacher){
-          if(!arr.includes(teacher)) arr.push(teacher);
-          try{
-            if(window.fbDb){
-              const refBare = doc(fbDb, 'sharedNameList', (sessionKey + '_' + teacher).replace(/[.#$/\[\]]/g,'_'));
-              await setDoc(refBare, { value: teacher, session: sessionKey, createdAt: serverTimestamp() });
-            }
-          }catch(e){}
-        }
-
-        // Update subjectsState mapping for Subject mode
-        try{
-          if(subject){
-            window.subjectsState = window.subjectsState || {pagi:{}, petang:{}};
-            var bucket = window.subjectsState[sessionKey] || {};
-            var list = bucket[subject] || [];
-            if(teacher && !list.includes(teacher)) list.push(teacher);
-            bucket[subject] = list;
-            window.subjectsState[sessionKey] = bucket;
-            if(typeof saveSubjectsState === 'function'){
-              await saveSubjectsState();
-            }
-          }
-        }catch(e){}
-
-        // Persist combined entry
-        try{
-          if(window.fbDb){
-            const ref = doc(fbDb, 'sharedNameList', (sessionKey + '_' + displayEntry).replace(/[.#$/\[\]]/g,'_'));
-            await setDoc(ref, { value: displayEntry, session: sessionKey, createdAt: serverTimestamp() });
-          }
-        }catch(err){}
-
-        if(teacherInput) teacherInput.value = '';
-        if(subjectInput) subjectInput.value = '';
-        window.showMessage && window.showMessage('Added: ' + displayEntry, 'success');
-
-        if(typeof renderNameList === 'function'){
-          renderNameList();
-        }
+        window.showMessage && window.showMessage('Saved to TSCL','success');
+        // clear inputs
+        ['tsclTeacher','tsclSubject','tsclClass','tsclLocation'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value=''; });
       }catch(err){
-        window.showMessage && window.showMessage('Failed to add entry','error');
+        console.error(err); window.showMessage && window.showMessage('Save failed','error');
       }
     }, {capture:true});
-    return true;
   }
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', wire);
-  } else {
-    wire();
-  }
-})();
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wireAdd); } else { wireAdd(); }
 
-/* ==== Teacher-mode autocomplete enhancement ==== */
-(function enhanceTeacherAutocomplete(){
-  function sessionKey(){ return (window.currentNameListSession==='petang') ? 'petang' : 'pagi'; }
-
-  function computeTeacherSet(){
-    var sKey = sessionKey();
-    var raw = (sKey==='petang' ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]));
-    var set = new Set();
-    (raw||[]).forEach(function(v){
-      v = (v||'').toString().trim();
-      if(!v) return;
-      var m = v.match(/^(.+?)\s+[–-]\s+.+$/);
-      if(m){ set.add(m[1].trim()); } else { set.add(v); }
-    });
+  // ---- Hook autocomplete with TSCL ----
+  // If your existing code calls getTeacherList() or getSubjectsList(), our overrides above feed from TSCL.
+  // If you need subject>teacher combos:
+  window.refreshAutocompleteSubjects = function(){
     try{
-      var bucket = (window.subjectsState && window.subjectsState[sKey]) ? window.subjectsState[sKey] : {};
-      Object.keys(bucket||{}).forEach(function(sub){
-        (bucket[sub]||[]).forEach(function(t){ if(t) set.add(String(t).trim()); });
-      });
-    }catch(e){}
-    var map = new Map();
-    set.forEach(function(name){
-      var key = name.toUpperCase();
-      if(!map.has(key)) map.set(key, name);
-    });
-    return Array.from(map.values()).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); });
-  }
-
-  function refreshAutocompleteTeachers(){
-    try{
-      window.teacherAutocomplete = computeTeacherSet();
+      window.subjectCombos = window.getSubjectTeacherCombos();
       if(typeof window.updateAutocompleteSuggestions === 'function'){
-        window.updateAutocompleteSuggestions(window.teacherAutocomplete);
+        window.updateAutocompleteSuggestions(window.subjectCombos);
       }
     }catch(e){}
-  }
+  };
 
+  // Enhance focus behavior to refresh suggestions
   document.addEventListener('focusin', function(e){
-    var td = e.target && e.target.closest && e.target.closest('td');
+    const td = e.target && e.target.closest && e.target.closest('td');
     if(!td) return;
-    var mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
-    if(mode === 'teacher'){
-      refreshAutocompleteTeachers();
+    const mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
+    if(mode === 'subject'){
+      window.refreshAutocompleteSubjects && window.refreshAutocompleteSubjects();
     } else {
-      if(typeof window.refreshAutocompleteSubjects === 'function'){
-        window.refreshAutocompleteSubjects();
+      if(typeof window.refreshAutocompleteTeachers === 'function'){
+        window.refreshAutocompleteTeachers();
+      } else {
+        // basic: expose teachers as suggestions if UI expects array
+        if(typeof window.updateAutocompleteSuggestions === 'function'){
+          window.updateAutocompleteSuggestions(window.getTeacherList());
+        }
       }
     }
   });
-  window.refreshAutocompleteTeachers = refreshAutocompleteTeachers;
+
+  // ---- Subject-only cell display (keep teacher in dataset) ----
+  window.renderCellChipsIfNeeded = function(cell){
+    if(!cell) return;
+    const el = cell.querySelector('.merged-cell-overlay') || cell;
+    const raw = (el.textContent||'').trim();
+    const parts = raw.split('//');
+    const main = parts[0].trim();
+    const notes = parts.slice(1).join('//').trim();
+    const m = main.match(/^(.+?)\s*>\s*(.+)$/); // Subject > Teacher
+    if(m){
+      const subject = m[1].trim();
+      const teacher = m[2].trim();
+      const wrap = document.createElement('span'); wrap.className='cell-chip';
+      const s = document.createElement('span'); s.className='chip-subject'; s.textContent = subject;
+      wrap.appendChild(s);
+      el.textContent=''; el.appendChild(wrap);
+      if(teacher) el.dataset.teacher = teacher;
+      if(subject) el.dataset.subject = subject;
+      if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
+    }
+  };
+
 })();
+/* ================== END TSCL LAYER ================== */
 
-/* ==== Subject-only display in cells (render chip + dataset for teacher) ==== */
-(function patchCellRendering(){
-  // Replace existing renderer if present
-  try{
-    window.renderCellChipsIfNeeded = function(cell){
-      if(!cell) return;
-      var el = cell.querySelector('.merged-cell-overlay') || cell;
-      var raw = (el.textContent||'').trim();
-      var parts = raw.split('//');
-      var main = parts[0].trim();
-      var notes = parts.slice(1).join('//').trim();
-      var match = main.match(/^(.+?)\s*>\s*(.+)$/); // Subject > Teacher
-      if(match){
-        var subject = match[1].trim();
-        var teacher = match[2].trim();
+/* Hide teacher chip if any legacy render leaves it in */
+(function(){
+  const css = document.createElement('style'); css.textContent = '.chip-teacher{display:none!important;}';
+  document.head.appendChild(css);
+})();
+</script>
 
-        var wrapper = document.createElement('span'); wrapper.className = 'cell-chip';
-        var s = document.createElement('span'); s.className = 'chip-subject'; s.textContent = subject;
-        wrapper.appendChild(s);
 
-        el.textContent = ''; el.appendChild(wrapper);
-        if(teacher) el.dataset.teacher = teacher;
-        if(subject) el.dataset.subject = subject;
-        if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
+<script>
+(function addTSCLButton(){
+  function insertBtn(anchor){
+    try{
+      var btn = document.createElement('button');
+      btn.id = 'tsclManagerBtn';
+      btn.textContent = 'TSCL Manager';
+      btn.title = 'Open Teachers • Subjects • Classes • Locations';
+      btn.style.marginLeft = '8px';
+      btn.style.padding = '8px 12px';
+      btn.style.borderRadius = '10px';
+      btn.style.border = '1px solid #26303c';
+      btn.style.background = '#2ea043';
+      btn.style.color = '#fff';
+      btn.style.fontWeight = '600';
+      btn.style.cursor = 'pointer';
+      anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+      return btn;
+    }catch(e){ return null; }
+  }
+
+  function ensureBtn(){
+    // Hide/disable legacy buttons if they exist
+    ['nameListBtn','subjectListBtn'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el){
+        el.disabled = true;
+        el.style.pointerEvents='none';
+        el.style.display='none';
       }
-    };
-  }catch(e){}
+    });
+
+    var anchor = document.getElementById('nameListBtn') || document.getElementById('subjectListBtn');
+    var btn = null;
+    if(anchor){
+      btn = insertBtn(anchor);
+    } else {
+      // fallback: add to a top toolbar if present, else fixed in corner
+      var topbar = document.querySelector('.toolbar, .top-bar, .header-actions');
+      if(topbar){
+        btn = document.createElement('button');
+        btn.id = 'tsclManagerBtn';
+        btn.textContent = 'TSCL Manager';
+        btn.className = 'btn';
+        topbar.appendChild(btn);
+      } else {
+        btn = document.createElement('button');
+        btn.id = 'tsclManagerBtn';
+        btn.textContent = 'TSCL Manager';
+        btn.style.position='fixed'; btn.style.right='16px'; btn.style.top='16px';
+        btn.style.zIndex='9999'; btn.style.padding='10px 14px'; btn.style.borderRadius='10px';
+        btn.style.border='1px solid #26303c'; btn.style.background='#2ea043'; btn.style.color='#fff'; btn.style.fontWeight='700';
+        document.body.appendChild(btn);
+      }
+    }
+    return btn;
+  }
+
+  function openTSCLModal(){
+    var modal = document.getElementById('nameModal') || document.getElementById('tsclModal');
+    if(!modal){
+      alert('TSCL modal not found');
+      return;
+    }
+    // update modal title if present
+    var t = modal.querySelector('.modal-header h3, .modal-title, h3');
+    if(t){ t.textContent = 'TSCL Manager'; }
+    modal.style.display = 'flex';
+    // focus first TSCL input if available
+    setTimeout(function(){
+      (document.getElementById('tsclTeacher') || document.getElementById('tsclSubject') || document.querySelector('#nameModal input'))?.focus();
+    }, 0);
+  }
+
+  function boot(){
+    var btn = ensureBtn();
+    if(btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault(); e.stopImmediatePropagation();
+        openTSCLModal();
+      }, {capture:true});
+    }
+  }
+
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
 })();
 </script>
 

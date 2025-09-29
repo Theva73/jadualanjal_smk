@@ -4489,129 +4489,166 @@ document.addEventListener('click', (e)=>{
   };
 })();
 
+
 /* ================== TSCL DATA LAYER (Overrides) ================== */
 (function initTSCL(){
-  // Ensure Firestore globals exist
-  if (typeof fbDb === 'undefined') { console.error('Firestore (fbDb) missing'); return; }
+  // Resolve Firestore DB handle (supports modular or compat)
+  var dbRef = (typeof fbDb !== 'undefined') ? fbDb : (typeof db !== 'undefined' ? db : null);
+  if(!dbRef){ console.error('Firestore DB not found (fbDb or db)'); return; }
 
-  const tsclColl = collection(fbDb, 'tscl');
-  const pairsDoc = doc(fbDb, 'tscl_meta', 'pairs');
+  // Helper: get collection ref (modular or compat)
+  function collRef(name){
+    if(typeof collection === 'function'){ try { return collection(dbRef, name); } catch(e){} }
+    if(typeof dbRef.collection === 'function') return dbRef.collection(name);
+    throw new Error('No Firestore collection() available');
+  }
+  // Helper: get doc ref
+  function docRef(pathOrColl, id){
+    if(typeof doc === 'function'){
+      if(typeof pathOrColl === 'string'){
+        // usage: doc(dbRef, 'tscl', 'abc')
+        return doc(dbRef, pathOrColl, id);
+      } else {
+        // usage: doc(collRef, 'abc')
+        return doc(pathOrColl, id);
+      }
+    }
+    if(typeof pathOrColl.doc === 'function') return pathOrColl.doc(id);
+    if(typeof dbRef.doc === 'function') return dbRef.doc([pathOrColl,id].join('/'));
+    throw new Error('No Firestore doc() available');
+  }
+  // Helper: set (merge)
+  async function writeDoc(ref, data){
+    if(typeof setDoc === 'function') return await setDoc(ref, data, {merge:true});
+    if(typeof ref.set === 'function') return await ref.set(data, {merge:true});
+    throw new Error('No Firestore setDoc/set available');
+  }
+  // Helper: now timestamp
+  function nowTS(){
+    if(typeof serverTimestamp === 'function') return serverTimestamp();
+    if(firebase && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp){
+      return firebase.firestore.FieldValue.serverTimestamp();
+    }
+    return new Date(); // fallback
+  }
+  // Helper: onSnapshot
+  function watch(target, cb){
+    if(typeof onSnapshot === 'function') return onSnapshot(target, cb);
+    if(typeof target.onSnapshot === 'function') return target.onSnapshot(cb);
+    throw new Error('No Firestore onSnapshot available');
+  }
+  // Helper: getDoc
+  async function readDoc(ref){
+    if(typeof getDoc === 'function') return await getDoc(ref);
+    if(typeof ref.get === 'function') return await ref.get();
+    throw new Error('No Firestore getDoc/get available');
+  }
 
-  // In-memory cache
+  var tsclColl = collRef('tscl');
+  var pairsDoc = docRef('tscl_meta', 'pairs');
+
   const TSCL = { teachers: [], subjects: [], pairs: {}, all: [] };
   window.__TSCL = TSCL;
 
-  function computeFromSnapshot(docs){
+  function computeFromSnapshot(docsOrSnap){
+    var docs = docsOrSnap.docs ? docsOrSnap.docs : docsOrSnap; // modular vs compat fallback
     const teachers = new Set(), subjects = new Set();
-    const pairs = {};
-    const all = [];
-    docs.forEach(d => {
-      const data = d.data() || {};
-      const t = String(data.teacher||'').trim();
-      const s = String(data.subject||'').trim();
-      const c = String(data.class||'').trim();
-      const l = String(data.location||'').trim();
-      const paired = !!data.paired;
-      all.push({id:d.id, teacher:t, subject:s, class:c, location:l, paired});
+    const pairs = {}, all = [];
+
+    (docs||[]).forEach(function(d){
+      var data = (typeof d.data === 'function') ? (d.data()||{}) : (d || {});
+      var t = String(data.teacher||'').trim();
+      var s = String(data.subject||'').trim();
+      var c = String(data.class||'').trim();
+      var l = String(data.location||'').trim();
+      var paired = !!data.paired;
+      var id = d.id || ('id_' + Math.random().toString(36).slice(2));
+      all.push({id, teacher:t, subject:s, class:c, location:l, paired});
       if (t) teachers.add(t);
       if (s) subjects.add(s);
       if (paired && t && s){
         pairs[s] = pairs[s] || [];
-        if (!pairs[s].includes(t)) pairs[s].push(t);
+        if (pairs[s].indexOf(t) === -1) pairs[s].push(t);
       }
     });
-    // sort pair lists
-    Object.keys(pairs).forEach(k => pairs[k].sort((a,b)=>a.localeCompare(b)));
-    TSCL.teachers = Array.from(teachers).sort((a,b)=>a.localeCompare(b));
-    TSCL.subjects = Array.from(subjects).sort((a,b)=>a.localeCompare(b));
-    TSCL.pairs    = pairs;
-    TSCL.all      = all;
+    Object.keys(pairs).forEach(function(k){ pairs[k].sort(function(a,b){ return a.localeCompare(b); }); });
+    TSCL.teachers = Array.from(teachers).sort(function(a,b){ return a.localeCompare(b); });
+    TSCL.subjects = Array.from(subjects).sort(function(a,b){ return a.localeCompare(b); });
+    TSCL.pairs = pairs;
+    TSCL.all = all;
   }
 
-  // Watch tscl records
-  onSnapshot(tsclColl, (qs)=>{
-    computeFromSnapshot(qs.docs);
-    try{ renderNameList && renderNameList(); }catch(e){}
-  });
+  // Watch tscl records and rebuild caches
+  watch(tsclColl, function(qs){ computeFromSnapshot(qs); try{ renderNameList && renderNameList(); }catch(e){} });
 
-  // Watch explicit pairs doc (if you maintain it elsewhere)
-  onSnapshot(pairsDoc, (snap)=>{
-    if(snap.exists()){
-      const map = snap.data()?.map || {};
-      // merge/override pairs while keeping teacher/subject sets
-      TSCL.pairs = Object.fromEntries(Object.entries(map).map(([k,v])=>[k, Array.from(new Set(v||[])).sort((a,b)=>a.localeCompare(b))]));
-    }
-  });
-
-  // ---- Override the old getters with TSCL-backed versions ----
-  window.getTeacherList = function getTeacherList_TSCL(){
-    return Array.from(TSCL.teachers);
-  };
-  window.getSubjectsList = function getSubjectsList_TSCL(){
-    return Array.from(TSCL.subjects);
-  };
-  window.getSubjectTeacherCombos = function(){
-    const out = [];
-    const p = TSCL.pairs;
-    Object.keys(p).forEach(sub => (p[sub]||[]).forEach(t => out.push(`${sub} > ${t}`)));
-    // fallback: derive combos from raw docs if no pairs present
-    if (!out.length) {
-      TSCL.all.forEach(r => {
-        if (r.subject && r.teacher) out.push(`${r.subject} > ${r.teacher}`);
+  // Optionally watch explicit pairs doc (if you maintain elsewhere) — merge but TSCL remains source of truth
+  watch(pairsDoc, function(snap){
+    try{
+      var data = (typeof snap.data === 'function') ? (snap.data()||{}) : (snap||{});
+      var map = data.map || {};
+      var merged = {};
+      Object.keys(map).forEach(function(k){
+        merged[k] = Array.from(new Set(map[k]||[])).sort(function(a,b){ return a.localeCompare(b); });
       });
+      // merge (do not delete existing derived pairs)
+      Object.keys(merged).forEach(function(k){
+        var set = new Set([...(TSCL.pairs[k]||[]), ...(merged[k]||[])]);
+        TSCL.pairs[k] = Array.from(set).sort(function(a,b){ return a.localeCompare(b); });
+      });
+    }catch(e){}
+  });
+
+  window.getTeacherList = function(){ return Array.from(TSCL.teachers); };
+  window.getSubjectsList = function(){ return Array.from(TSCL.subjects); };
+  window.getSubjectTeacherCombos = function(){
+    var out = [];
+    var p = TSCL.pairs;
+    Object.keys(p).forEach(function(sub){ (p[sub]||[]).forEach(function(t){ out.push(sub + ' > ' + t); }); });
+    if(!out.length){
+      TSCL.all.forEach(function(r){ if(r.subject && r.teacher) out.push(r.subject + ' > ' + r.teacher); });
     }
-    // unique
-    return Array.from(new Set(out)).sort((a,b)=>a.localeCompare(b));
+    return Array.from(new Set(out)).sort(function(a,b){ return a.localeCompare(b); });
   };
 
-  // ---- Override Name List Renderer to show TSCL entries ----
-  window.renderNameList = function renderNameList_TSCL(){
-    const listEl = document.getElementById('nameList');
-    if(!listEl) return;
-    const combos = window.getSubjectTeacherCombos();
-    // show combined "Subject > Teacher" and subject-only + teacher-only lines
-    const soloTeachers = TSCL.teachers.filter(t => !combos.some(ct=>ct.endsWith(`> ${t}`)));
-    const soloSubjects = TSCL.subjects.filter(s => !combos.some(ct=>ct.startsWith(`${s} >`)));
-    const html = []
-      .concat(combos.map(v=>`<div class="name-item"><span>${v}</span></div>`))
-      .concat(soloSubjects.map(v=>`<div class="name-item"><span>${v}</span></div>`))
-      .concat(soloTeachers.map(v=>`<div class="name-item"><span>${v}</span></div>`));
+  window.renderNameList = function(){
+    var listEl = document.getElementById('nameList'); if(!listEl) return;
+    var combos = window.getSubjectTeacherCombos();
+    var soloTeachers = TSCL.teachers.filter(function(t){ return !combos.some(function(ct){ return ct.endsWith('> ' + t); }); });
+    var soloSubjects = TSCL.subjects.filter(function(s){ return !combos.some(function(ct){ return ct.indexOf(s + ' >') === 0; }); });
+    var html = []
+      .concat(combos.map(function(v){ return '<div class="name-item"><span>'+v+'</span></div>'; }))
+      .concat(soloSubjects.map(function(v){ return '<div class="name-item"><span>'+v+'</span></div>'; }))
+      .concat(soloTeachers.map(function(v){ return '<div class="name-item"><span>'+v+'</span></div>'; }));
     listEl.innerHTML = html.join('') || '<div class="muted">No TSCL entries yet</div>';
   };
 
-  // ---- Force Add button to write into TSCL (NOT old collections) ----
+  // SAVE handler: write to tscl only; compute pairs asynchronously from tscl (no arrayUnion)
   function wireAdd(){
-    const btn = document.getElementById('addNameBtnInModal');
-    if(!btn) return;
-    const freshBtn = btn.cloneNode(true); btn.parentNode.replaceChild(freshBtn, btn);
-    freshBtn.addEventListener('click', async (e)=>{
+    var btn = document.getElementById('addNameBtnInModal'); if(!btn) return;
+    var freshBtn = btn.cloneNode(true); btn.parentNode.replaceChild(freshBtn, btn);
+    freshBtn.addEventListener('click', async function(e){
       e.preventDefault(); e.stopImmediatePropagation();
-      const t = (document.getElementById('tsclTeacher')?.value || '').trim();
-      const s = (document.getElementById('tsclSubject')?.value || '').trim();
-      const c = (document.getElementById('tsclClass')?.value || '').trim();
-      const l = (document.getElementById('tsclLocation')?.value || '').trim();
-      const paired = !!(t && s); // auto-pair if both exist
+      var t = (document.getElementById('tsclTeacher')||{}).value || '';
+      var s = (document.getElementById('tsclSubject')||{}).value || '';
+      var c = (document.getElementById('tsclClass')||{}).value || '';
+      var l = (document.getElementById('tsclLocation')||{}).value || '';
+      t = String(t).trim(); s = String(s).trim(); c = String(c).trim(); l = String(l).trim();
+      var paired = !!(t && s);
       if(!t && !s && !c && !l){ window.showMessage && window.showMessage('Please enter at least one field','error'); return; }
       try{
-        const ref = doc(tsclColl); // new doc
-        await setDoc(ref, { teacher:t, subject:s, class:c, location:l, paired, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-        // also update pairs doc if paired
-        if(paired){
-          await setDoc(pairsDoc, { map: { [s]: arrayUnion(t) } }, { merge: true });
-        }
+        var ref = docRef('tscl', (Math.random().toString(36).slice(2))); // new doc
+        await writeDoc(ref, { teacher:t, subject:s, class:c, location:l, paired:paired, createdAt: nowTS(), updatedAt: nowTS() });
         window.showMessage && window.showMessage('Saved to TSCL','success');
-        // clear inputs
-        ['tsclTeacher','tsclSubject','tsclClass','tsclLocation'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value=''; });
+        ['tsclTeacher','tsclSubject','tsclClass','tsclLocation'].forEach(function(id){ var el = document.getElementById(id); if(el) el.value=''; });
       }catch(err){
-        console.error(err); window.showMessage && window.showMessage('Save failed','error');
+        console.error('TSCL save failed:', err);
+        window.showMessage && window.showMessage('Save failed','error');
       }
     }, {capture:true});
   }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wireAdd); } else { wireAdd(); }
 
-  // ---- Hook autocomplete with TSCL ----
-  // If your existing code calls getTeacherList() or getSubjectsList(), our overrides above feed from TSCL.
-  // If you need subject>teacher combos:
+  // Subject-mode suggestions
   window.refreshAutocompleteSubjects = function(){
     try{
       window.subjectCombos = window.getSubjectTeacherCombos();
@@ -4621,39 +4658,27 @@ document.addEventListener('click', (e)=>{
     }catch(e){}
   };
 
-  // Enhance focus behavior to refresh suggestions
   document.addEventListener('focusin', function(e){
-    const td = e.target && e.target.closest && e.target.closest('td');
-    if(!td) return;
-    const mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
-    if(mode === 'subject'){
-      window.refreshAutocompleteSubjects && window.refreshAutocompleteSubjects();
-    } else {
-      if(typeof window.refreshAutocompleteTeachers === 'function'){
-        window.refreshAutocompleteTeachers();
-      } else {
-        // basic: expose teachers as suggestions if UI expects array
-        if(typeof window.updateAutocompleteSuggestions === 'function'){
-          window.updateAutocompleteSuggestions(window.getTeacherList());
-        }
-      }
-    }
+    var td = e.target && e.target.closest && e.target.closest('td'); if(!td) return;
+    var mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
+    if(mode === 'subject'){ window.refreshAutocompleteSubjects && window.refreshAutocompleteSubjects(); }
+    else if(typeof window.refreshAutocompleteTeachers === 'function'){ window.refreshAutocompleteTeachers(); }
   });
 
-  // ---- Subject-only cell display (keep teacher in dataset) ----
+  // Subject-only render with teacher in dataset (for summary)
   window.renderCellChipsIfNeeded = function(cell){
     if(!cell) return;
-    const el = cell.querySelector('.merged-cell-overlay') || cell;
-    const raw = (el.textContent||'').trim();
-    const parts = raw.split('//');
-    const main = parts[0].trim();
-    const notes = parts.slice(1).join('//').trim();
-    const m = main.match(/^(.+?)\s*>\s*(.+)$/); // Subject > Teacher
+    var el = cell.querySelector('.merged-cell-overlay') || cell;
+    var raw = (el.textContent||'').trim();
+    var parts = raw.split('//');
+    var main = parts[0].trim();
+    var notes = parts.slice(1).join('//').trim();
+    var m = main.match(/^(.+?)\s*>\s*(.+)$/);
     if(m){
-      const subject = m[1].trim();
-      const teacher = m[2].trim();
-      const wrap = document.createElement('span'); wrap.className='cell-chip';
-      const s = document.createElement('span'); s.className='chip-subject'; s.textContent = subject;
+      var subject = m[1].trim();
+      var teacher = m[2].trim();
+      var wrap = document.createElement('span'); wrap.className='cell-chip';
+      var s = document.createElement('span'); s.className='chip-subject'; s.textContent = subject;
       wrap.appendChild(s);
       el.textContent=''; el.appendChild(wrap);
       if(teacher) el.dataset.teacher = teacher;
@@ -4662,8 +4687,9 @@ document.addEventListener('click', (e)=>{
     }
   };
 
-})();
+})(); 
 /* ================== END TSCL LAYER ================== */
+
 
 /* Hide teacher chip if any legacy render leaves it in */
 (function(){

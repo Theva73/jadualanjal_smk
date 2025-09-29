@@ -496,22 +496,7 @@
         await addDoc(collection(db, getPath('versions')), versionData);
     }
 
-    async function loadVersion(versionId) {
-        const version = versions[versionId];
-        if (!version) return;
-        
-        openConfirmationModal(
-            `Load Schedule: "${version.name}"?`,
-            "This will overwrite all current classes, teachers, subjects, locations, time slots and the schedule. This action cannot be undone.",
-            "Load Version",
-            async () => {
-                await autoLoadVersionData(version.data, version.name, false);
-                showToast(`Schedule version "${version.name}" loaded successfully!`);
-            }
-        );
-    }
-
-    async function autoLoadVersionData(versionData, versionName, isAutoLoad = true) {
+    async function replaceAllDataWithVersion(versionData) {
         if (!versionData) return;
 
         const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule, timeslots: vTimeslots } = versionData;
@@ -541,9 +526,22 @@
         addDataToBatch('timeslots', vTimeslots || {});
 
         await batch.commit();
-        if (isAutoLoad) {
-            showToast(`Automatically loaded schedule: "${versionName}"`);
-        }
+    }
+
+    async function loadVersion(versionId) {
+        const version = versions[versionId];
+        if (!version) return;
+        
+        openConfirmationModal(
+            `Load Schedule: "${version.name}"?`,
+            "This will overwrite all current classes, teachers, subjects, locations, time slots and the schedule. This action cannot be undone.",
+            "Load Version",
+            async () => {
+                await replaceAllDataWithVersion(version.data);
+                // The onSnapshot listeners will handle the UI update automatically.
+                showToast(`Schedule version "${version.name}" loaded successfully!`);
+            }
+        );
     }
     
     function deleteVersion(versionId) {
@@ -707,7 +705,7 @@
         });
     }
 
-    async function initialAutoLoad() {
+    async function loadLatestVersionOnStartup() {
         const versionsRef = collection(db, getPath('versions'));
         const q = query(versionsRef, orderBy("createdAt", "desc"), limit(1));
         const querySnapshot = await getDocs(q);
@@ -716,7 +714,8 @@
             const latestVersionDoc = querySnapshot.docs[0];
             const latestVersion = latestVersionDoc.data();
             console.log("Found latest version to auto-load:", latestVersion.name);
-            await autoLoadVersionData(latestVersion.data, latestVersion.name);
+            await replaceAllDataWithVersion(latestVersion.data);
+            showToast(`Automatically loaded schedule: "${latestVersion.name}"`);
         } else {
             console.log("No saved versions found to auto-load.");
         }
@@ -730,7 +729,7 @@
             onAuthStateChanged(auth, async (user) => {
                 if (user) { 
                     userId = user.uid; 
-                    await initialAutoLoad();
+                    await loadLatestVersionOnStartup();
                     setupDataListeners(); 
                 } 
                 else { 

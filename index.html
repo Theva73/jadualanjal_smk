@@ -538,7 +538,6 @@
             "Load Version",
             async () => {
                 await replaceAllDataWithVersion(version.data);
-                // The onSnapshot listeners will handle the UI update automatically.
                 showToast(`Schedule version "${version.name}" loaded successfully!`);
             }
         );
@@ -693,6 +692,7 @@
             onSnapshot(collection(db, getPath(name)), snapshot => {
                 const dataObject = {};
                 snapshot.forEach(doc => dataObject[doc.id] = {...doc.data(), id: doc.id});
+
                 if (name === 'classes') classes = dataObject;
                 if (name === 'teachers') teachers = dataObject;
                 if (name === 'subjects') subjects = dataObject;
@@ -700,12 +700,14 @@
                 if (name === 'locations') locations = dataObject;
                 if (name === 'versions') versions = dataObject;
                 if (name === 'timeslots') timeslots = dataObject;
+                
                 renderAll();
             }, err => console.error(`Error fetching ${name}:`, err));
         });
     }
 
-    async function loadLatestVersionOnStartup() {
+    async function initializeAppData() {
+        // 1. Fetch the latest version first, without a real-time listener.
         const versionsRef = collection(db, getPath('versions'));
         const q = query(versionsRef, orderBy("createdAt", "desc"), limit(1));
         const querySnapshot = await getDocs(q);
@@ -714,11 +716,15 @@
             const latestVersionDoc = querySnapshot.docs[0];
             const latestVersion = latestVersionDoc.data();
             console.log("Found latest version to auto-load:", latestVersion.name);
+            // 2. Overwrite all current data with the data from this version.
             await replaceAllDataWithVersion(latestVersion.data);
             showToast(`Automatically loaded schedule: "${latestVersion.name}"`);
         } else {
             console.log("No saved versions found to auto-load.");
         }
+
+        // 3. NOW, after the initial state is set, attach the real-time listeners.
+        setupDataListeners();
     }
     
     async function main() {
@@ -729,8 +735,8 @@
             onAuthStateChanged(auth, async (user) => {
                 if (user) { 
                     userId = user.uid; 
-                    await loadLatestVersionOnStartup();
-                    setupDataListeners(); 
+                    // This function now handles the entire startup data flow correctly.
+                    await initializeAppData();
                 } 
                 else { 
                     signInAnonymously(auth); 

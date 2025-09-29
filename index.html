@@ -893,8 +893,22 @@
 window.appId = window.appId || (firebaseConfig.projectId || 'jadualanjal_smk');
 fbAuth = getAuth(fbApp);
         fbDb = getFirestore(fbApp);
-        
-        if (!fbDb) { throw new Error("Firestore not initialized properly!"); }
+        // ---- Ensure anonymous auth so Firestore security rules permit reads/writes ----
+        try {
+            signInAnonymously(fbAuth).catch((e)=>console.warn('Anonymous sign-in warning:', e?.code||e));
+        } catch(e) { console.warn('signInAnonymously not executed:', e); }
+        onAuthStateChanged(fbAuth, (user) => {
+            if (user) {
+                fbUserId = user.uid;
+                fbIsAuthReady = true;
+                document.getElementById('userIdDisplay').textContent = `User ID: ${fbUserId}`;
+                console.log('Firebase Auth ready with UID:', fbUserId);
+            } else {
+                fbIsAuthReady = false;
+                document.getElementById('userIdDisplay').textContent = 'User ID: (signed out)';
+            }
+        });
+if (!fbDb) { throw new Error("Firestore not initialized properly!"); }
 console.log("Firebase services initialized for Shared Scheduler with Project ID:", firebaseConfig.projectId);
     } catch (e) {
         console.error("CRITICAL Error initializing Firebase services:", e);
@@ -2054,6 +2068,7 @@ function detectAndMarkClashes(){
 
             const MAX_CANDIDATES_TO_CHECK = 5;
             let candidates = [];
+            let candCount = 0;
             try {
                 console.log("loadLatest: Querying Firestore for latest non-backup schedules");
                 const qPrimary = query(collection(fbDb, "artifacts", appId, "public/data/sharedSchedules"),
@@ -2063,6 +2078,7 @@ function detectAndMarkClashes(){
                 const primarySnapshot = await getDocs(qPrimary);
                 primarySnapshot.forEach(docSnap => candidates.push(docSnap));
                 console.log(`loadLatest: Found ${candidates.length} candidate schedules (primary query).`);
+                candCount = candidates.length
             } catch (error) {
                 console.warn("loadLatest (lastUpdatedAt query failed, trying createdAt):", error);
                 const qFallback = query(collection(fbDb, "artifacts", appId, "public/data/sharedSchedules"),
@@ -2083,9 +2099,10 @@ function detectAndMarkClashes(){
                 });
                 candidates = candidates.slice(0, MAX_CANDIDATES_TO_CHECK); 
                 console.log(`loadLatest: Found ${candidates.length} candidate schedules (after fallback & sort).`);
+                candCount = candidates.length
             }
 
-            for (const docSnap of candidates) {
+            for (const docSnap of (candidates || [])) {
                 console.log(`loadLatest: Trying to load schedule ${docSnap.id} ('${docSnap.data().name}')`);
                 loadedSuccessfully = await loadSelectedSharedScheduleFromFirestore(docSnap.id, true);
                 if (loadedSuccessfully) {
@@ -2117,7 +2134,7 @@ function detectAndMarkClashes(){
             }
             rebuildAndRenderSummary();
             const lastActiveIdFromSession = sessionStorage.getItem(LAST_ACTIVE_SCHEDULE_ID_KEY); 
-            const __candCount = (Array.isArray(typeof candidates !== 'undefined' ? candidates : []) ? candidates.length : 0);
+            const __candCount = (typeof candCount !== "undefined" ? candCount : 0);
             if (!lastActiveIdFromSession && __candCount === 0) { 
                  showMessage('No saved schedule found. Starting with a new schedule.', 'info', 5000);
             } else if (__candCount > 0 || lastActiveIdFromSession) { 
@@ -4498,8 +4515,8 @@ document.addEventListener('click', (e)=>{
 
 /* ================== TSCL DATA LAYER (Overrides) ================== */
 (function initTSCL(){
-  // Ensure Firestore globals exist
-  if (typeof fbDb === 'undefined' || !fbDb) { console.warn('TSCL: Firestore not ready, retrying...'); setTimeout(initTSCL, 500); return; }
+  // Ensure Firestore + Auth are ready
+  if (!fbDb || !fbIsAuthReady) { console.warn('TSCL: Firestore/Auth not ready, retrying...'); setTimeout(initTSCL, 750); return; }
 
   const tsclColl = collection(fbDb, 'tscl');
   const pairsDoc = doc(fbDb, 'tscl_meta', 'pairs');

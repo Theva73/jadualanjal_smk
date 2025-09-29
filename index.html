@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Standalone School Scheduler</title>
+    <title>Standalone Scheduler with Edit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -93,8 +93,6 @@
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
 
-    // --- NEW DATABASE PATHS ---
-    // All data for this app will be stored in collections with a "scheduler_v2_" prefix
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
 
     function renderAll() {
@@ -108,20 +106,44 @@
 
     function renderClasses() {
         const classListDiv = document.getElementById('class-list');
-        classListDiv.innerHTML = Object.keys(classes).length ? Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `<div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm"><span>${cls.name}</span><button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button></div>`).join('') : `<p class="text-sm text-gray-500">No classes found.</p>`;
+        classListDiv.innerHTML = Object.keys(classes).length ? Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `
+            <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                <span>${cls.name}</span>
+                <div class="flex gap-2">
+                    <button data-id="${id}" data-name="${cls.name}" data-collection="classes" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No classes found.</p>`;
     }
     
     function renderTeachers() {
         const teacherListDiv = document.getElementById('teacher-list');
         const teacherArray = Object.values(teachers);
-        teacherListDiv.innerHTML = teacherArray.length ? teacherArray.sort((a,b) => a.name.localeCompare(b.name)).map(teacher => `<div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm"><span>${teacher.name}</span><button data-id="${teacher.id}" class="delete-teacher text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button></div>`).join('') : `<p class="text-sm text-gray-500">No teachers added yet.</p>`;
+        teacherListDiv.innerHTML = teacherArray.length ? teacherArray.sort((a,b) => a.name.localeCompare(b.name)).map(teacher => `
+            <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                <span>${teacher.name}</span>
+                 <div class="flex gap-2">
+                    <button data-id="${teacher.id}" data-name="${teacher.name}" data-collection="teachers" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${teacher.id}" class="delete-teacher text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No teachers added yet.</p>`;
     }
 
     function renderSubjects() {
         const subjectListDiv = document.getElementById('subject-list');
         subjectListDiv.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => {
             const teacherNames = subject.teacherIds?.map(tid => teachers[tid]?.name).filter(Boolean).join(', ') || 'None assigned';
-            return `<div class="p-3 bg-white rounded-md shadow-sm"><div class="flex justify-between items-center"><span class="font-semibold text-gray-800">${subject.name}</span><div><button data-id="${id}" class="assign-teachers bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs mr-2">ASSIGN</button><button data-id="${id}" class="delete-subject text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button></div></div><p class="text-xs text-gray-500 mt-1">Teachers: ${teacherNames}</p></div>`;
+            return `<div class="p-3 bg-white rounded-md shadow-sm">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-gray-800">${subject.name}</span>
+                    <div class="flex gap-2">
+                        <button data-id="${id}" data-name="${subject.name}" data-collection="subjects" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                        <button data-id="${id}" class="assign-teachers bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">ASSIGN</button>
+                        <button data-id="${id}" class="delete-subject text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Teachers: ${teacherNames}</p>
+            </div>`;
         }).join('') : `<p class="text-sm text-gray-500">No subjects created yet.</p>`;
     }
 
@@ -183,8 +205,9 @@
         document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name }); e.target.reset(); });
         document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
-        document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
+        
         document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
+        document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
         document.getElementById('subject-list').addEventListener('click', e => {
             if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
             if (e.target.classList.contains('assign-teachers')) {
@@ -194,32 +217,61 @@
                 toggleModal('teacher-assignment-modal', true);
             }
         });
+
+        // Event delegation for all edit buttons
+        document.getElementById('tab-content-management').addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn')) {
+                const id = e.target.dataset.id;
+                const name = e.target.dataset.name;
+                const collection = e.target.dataset.collection;
+                openEditModal(id, name, collection);
+            }
+        });
+
         document.getElementById('class-selector').addEventListener('change', e => { selectedClassId = e.target.value; renderScheduleForClass(); });
         document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleScheduleChange(e); });
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); document.getElementById('tab-management').addEventListener('click', () => switchTab('management')); document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
         document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
-        // Remove Pagi/Petang listeners as this version is fully independent
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const collection = document.getElementById('edit-collection').value;
+            const newName = document.getElementById('edit-name-input').value.trim();
+            if (id && collection && newName) {
+                await updateDoc(doc(db, getPath(collection), id), { name: newName });
+                toggleModal('edit-modal', false);
+            }
+        });
+        document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
     }
 
-    function initModals() { document.getElementById('modal-container').innerHTML = `<div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div><div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>`; }
+    function openEditModal(id, name, collection) {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-collection').value = collection;
+        document.getElementById('edit-name-input').value = name;
+        document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`;
+        toggleModal('edit-modal', true);
+    }
+
+    function initModals() {
+        document.getElementById('modal-container').innerHTML = `
+            <div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
+            <div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>
+            <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>`; 
+    }
 
     function setupDataListeners() {
         const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule'];
-        
         collectionsToWatch.forEach(name => {
             const path = getPath(name);
-            console.log(`%cListening for data at: ${path}`, 'color: blue; font-weight: bold;');
             onSnapshot(collection(db, path), snapshot => {
                 const dataObject = {};
                 snapshot.forEach(doc => dataObject[doc.id] = {...doc.data(), id: doc.id});
-                
-                // Update the correct global variable
                 if (name === 'classes') classes = dataObject;
                 if (name === 'teachers') teachers = dataObject;
                 if (name === 'subjects') subjects = dataObject;
                 if (name === 'schedule') schedule = dataObject;
-
                 renderAll();
             }, err => console.error(`Error fetching ${name}:`, err));
         });

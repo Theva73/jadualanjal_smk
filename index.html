@@ -658,6 +658,11 @@
 #autocompleteSuggestions .fallback-hint { font-size:11px; padding:6px 8px; opacity:.7; border-bottom:1px solid rgba(0,0,0,.06); }
 </style>
 
+
+<style id="hide-teacher-chip">
+.chip-teacher { display: none !important; }
+</style>
+
 </head>
 <body>
 <div class="main-container">
@@ -4056,10 +4061,10 @@ function enhanceSummaryWithSubjects(){
     const tds = activeTable.querySelectorAll('td');
     tds.forEach(td=>{
       const subEl = td.querySelector('.chip-subject');
-      const tEl   = td.querySelector('.chip-teacher');
-      if(subEl && tEl){
-        const sub = subEl.textContent.trim();
-        const tch = tEl.textContent.trim();
+        const tEl   = td.querySelector('.chip-teacher');
+        const sub = subEl ? subEl.textContent.trim() : (td.dataset.subject||'').trim();
+        const tch = tEl ? tEl.textContent.trim() : (td.dataset.teacher||'').trim();
+        if(sub && tch){
         if(sub && tch){
           teacherToSubject[tch] = teacherToSubject[tch] || new Set();
           teacherToSubject[tch].add(sub);
@@ -4478,65 +4483,6 @@ document.addEventListener('click', (e)=>{
   };
 })();
 
-/* ==== Combined Teacher + Subject entry (override) ==== */
-(function initCombinedNameSubject(){
-  function attachHandler(){
-    const btn = document.getElementById("addNameBtnInModal");
-    const teacherInput = document.getElementById("newTeacherInput");
-    const subjectInput = document.getElementById("newSubjectInput");
-    if(!btn || !subjectInput){ return false; }
-
-    btn.onclick = async function(){
-      try{
-        const teacher = (teacherInput && teacherInput.value || "").trim();
-        const subject = (subjectInput && subjectInput.value || "").trim();
-        if(!teacher && !subject){
-          if(window.showMessage) window.showMessage("Please enter at least a teacher or a subject", "error");
-          return;
-        }
-        let displayEntry = "";
-        if(teacher && subject) displayEntry = `${teacher} – ${subject}`;
-        else if(subject) displayEntry = subject;
-        else displayEntry = teacher;
-
-        const sessionKey = (typeof currentNameListSession!=="undefined" && currentNameListSession) ? currentNameListSession : "pagi";
-        const targetArray = (sessionKey === "pagi") ? (window.namesPagiShared || []) : (window.namesPetangShared || []);
-        targetArray.push(displayEntry);
-        if(sessionKey === "pagi") window.namesPagiShared = targetArray; else window.namesPetangShared = targetArray;
-
-        // Persist to Firestore (sharedNameList collection)
-        if(typeof fbDb !== "undefined"){
-          try{
-            const docId = `${sessionKey}_${displayEntry}`.replace(/[.#$/\[\]]/g,"_"); // sanitize
-            const ref = doc(fbDb, "sharedNameList", docId);
-            await setDoc(ref, { value: displayEntry, session: sessionKey, createdAt: serverTimestamp() });
-          }catch(e){
-            console.error("Firestore write failed:", e);
-          }
-        }
-
-        if(teacherInput) teacherInput.value = "";
-        if(subjectInput) subjectInput.value = "";
-        if(window.showMessage) window.showMessage(`Added: ${displayEntry}`, "success");
-
-        // Re-render the list if renderer exists
-        if(typeof renderNameList === "function") renderNameList();
-      }catch(err){
-        console.error("Add combined entry error:", err);
-        if(window.showMessage) window.showMessage("Failed to add entry", "error");
-      }
-    };
-    return true;
-  }
-
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", attachHandler);
-  } else {
-    attachHandler();
-  }
-})();
-/* ==== End Combined Teacher + Subject override ==== */
-
 /* Compatibility alias for legacy `newNameInput` */
 (function aliasNewNameInput(){
   function doAlias(){
@@ -4552,6 +4498,173 @@ document.addEventListener('click', (e)=>{
   } else {
     doAlias();
   }
+})();
+
+/* ==== Combined Teacher + Subject entry (primary handler) ==== */
+(function forceUnifiedAdd(){
+  function wire(){
+    var oldBtn = document.getElementById('addNameBtnInModal');
+    if(!oldBtn) return false;
+    var btn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(btn, oldBtn);
+
+    btn.addEventListener('click', async function(e){
+      e.preventDefault(); e.stopImmediatePropagation();
+      try{
+        var teacherInput = document.getElementById('newTeacherInput');
+        var subjectInput = document.getElementById('newSubjectInput');
+        var teacher = (teacherInput && teacherInput.value || '').trim();
+        var subject = (subjectInput && subjectInput.value || '').trim();
+        if(!teacher && !subject){
+          window.showMessage && window.showMessage('Please enter at least a teacher or a subject','error');
+          return;
+        }
+        var displayEntry = (teacher && subject) ? (teacher + ' – ' + subject) : (teacher || subject);
+
+        var sessionKey = (window.currentNameListSession === 'petang') ? 'petang' : 'pagi';
+        var arr;
+        if(sessionKey === 'petang'){
+          window.namesPetangShared = window.namesPetangShared || [];
+          arr = window.namesPetangShared;
+        } else {
+          window.namesPagiShared = window.namesPagiShared || [];
+          arr = window.namesPagiShared;
+        }
+        if(!arr.includes(displayEntry)) arr.push(displayEntry);
+
+        // Ensure bare teacher exists for Teacher mode
+        if(teacher){
+          if(!arr.includes(teacher)) arr.push(teacher);
+          try{
+            if(window.fbDb){
+              const refBare = doc(fbDb, 'sharedNameList', (sessionKey + '_' + teacher).replace(/[.#$/\[\]]/g,'_'));
+              await setDoc(refBare, { value: teacher, session: sessionKey, createdAt: serverTimestamp() });
+            }
+          }catch(e){}
+        }
+
+        // Update subjectsState mapping for Subject mode
+        try{
+          if(subject){
+            window.subjectsState = window.subjectsState || {pagi:{}, petang:{}};
+            var bucket = window.subjectsState[sessionKey] || {};
+            var list = bucket[subject] || [];
+            if(teacher && !list.includes(teacher)) list.push(teacher);
+            bucket[subject] = list;
+            window.subjectsState[sessionKey] = bucket;
+            if(typeof saveSubjectsState === 'function'){
+              await saveSubjectsState();
+            }
+          }
+        }catch(e){}
+
+        // Persist combined entry
+        try{
+          if(window.fbDb){
+            const ref = doc(fbDb, 'sharedNameList', (sessionKey + '_' + displayEntry).replace(/[.#$/\[\]]/g,'_'));
+            await setDoc(ref, { value: displayEntry, session: sessionKey, createdAt: serverTimestamp() });
+          }
+        }catch(err){}
+
+        if(teacherInput) teacherInput.value = '';
+        if(subjectInput) subjectInput.value = '';
+        window.showMessage && window.showMessage('Added: ' + displayEntry, 'success');
+
+        if(typeof renderNameList === 'function'){
+          renderNameList();
+        }
+      }catch(err){
+        window.showMessage && window.showMessage('Failed to add entry','error');
+      }
+    }, {capture:true});
+    return true;
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
+
+/* ==== Teacher-mode autocomplete enhancement ==== */
+(function enhanceTeacherAutocomplete(){
+  function sessionKey(){ return (window.currentNameListSession==='petang') ? 'petang' : 'pagi'; }
+
+  function computeTeacherSet(){
+    var sKey = sessionKey();
+    var raw = (sKey==='petang' ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]));
+    var set = new Set();
+    (raw||[]).forEach(function(v){
+      v = (v||'').toString().trim();
+      if(!v) return;
+      var m = v.match(/^(.+?)\s+[–-]\s+.+$/);
+      if(m){ set.add(m[1].trim()); } else { set.add(v); }
+    });
+    try{
+      var bucket = (window.subjectsState && window.subjectsState[sKey]) ? window.subjectsState[sKey] : {};
+      Object.keys(bucket||{}).forEach(function(sub){
+        (bucket[sub]||[]).forEach(function(t){ if(t) set.add(String(t).trim()); });
+      });
+    }catch(e){}
+    var map = new Map();
+    set.forEach(function(name){
+      var key = name.toUpperCase();
+      if(!map.has(key)) map.set(key, name);
+    });
+    return Array.from(map.values()).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); });
+  }
+
+  function refreshAutocompleteTeachers(){
+    try{
+      window.teacherAutocomplete = computeTeacherSet();
+      if(typeof window.updateAutocompleteSuggestions === 'function'){
+        window.updateAutocompleteSuggestions(window.teacherAutocomplete);
+      }
+    }catch(e){}
+  }
+
+  document.addEventListener('focusin', function(e){
+    var td = e.target && e.target.closest && e.target.closest('td');
+    if(!td) return;
+    var mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
+    if(mode === 'teacher'){
+      refreshAutocompleteTeachers();
+    } else {
+      if(typeof window.refreshAutocompleteSubjects === 'function'){
+        window.refreshAutocompleteSubjects();
+      }
+    }
+  });
+  window.refreshAutocompleteTeachers = refreshAutocompleteTeachers;
+})();
+
+/* ==== Subject-only display in cells (render chip + dataset for teacher) ==== */
+(function patchCellRendering(){
+  // Replace existing renderer if present
+  try{
+    window.renderCellChipsIfNeeded = function(cell){
+      if(!cell) return;
+      var el = cell.querySelector('.merged-cell-overlay') || cell;
+      var raw = (el.textContent||'').trim();
+      var parts = raw.split('//');
+      var main = parts[0].trim();
+      var notes = parts.slice(1).join('//').trim();
+      var match = main.match(/^(.+?)\s*>\s*(.+)$/); // Subject > Teacher
+      if(match){
+        var subject = match[1].trim();
+        var teacher = match[2].trim();
+
+        var wrapper = document.createElement('span'); wrapper.className = 'cell-chip';
+        var s = document.createElement('span'); s.className = 'chip-subject'; s.textContent = subject;
+        wrapper.appendChild(s);
+
+        el.textContent = ''; el.appendChild(wrapper);
+        if(teacher) el.dataset.teacher = teacher;
+        if(subject) el.dataset.subject = subject;
+        if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
+      }
+    };
+  }catch(e){}
 })();
 </script>
 

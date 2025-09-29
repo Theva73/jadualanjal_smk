@@ -867,9 +867,13 @@
         console.log("Using Firebase config defined in the script.");
     }
     
-    if (firebaseConfig.apiKey === "AIzaSyEXAMPLE-API-KEYdQquIEx4" || firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey.includes("AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4")) {
-        console.warn("Firebase Auth: Update Firebase API Key if you see this in production.");
-    }
+    // Ensure a stable global __app_id to silence warnings and namespace localStorage/sessionStorage keys
+    window.__app_id = window.__app_id || firebaseConfig.projectId || firebaseConfig.appId || "jadual-3f0aa";
+
+    if (firebaseConfig.apiKey === "AIzaSyEXAMPLE-API-KEYdQquIEx4" || firebaseConfig.apiKey === "YOUR_API_KEY") {
+    console.warn("Firebase Auth: Update Firebase API Key if you see this in production.");
+}
+
     
     const appId = typeof __app_id !== 'undefined' ? __app_id : (firebaseConfig.appId || 'default-shared-scheduler-app');
     if (typeof __app_id === 'undefined') {
@@ -889,7 +893,9 @@
 window.appId = window.appId || (firebaseConfig.projectId || 'jadualanjal_smk');
 fbAuth = getAuth(fbApp);
         fbDb = getFirestore(fbApp);
-        console.log("Firebase services initialized for Shared Scheduler with Project ID:", firebaseConfig.projectId);
+        
+        if (!fbDb) { throw new Error("Firestore not initialized properly!"); }
+console.log("Firebase services initialized for Shared Scheduler with Project ID:", firebaseConfig.projectId);
     } catch (e) {
         console.error("CRITICAL Error initializing Firebase services:", e);
         const userIdDisplayInitError = document.getElementById('userIdDisplay');

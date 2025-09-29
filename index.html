@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadual Anjal (Final Connection)</title>
+    <title>Jadual Anjal (Corrected Connection)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -19,7 +19,7 @@
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">Connected to your existing Firebase data.</p>
+        <p class="text-sm text-gray-500 mt-1">Connecting to your existing Firebase data.</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -88,9 +88,8 @@
       appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
     };
     
-    // --- CORRECTED CONFIGURATION ---
-    // Using the App ID from your original script to ensure it connects to your existing data.
-    const appId = 'default-shared-scheduler-app'; 
+    // Using the App ID directly from your config to ensure paths match
+    const appId = firebaseConfig.appId;
     
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {};
@@ -102,8 +101,9 @@
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
 
-    // This path now correctly matches your original script's data structure
-    const getPath = (collectionName) => `artifacts/${appId}/public/data/${collectionName}`;
+    // --- CORRECTED PATH LOGIC ---
+    // This now matches the structure shown in your Firestore screenshots
+    const getPath = (collectionName) => `${appId}/public/data/${collectionName}`;
 
     function renderAll() {
         renderClasses();
@@ -215,9 +215,12 @@
     function setupDataListeners() {
         if (unsubscribePagi) unsubscribePagi(); if (unsubscribePetang) unsubscribePetang(); if (unsubscribeSubjects) unsubscribeSubjects(); if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeSchedule) unsubscribeSchedule();
         
-        const nameListPath = doc(db, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
-        console.log(`%cListening for teachers at: ${nameListPath.path}`, 'color: blue; font-weight: bold;');
-        const nameListener = onSnapshot(nameListPath, docSnap => {
+        // This is the collection containing the 'pagi' and 'petang' documents
+        const nameListCollectionPath = getPath('sharedNameLists');
+        const nameListDocPath = doc(db, nameListCollectionPath, currentNameListSession);
+        
+        console.log(`%cListening for teachers at: ${nameListDocPath.path}`, 'color: blue; font-weight: bold;');
+        const nameListener = onSnapshot(nameListDocPath, docSnap => {
             const nameArray = docSnap.exists() ? (docSnap.data().names || []) : [];
             teachers = {};
             nameArray.forEach((name, i) => { teachers[`id_${i}_${name.replace(/\s+/g, '')}`] = {name}; });
@@ -252,5 +255,4 @@
 </script>
 </body>
 </html>
-
 

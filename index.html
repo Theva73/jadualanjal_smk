@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Standalone Scheduler with Versions (Auto‑load Latest)</title>
+    <title>School Schedule Planner with Playlists</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -28,7 +28,7 @@
         <nav class="flex flex-wrap space-x-2 sm:space-x-4">
             <button id="tab-schedule" class="tab-btn px-3 py-2 font-medium text-sm rounded-md active">Schedule</button>
             <button id="tab-management" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Management</button>
-            <button id="tab-versions" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Schedule Versions</button>
+            <button id="tab-playlists" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Playlists</button>
             <button id="tab-summary" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Summary</button>
         </nav>
     </div>
@@ -36,11 +36,11 @@
     <!-- Tab Content -->
     <div id="tab-content-schedule" class="tab-panel">
         <div class="mb-4">
-            <label for="class-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Class to View/Edit Schedule:</label>
-            <select id="class-selector" class="w-full max-w-xs p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
+            <label for="playlist-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Playlist to View/Edit:</label>
+            <select id="playlist-selector" class="w-full max-w-xs p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
         </div>
-        <div id="schedule-view" class="overflow-x-auto">
-            <p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>
+        <div id="schedule-view" class="mt-6 space-y-8">
+            <p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a playlist to view schedules.</p>
         </div>
     </div>
 
@@ -93,20 +93,20 @@
         </div>
     </div>
     
-    <div id="tab-content-versions" class="tab-panel hidden">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">Manage Schedule Versions</h2>
+    <div id="tab-content-playlists" class="tab-panel hidden">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Manage Playlists</h2>
         <div class="bg-gray-50 p-4 rounded-lg">
-            <h3 class="text-lg font-semibold mb-3 text-gray-800">Create New Version</h3>
-            <form id="add-version-form" class="flex items-center gap-2 mb-4">
-                <input type="text" id="version-name" placeholder="e.g., Final Term 1" class="flex-grow p-2 text-sm border rounded-md" required>
+            <h3 class="text-lg font-semibold mb-3 text-gray-800">Create New Playlist</h3>
+            <form id="add-playlist-form" class="flex items-center gap-2 mb-4">
+                <input type="text" id="playlist-name" placeholder="e.g., Final Term 1" class="flex-grow p-2 text-sm border rounded-md" required>
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
-                    Save Current Schedule
+                    Save Current as Playlist
                 </button>
             </form>
-            <h3 class="text-lg font-semibold mb-3 text-gray-800">Saved Versions</h3>
-            <div id="version-list" class="space-y-2">
-                <p class="text-sm text-gray-500">No versions saved yet.</p>
+            <h3 class="text-lg font-semibold mb-3 text-gray-800">Saved Playlists</h3>
+            <div id="playlist-list" class="space-y-2">
+                <p class="text-sm text-gray-500">No playlists saved yet.</p>
             </div>
         </div>
     </div>
@@ -136,13 +136,9 @@
     
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, versions = {}, timeslots = {};
-    let selectedClassId = null;
-
-    // Persist last picked class id across reloads
-    const STORAGE_KEY_SELECTED_CLASS = "scheduler_v2_selectedClassId";
+    let activeVersionId = null; // Tracks the currently loaded playlist/version
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
-
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
 
     function getSortedTimeSlots() {
@@ -155,11 +151,10 @@
         renderTeachers();
         renderLocations();
         renderSubjects();
-        renderVersions();
+        renderPlaylists();
         renderTimeSlots();
-        renderClassSelector();
-        // Keep the currently selected class in view if possible
-        renderScheduleForClass();
+        renderPlaylistSelector();
+        renderAllSchedules();
         renderSummaryGrid();
     }
 
@@ -236,44 +231,52 @@
             </div>`).join('') : `<p class="text-sm text-gray-500">No time slots defined.</p>`;
     }
     
-    function renderVersions() {
-        const versionListDiv = document.getElementById('version-list');
-        versionListDiv.innerHTML = Object.keys(versions).length ? Object.entries(versions).sort(([, a], [, b]) => b.createdAt - a.createdAt).map(([id, version]) => `
+    function renderPlaylists() {
+        const playlistListDiv = document.getElementById('playlist-list');
+        playlistListDiv.innerHTML = Object.keys(versions).length ? Object.entries(versions).sort(([, a], [, b]) => b.createdAt - a.createdAt).map(([id, version]) => `
             <div class="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
                 <div>
                     <span class="font-semibold text-gray-800">${version.name}</span>
                     <p class="text-xs text-gray-500">Saved on: ${new Date(version.createdAt).toLocaleString()}</p>
                 </div>
                 <div class="flex gap-2">
-                    <button data-id="${id}" class="load-version bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-semibold hover:bg-green-200">LOAD</button>
-                    <button data-id="${id}" class="delete-version text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                    <button data-id="${id}" class="load-playlist bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-semibold hover:bg-green-200">LOAD</button>
+                    <button data-id="${id}" class="delete-playlist text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
                 </div>
-            </div>`).join('') : `<p class="text-sm text-gray-500">No versions saved yet.</p>`;
+            </div>`).join('') : `<p class="text-sm text-gray-500">No playlists saved yet.</p>`;
     }
 
-    function renderClassSelector() {
-        const selector = document.getElementById('class-selector');
-        const hasClasses = Object.keys(classes).length > 0;
-        selector.disabled = !hasClasses;
-        const currentSelected = selector.value;
-        selector.innerHTML = !hasClasses ? `<option>Please add a class first</option>` : `<option value="">-- Select a Class --</option>` + Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `<option value="${id}">${cls.name}</option>`).join('');
-        selector.value = currentSelected;
-    }
+    function renderPlaylistSelector() {
+        const selector = document.getElementById('playlist-selector');
+        const hasVersions = Object.keys(versions).length > 0;
+        selector.disabled = !hasVersions;
 
-    function setSelectedClass(id) {
-        selectedClassId = id || null;
-        const selector = document.getElementById('class-selector');
-        if (selector) selector.value = selectedClassId || '';
-        if (selectedClassId) {
-            try { localStorage.setItem(STORAGE_KEY_SELECTED_CLASS, selectedClassId); } catch {}
+        if (!hasVersions) {
+            selector.innerHTML = `<option>No saved playlists found</option>`;
+            return;
         }
-        renderScheduleForClass();
+
+        const sortedVersions = Object.entries(versions).sort(([, a], [, b]) => b.createdAt - a.createdAt);
+        selector.innerHTML = sortedVersions.map(([id, version]) =>
+            `<option value="${id}" ${id === activeVersionId ? 'selected' : ''}>${version.name}</option>`
+        ).join('');
     }
 
-    function renderScheduleForClass() {
+    function renderAllSchedules() {
         const scheduleView = document.getElementById('schedule-view');
-        if (!selectedClassId) { scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>'; return; }
         
+        if (!activeVersionId) {
+             scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a playlist to view schedules.</p>'; 
+             return;
+        }
+
+        const sortedClasses = Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name));
+
+        if (sortedClasses.length === 0) {
+            scheduleView.innerHTML = '<p class="text-gray-500 py-8 text-center">No classes found in this playlist. Add classes in the Management tab.</p>';
+            return;
+        }
+
         const sortedTimeSlots = getSortedTimeSlots();
         if (sortedTimeSlots.length === 0) {
             scheduleView.innerHTML = '<p class="text-gray-500 py-8 text-center">Please define time slots in the Management tab first.</p>';
@@ -281,30 +284,51 @@
         }
 
         const locationOptions = `<option value="">-- Lokasi --</option>` + Object.entries(locations).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
-        const classSchedule = Object.values(schedule).filter(entry => entry.classId === selectedClassId);
-
-        const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${sortedTimeSlots.map(slot => {
-            const time = `${slot.start}-${slot.end}`;
-            if (slot.isBreak) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">${time}<br>Rehat</td>`;
-            const slotId = `${day}_${time}`;
-            const entry = classSchedule.find(e => e.slotId === slotId);
-            const subjectNames = entry?.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '<span class="text-gray-400">Not set</span>';
-
-            return `<td class="p-1 border align-top min-w-[180px]"><div class="flex flex-col gap-1">
-                <div class="p-1.5 text-xs bg-gray-50 rounded border border-dashed h-12 overflow-y-auto">${subjectNames}</div>
-                <button data-slot-id="${slotId}" class="select-subjects-btn w-full p-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">Select Subjects</button>
-                <select data-slot-id="${slotId}" data-type="location" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(locations).length ? 'disabled' : ''}>${locationOptions}</select>
-            </div></td>`;
-        }).join('')}</tr>`).join('');
-
-        const timeHeaders = sortedTimeSlots.map(slot => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
-
-        scheduleView.innerHTML = `<table class="min-w-full border-collapse"><thead><tr class="bg-gray-100"><th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Class/Time</th>${timeHeaders}</tr></thead><tbody>${tableBody}</tbody></table>`;
         
-        classSchedule.forEach(entry => {
-            const locationSelect = scheduleView.querySelector(`select[data-slot-id='${entry.slotId}'][data-type='location']`);
-            if (locationSelect) locationSelect.value = entry.locationId || '';
-        });
+        const allTablesHTML = sortedClasses.map(([classId, cls]) => {
+            const classSchedule = Object.values(schedule).filter(entry => entry.classId === classId);
+            const timeHeaders = sortedTimeSlots.map(slot => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
+
+            const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${sortedTimeSlots.map(slot => {
+                const time = `${slot.start}-${slot.end}`;
+                if (slot.isBreak) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">${time}<br>Rehat</td>`;
+                const slotId = `${day}_${time}`;
+                const entry = classSchedule.find(e => e.slotId === slotId);
+                const subjectNames = entry?.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '<span class="text-gray-400">Not set</span>';
+                
+                return `<td class="p-1 border align-top min-w-[180px]"><div class="flex flex-col gap-1">
+                    <div class="p-1.5 text-xs bg-gray-50 rounded border border-dashed h-12 overflow-y-auto">${subjectNames}</div>
+                    <button data-class-id="${classId}" data-slot-id="${slotId}" class="select-subjects-btn w-full p-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">Select Subjects</button>
+                    <select data-class-id="${classId}" data-slot-id="${slotId}" data-type="location" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(locations).length ? 'disabled' : ''}>${locationOptions}</select>
+                </div></td>`;
+            }).join('')}</tr>`).join('');
+            
+            setTimeout(() => {
+                 classSchedule.forEach(entry => {
+                    const locationSelect = scheduleView.querySelector(`select[data-class-id='${classId}'][data-slot-id='${entry.slotId}'][data-type='location']`);
+                    if (locationSelect) locationSelect.value = entry.locationId || '';
+                });
+            }, 0);
+
+            return `
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">${cls.name}</h2>
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="min-w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Day/Time</th>
+                                    ${timeHeaders}
+                                </tr>
+                            </thead>
+                            <tbody>${tableBody}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+
+        }).join('');
+
+        scheduleView.innerHTML = allTablesHTML;
     }
 
     function renderSummaryGrid() {
@@ -389,11 +413,13 @@
     // --- Core Logic Functions ---
     async function handleLocationChange(e) {
         const selectEl = e.target;
-        const { slotId } = selectEl.dataset;
+        const { slotId, classId } = selectEl.dataset;
+        if (!classId) return;
+
         const newLocationId = selectEl.value;
         const [day, time] = slotId.split('_');
         
-        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === classId);
         const existingDocId = existingEntry ? existingEntry.id : null;
         const existingData = existingDocId ? schedule[existingDocId] : {};
         
@@ -405,7 +431,7 @@
             const querySnapshot = await getDocs(q);
             for (const docSnap of querySnapshot.docs) {
                 const entry = docSnap.data();
-                if (entry.classId !== selectedClassId) {
+                if (entry.classId !== classId) {
                     clashFound = true;
                     clashDetails = `Location Clash: Location ${locations[newLocationId]?.name} is already booked for class ${classes[entry.classId]?.name} at this time.`;
                     break;
@@ -428,7 +454,7 @@
             await setDoc(docRef, { 
                 ...existingData,
                 day, time, slotId, 
-                classId: selectedClassId, 
+                classId: classId, 
                 locationId: newLocationId || null 
             }, { merge: true });
         } else if (existingDocId) {
@@ -439,6 +465,9 @@
     async function handleSubjectSelectionSave(e) {
         e.preventDefault();
         const slotId = document.getElementById('modal-slot-id').value;
+        const classId = document.getElementById('modal-class-id').value;
+        if (!classId) return;
+
         const selectedSubjectIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value);
         const [day, time] = slotId.split('_');
 
@@ -451,7 +480,7 @@
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach(docSnap => {
                 const entry = docSnap.data();
-                if (entry.classId === selectedClassId) return;
+                if (entry.classId === classId) return;
 
                 const scheduledSubjectIds = entry.subjectIds || [];
                 const scheduledTeachers = scheduledSubjectIds.flatMap(sid => subjects[sid]?.teacherIds || []).filter(Boolean);
@@ -472,20 +501,20 @@
                 `Details:\n- ${[...new Set(clashDetails)].join('\n- ')}\n\nDo you want to proceed with this assignment anyway?`,
                 "Proceed Anyway",
                 () => {
-                    saveScheduleEntry(slotId, selectedSubjectIds, true);
+                    saveScheduleEntry(classId, slotId, selectedSubjectIds, true);
                 },
                 true
             );
         } else {
-            await saveScheduleEntry(slotId, selectedSubjectIds, false);
+            await saveScheduleEntry(classId, slotId, selectedSubjectIds, false);
         }
 
         toggleModal('subject-selection-modal', false);
     }
 
-    async function saveScheduleEntry(slotId, subjectIds, proceededWithClash) {
+    async function saveScheduleEntry(classId, slotId, subjectIds, proceededWithClash) {
         const [day, time] = slotId.split('_');
-        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === classId);
         const existingDocId = existingEntry ? existingEntry.id : null;
         const schedulePath = getPath('schedule');
         const locationId = existingEntry ? existingEntry.locationId : null;
@@ -494,7 +523,7 @@
             const docRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
             await setDoc(docRef, {
                 day, time, slotId,
-                classId: selectedClassId,
+                classId: classId,
                 subjectIds: subjectIds || [],
                 locationId: locationId || null,
                 proceededWithClash: proceededWithClash || false
@@ -504,7 +533,7 @@
         }
     }
     
-    async function saveVersion(name) {
+    async function savePlaylist(name) {
         if (!name) return;
         const versionData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule, timeslots } };
         await addDoc(collection(db, getPath('versions')), versionData);
@@ -519,7 +548,6 @@
         timeslots = data.timeslots || {};
     }
 
-    // Replace all live collections with a version's data (silent: no modal, used at startup)
     async function replaceAllDataInDBWithVersion(versionData) {
         if (!versionData) return;
         const batch = writeBatch(db);
@@ -552,35 +580,34 @@
         await wb.commit();
     }
 
-    async function loadVersion(versionId) {
+    async function loadPlaylist(versionId) {
         const version = versions[versionId];
         if (!version) return;
         
         openConfirmationModal(
-            `Load Schedule: "${version.name}"?`,
+            `Load Playlist: "${version.name}"?`,
             "This will overwrite all current data. This action cannot be undone.",
-            "Load Version",
+            "Load Playlist",
             async () => {
                 await replaceAllDataInDBWithVersion(version.data);
-                // The onSnapshot listeners will pick this up, but update instantly:
+                activeVersionId = versionId;
                 updateLocalState(version.data);
                 renderAll();
-                postInitialSelection();
-                showToast(`Schedule version "${version.name}" loaded successfully!`);
+                showToast(`Playlist "${version.name}" loaded successfully!`);
             }
         );
     }
     
-    function deleteVersion(versionId) {
+    function deletePlaylist(versionId) {
         const version = versions[versionId];
         if (!version) return;
         openConfirmationModal(
-            `Delete Schedule: "${version.name}"?`,
-            "Are you sure you want to permanently delete this schedule version?",
+            `Delete Playlist: "${version.name}"?`,
+            "Are you sure you want to permanently delete this playlist?",
             "Delete",
             async () => {
                 await deleteDoc(doc(db, getPath('versions'), versionId));
-                showToast("Version deleted.");
+                showToast("Playlist deleted.");
             },
             true
         );
@@ -589,7 +616,7 @@
     // --- UI & Utility Functions ---
     function toggleModal(modalId, show) { const modal = document.getElementById(modalId); if (!modal) return; const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
     
-    function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false) {
+    function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false, onCancel = () => {}) {
         document.getElementById('confirmation-title').textContent = title;
         document.getElementById('confirmation-message').textContent = message;
         const confirmBtn = document.getElementById('confirmation-confirm-btn');
@@ -598,9 +625,16 @@
         
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        
         newConfirmBtn.addEventListener('click', () => {
             onConfirm();
+            toggleModal('confirmation-modal', false);
+        });
+
+        const cancelBtn = document.getElementById('confirmation-cancel-btn');
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        newCancelBtn.addEventListener('click', () => {
+            onCancel();
             toggleModal('confirmation-modal', false);
         });
 
@@ -629,7 +663,7 @@
         document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
         document.getElementById('add-location-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('location-name').value.trim(); if(name) await addDoc(collection(db, getPath('locations')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
-        document.getElementById('add-version-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('version-name').value.trim(); if(name) { await saveVersion(name); showToast('Schedule version saved!'); e.target.reset(); } });
+        document.getElementById('add-playlist-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('playlist-name').value.trim(); if(name) { await savePlaylist(name); showToast('Playlist saved!'); e.target.reset(); } });
         document.getElementById('add-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const start = document.getElementById('timeslot-start').value; const end = document.getElementById('timeslot-end').value; const isBreak = document.getElementById('timeslot-is-break').checked; if (start && end && start < end) { await addDoc(collection(db, getPath('timeslots')), { start, end, isBreak }); e.target.reset(); } else { showToast("Error: End time must be after start time."); }});
 
         document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
@@ -637,7 +671,7 @@
         document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
         document.getElementById('timeslot-list').addEventListener('click', e => { if (e.target.classList.contains('delete-timeslot')) deleteDoc(doc(db, getPath('timeslots'), e.target.dataset.id)); if (e.target.classList.contains('edit-timeslot')) openEditTimeSlotModal(e.target.dataset.id);});
         
-        document.getElementById('version-list').addEventListener('click', e => { if (e.target.classList.contains('load-version')) loadVersion(e.target.dataset.id); if (e.target.classList.contains('delete-version')) deleteVersion(e.target.dataset.id); });
+        document.getElementById('playlist-list').addEventListener('click', e => { if (e.target.classList.contains('load-playlist')) loadPlaylist(e.target.dataset.id); if (e.target.classList.contains('delete-playlist')) deletePlaylist(e.target.dataset.id); });
         
         document.getElementById('subject-list').addEventListener('click', e => {
             if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
@@ -650,16 +684,34 @@
         });
 
         document.getElementById('tab-content-management').addEventListener('click', e => { if (e.target.classList.contains('edit-btn')) { openEditModal(e.target.dataset.id, e.target.dataset.name, e.target.dataset.collection); } });
-        document.getElementById('class-selector').addEventListener('change', e => { setSelectedClass(e.target.value); });
-        document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleLocationChange(e); });
-        document.getElementById('schedule-view').addEventListener('click', e => { if (e.target.classList.contains('select-subjects-btn')) openSubjectSelectionModal(e.target.dataset.slotId); });
         
+        document.getElementById('playlist-selector').addEventListener('change', e => {
+            const newVersionId = e.target.value;
+            const previousVersionId = activeVersionId;
+            const versionToLoad = versions[newVersionId];
+            if (!versionToLoad) return;
+
+            openConfirmationModal(
+                `Load Playlist: "${versionToLoad.name}"?`,
+                "This will overwrite all current unsaved changes.", "Load Playlist",
+                async () => {
+                    await replaceAllDataInDBWithVersion(versionToLoad.data);
+                    activeVersionId = newVersionId;
+                    updateLocalState(versionToLoad.data);
+                    renderAll();
+                    showToast(`Playlist "${versionToLoad.name}" loaded successfully!`);
+                }, false, () => { e.target.value = previousVersionId; }
+            );
+        });
+
+        document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleLocationChange(e); });
+        document.getElementById('schedule-view').addEventListener('click', e => { if (e.target.classList.contains('select-subjects-btn')) openSubjectSelectionModal(e.target.dataset.classId, e.target.dataset.slotId); });
         document.getElementById('subject-selection-form').addEventListener('submit', handleSubjectSelectionSave);
         
         // Tab Navigation
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); 
         document.getElementById('tab-management').addEventListener('click', () => switchTab('management'));
-        document.getElementById('tab-versions').addEventListener('click', () => switchTab('versions'));
+        document.getElementById('tab-playlists').addEventListener('click', () => switchTab('playlists'));
         document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
 
         // Modal Buttons
@@ -670,15 +722,17 @@
         document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
         document.getElementById('edit-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-id').value; const collection = document.getElementById('edit-collection').value; const newName = document.getElementById('edit-name-input').value.trim(); if (id && collection && newName) { await updateDoc(doc(db, getPath(collection), id), { name: newName }); toggleModal('edit-modal', false); } });
         document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
-        document.getElementById('confirmation-cancel-btn').addEventListener('click', () => toggleModal('confirmation-modal', false));
         document.getElementById('cancel-subject-selection-btn').addEventListener('click', () => toggleModal('subject-selection-modal', false));
     }
     
-    function openSubjectSelectionModal(slotId) {
+    function openSubjectSelectionModal(classId, slotId) {
+        if (!classId || !slotId) return;
         const [day, time] = slotId.split('_');
-        document.getElementById('subject-modal-title').textContent = `Select Subjects for ${day} at ${time}`;
+        const className = classes[classId]?.name || 'Unknown Class';
+        document.getElementById('subject-modal-title').textContent = `Select Subjects for ${className} - ${day} at ${time}`;
         document.getElementById('modal-slot-id').value = slotId;
-        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
+        document.getElementById('modal-class-id').value = classId;
+        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === classId);
         const selectedIds = existingEntry?.subjectIds || [];
         const listContainer = document.getElementById('modal-subject-list');
         listContainer.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="subject" value="${id}" ${selectedIds.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${subject.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No subjects found.</p>';
@@ -709,7 +763,7 @@
             <div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>
             <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0 whitespace-pre-wrap"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
-            <div id="subject-selection-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4" id="subject-modal-title">Select Subjects</h3><form id="subject-selection-form"><input type="hidden" id="modal-slot-id"><div id="modal-subject-list" class="space-y-1 max-h-80 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-subject-selection-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Subjects</button></div></form></div></div>
+            <div id="subject-selection-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4" id="subject-modal-title">Select Subjects</h3><form id="subject-selection-form"><input type="hidden" id="modal-slot-id"><input type="hidden" id="modal-class-id"><div id="modal-subject-list" class="space-y-1 max-h-80 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-subject-selection-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Subjects</button></div></form></div></div>
             <div id="timeslot-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Edit Time Slot</h3><form id="edit-timeslot-form"><input type="hidden" id="edit-timeslot-id"><div class="space-y-3"><div class="flex gap-2 items-center"><input type="time" id="edit-timeslot-start" class="w-full p-2 text-sm border rounded-md" required><span>-</span><input type="time" id="edit-timeslot-end" class="w-full p-2 text-sm border rounded-md" required></div><div class="flex items-center"><input id="edit-timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><label for="edit-timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label></div></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-timeslot-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`; 
     }
@@ -730,25 +784,11 @@
                 if (name === 'timeslots') timeslots = dataObject;
                 
                 renderAll();
-                // After first snapshot(s), ensure a class is selected for display.
-                postInitialSelection();
             }, err => console.error(`Error fetching ${name}:`, err));
         });
     }
 
-    // Choose a class automatically (last viewed, else alphabetically first) for immediate display
-    function postInitialSelection() {
-        if (selectedClassId && classes[selectedClassId]) return;
-        let stored = null;
-        try { stored = localStorage.getItem(STORAGE_KEY_SELECTED_CLASS); } catch {}
-        const all = Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name));
-        const firstId = all.length ? all[0][0] : null;
-        const pick = (stored && classes[stored]) ? stored : firstId;
-        if (pick) setSelectedClass(pick);
-    }
-
     async function initializeAppData() {
-        // 1) Try to find the latest saved version ("playlist")
         const versionsRef = collection(db, getPath('versions'));
         const q = query(versionsRef, orderBy("createdAt", "desc"), limit(1));
         const querySnapshot = await getDocs(q);
@@ -756,15 +796,11 @@
         if (!querySnapshot.empty) {
             const latestVersionDoc = querySnapshot.docs[0];
             const latestVersion = latestVersionDoc.data();
-
-            // 2) Write it into the live collections so realtime listeners reflect it
+            activeVersionId = latestVersionDoc.id; 
             await replaceAllDataInDBWithVersion(latestVersion.data);
-
-            // 3) Also set local state immediately for instant UI before listeners return
             updateLocalState(latestVersion.data);
-            showToast(`Auto‑loaded: "${latestVersion.name}"`);
+            showToast(`Auto‑loaded playlist: "${latestVersion.name}"`);
         } else {
-            // Fallback for users without any saved versions.
             const collectionsToFetch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'timeslots'];
             for (const name of collectionsToFetch) {
                 const snapshot = await getDocs(collection(db, getPath(name)));
@@ -779,11 +815,7 @@
             }
         }
         
-        // 4) Render with loaded state, and pick initial class
         renderAll();
-        postInitialSelection();
-
-        // 5) NOW attach the realtime listeners
         setupDataListeners();
     }
     
@@ -794,7 +826,7 @@
             initModals(); attachEventListeners();
             onAuthStateChanged(auth, async (user) => {
                 if (user) { 
-                    if (!userId) { // Prevents re-running on token refresh
+                    if (!userId) { 
                         userId = user.uid; 
                         await initializeAppData();
                     }
@@ -809,3 +841,4 @@
 </script>
 </body>
 </html>
+

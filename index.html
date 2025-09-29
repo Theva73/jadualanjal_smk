@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete School Scheduler</title>
+    <title>Standalone Scheduler with Versions</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -13,32 +13,14 @@
         .modal { transition: opacity 0.3s ease, transform 0.3s ease; }
         select:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
         .summary-clash { background-color: #fee2e2 !important; color: #b91c1c; font-weight: bold; }
-        .schedule-entry {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px 6px;
-            margin-bottom: 4px;
-            border-radius: 4px;
-            background-color: #eef2ff;
-            border: 1px solid #c7d2fe;
-        }
-        .schedule-entry span {
-            font-size: 0.75rem;
-            line-height: 1rem;
-            color: #4338ca;
-        }
-        .delete-entry-btn {
-            background: none; border: none; cursor: pointer; color: #ef4444; padding: 2px;
-        }
-        .delete-entry-btn:hover { color: #b91c1c; }
+        .summary-clash-override { background-color: #fef9c3 !important; color: #a16207; border: 1px solid #fde047; }
     </style>
 </head>
 <body class="p-2 sm:p-4">
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Complete School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">All features integrated with your database.</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">New School Schedule Planner</h1>
+        <p class="text-sm text-gray-500 mt-1">A new, independent database in your Firebase project.</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -104,7 +86,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="tab-content-summary" class="tab-panel hidden">
          <h2 class="text-xl font-semibold mb-4 text-gray-800">Teacher Schedule Summary</h2>
          <div id="summary-grid" class="overflow-x-auto"></div>
@@ -117,9 +99,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // This configuration is taken from your working file.
     const firebaseConfig = {
       apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
       authDomain: "jadual-3f0aa.firebaseapp.com",
@@ -137,7 +118,7 @@
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
 
-    const getPath = (collectionName) => `scheduler_final_${collectionName}`;
+    const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
 
     function renderAll() {
         renderClasses();
@@ -150,27 +131,42 @@
         renderSummaryGrid();
     }
 
+    // --- Data Rendering Functions ---
     function renderClasses() {
         const classListDiv = document.getElementById('class-list');
         classListDiv.innerHTML = Object.keys(classes).length ? Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `
             <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
-                <span>${cls.name}</span><button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                <span>${cls.name}</span>
+                <div class="flex gap-2">
+                    <button data-id="${id}" data-name="${cls.name}" data-collection="classes" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
             </div>`).join('') : `<p class="text-sm text-gray-500">No classes found.</p>`;
     }
     
     function renderTeachers() {
         const teacherListDiv = document.getElementById('teacher-list');
-        teacherListDiv.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `
+        const teacherArray = Object.values(teachers);
+        teacherListDiv.innerHTML = teacherArray.length ? teacherArray.sort((a,b) => a.name.localeCompare(b.name)).map(teacher => `
             <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
-                <span>${teacher.name}</span><button data-id="${id}" class="delete-teacher text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                <span>${teacher.name}</span>
+                 <div class="flex gap-2">
+                    <button data-id="${teacher.id}" data-name="${teacher.name}" data-collection="teachers" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${teacher.id}" class="delete-teacher text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
             </div>`).join('') : `<p class="text-sm text-gray-500">No teachers added yet.</p>`;
     }
 
     function renderLocations() {
         const locationListDiv = document.getElementById('location-list');
-        locationListDiv.innerHTML = Object.keys(locations).length ? Object.entries(locations).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `
+        const locationArray = Object.values(locations);
+        locationListDiv.innerHTML = locationArray.length ? locationArray.sort((a, b) => a.name.localeCompare(b.name)).map(location => `
             <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
-                <span>${loc.name}</span><button data-id="${id}" class="delete-location text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                <span>${location.name}</span>
+                 <div class="flex gap-2">
+                    <button data-id="${location.id}" data-name="${location.name}" data-collection="locations" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${location.id}" class="delete-location text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
             </div>`).join('') : `<p class="text-sm text-gray-500">No locations added yet.</p>`;
     }
 
@@ -182,6 +178,7 @@
                 <div class="flex justify-between items-center">
                     <span class="font-semibold text-gray-800">${subject.name}</span>
                     <div class="flex gap-2">
+                        <button data-id="${id}" data-name="${subject.name}" data-collection="subjects" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
                         <button data-id="${id}" class="assign-teachers bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">ASSIGN</button>
                         <button data-id="${id}" class="delete-subject text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
                     </div>
@@ -190,8 +187,8 @@
             </div>`;
         }).join('') : `<p class="text-sm text-gray-500">No subjects created yet.</p>`;
     }
-
-     function renderVersions() {
+    
+    function renderVersions() {
         const versionListDiv = document.getElementById('version-list');
         versionListDiv.innerHTML = Object.keys(versions).length ? Object.entries(versions).sort(([, a], [, b]) => b.createdAt - a.createdAt).map(([id, version]) => `
             <div class="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
@@ -218,93 +215,220 @@
     function renderScheduleForClass() {
         const scheduleView = document.getElementById('schedule-view');
         if (!selectedClassId) { scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>'; return; }
-        
-        const scheduleEntries = Object.values(schedule).filter(entry => entry.classId === selectedClassId);
+        const locationOptions = `<option value="">-- Lokasi --</option>` + Object.entries(locations).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
+        const classSchedule = Object.values(schedule).filter(entry => entry.classId === selectedClassId);
 
         const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${TIME_SLOTS.map(time => {
             if (time === REHAT_TIME) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">Rehat</td>`;
             const slotId = `${day}_${time}`;
-            const entriesForSlot = scheduleEntries.filter(e => e.slotId === slotId);
-            const entriesHtml = entriesForSlot.map(entry => `
-                <div class="schedule-entry">
-                    <span>
-                        <strong>${subjects[entry.subjectId]?.name || 'N/A'}</strong><br>
-                        ${locations[entry.locationId]?.name || 'N/A'}
-                    </span>
-                    <button data-doc-id="${entry.id}" class="delete-entry-btn" title="Delete entry">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                    </button>
-                </div>
-            `).join('');
+            const entry = classSchedule.find(e => e.slotId === slotId);
+            const subjectNames = entry?.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '<span class="text-gray-400">Not set</span>';
 
-            return `<td class="p-1 border align-top min-w-[180px]">
-                <div class="space-y-1">${entriesHtml}</div>
-                <button data-slot-id="${slotId}" class="add-entry-btn w-full mt-2 text-xs p-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600">+ Add</button>
-            </td>`;
+            return `<td class="p-1 border align-top min-w-[180px]"><div class="flex flex-col gap-1">
+                <div class="p-1.5 text-xs bg-gray-50 rounded border border-dashed h-12 overflow-y-auto">${subjectNames}</div>
+                <button data-slot-id="${slotId}" class="select-subjects-btn w-full p-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">Select Subjects</button>
+                <select data-slot-id="${slotId}" data-type="location" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(locations).length ? 'disabled' : ''}>${locationOptions}</select>
+            </div></td>`;
         }).join('')}</tr>`).join('');
 
         scheduleView.innerHTML = `<table class="min-w-full border-collapse"><thead><tr class="bg-gray-100"><th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Class/Time</th>${TIME_SLOTS.map(ts => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${ts}</th>`).join('')}</tr></thead><tbody>${tableBody}</tbody></table>`;
+        
+        classSchedule.forEach(entry => {
+            const locationSelect = scheduleView.querySelector(`select[data-slot-id='${entry.slotId}'][data-type='location']`);
+            if (locationSelect) locationSelect.value = entry.locationId || '';
+        });
     }
 
     function renderSummaryGrid() {
         const summaryDiv = document.getElementById('summary-grid');
         if (!Object.keys(teachers).length) { summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No teachers to display.</p>`; return; }
-        const teacherSchedules = {};
-        Object.keys(teachers).forEach(tid => { teacherSchedules[tid] = {}; DAYS.forEach(day => teacherSchedules[tid][day] = {}); });
         
-        Object.values(schedule).forEach(entry => {
-            const subject = subjects[entry.subjectId]; const className = classes[entry.classId]?.name || 'Unknown'; const locationName = locations[entry.locationId]?.name;
-            if (subject?.teacherIds) {
-                subject.teacherIds.forEach(tid => {
-                    if (teacherSchedules[tid]?.[entry.day]) {
-                        if (!teacherSchedules[tid][entry.day][entry.time]) teacherSchedules[tid][entry.day][entry.time] = [];
-                        const entryText = `${className} (${subjects[entry.subjectId]?.name}, ${locationName || 'N/A'})`;
-                        teacherSchedules[tid][entry.day][entry.time].push(entryText);
-                    }
+        const teacherSchedules = {};
+        Object.keys(teachers).forEach(tid => {
+            teacherSchedules[tid] = {};
+            DAYS.forEach(day => {
+                teacherSchedules[tid][day] = {};
+                TIME_SLOTS.forEach(time => {
+                    teacherSchedules[tid][day][time] = [];
                 });
-            }
+            });
+        });
+
+        Object.values(schedule).forEach(entry => {
+            const className = classes[entry.classId]?.name || '???';
+            const locationName = locations[entry.locationId]?.name || '';
+            const subjectIds = entry.subjectIds || [];
+
+            subjectIds.forEach(subjectId => {
+                const subject = subjects[subjectId];
+                if (subject?.teacherIds) {
+                    subject.teacherIds.forEach(tid => {
+                        if (teacherSchedules[tid]?.[entry.day]?.[entry.time]) {
+                            const text = `${subject.name} @ ${className} ${locationName ? `(${locationName})` : ''}`;
+                            teacherSchedules[tid][entry.day][entry.time].push({
+                                text,
+                                proceededWithClash: entry.proceededWithClash
+                            });
+                        }
+                    });
+                }
+            });
         });
         
-        const dayHeaders = DAYS.map(day => `<th colspan="${TIME_SLOTS.length}" class="p-2 border font-semibold text-center">${day}</th>`).join('');
-        const timeHeaders = TIME_SLOTS.map(ts => `<th class="p-2 border font-semibold whitespace-nowrap">${ts}</th>`).join('');
-        summaryDiv.innerHTML = `<p class="text-xs text-gray-500 mb-2">Clashes (multiple assignments in one slot) are highlighted in red.</p><table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Nama/Masa</th>${dayHeaders}</tr><tr class="bg-gray-100">${DAYS.map(() => timeHeaders).join('')}</tr></thead><tbody>${Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([tid, teacher]) => `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${teacher.name}</td>${DAYS.map(day => TIME_SLOTS.map(time => { if (time === REHAT_TIME) return `<td class="p-1 border bg-green-50"></td>`; const classesAssigned = teacherSchedules[tid]?.[day]?.[time] || []; const isClash = classesAssigned.length > 1; return `<td class="p-2 border align-middle text-center ${isClash ? 'summary-clash' : ''}" title="${day} ${time}">${classesAssigned.join('<br>')}</td>`; }).join('')).join('')}</tr>`).join('')}</tbody></table>`;
+        const summaryHtml = `
+            <p class="text-xs text-gray-500 mb-2">Organic clashes (multiple assignments in one slot) are highlighted in <span class="text-red-600 font-semibold">red</span>. Overridden clashes are highlighted in <span class="text-yellow-600 font-semibold">yellow</span>.</p>
+            <table class="min-w-full border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Teacher</th>
+                        ${DAYS.map(day => `<th class="p-2 border text-center font-semibold" colspan="${TIME_SLOTS.length}">${day}</th>`).join('')}
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <th class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Time</th>
+                        ${DAYS.map(() => TIME_SLOTS.map(ts => `<th class="p-2 border font-semibold whitespace-nowrap">${ts}</th>`).join('')).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([tid, teacher]) => `
+                        <tr class="even:bg-gray-50">
+                            <td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${teacher.name}</td>
+                            ${DAYS.map(day => 
+                                TIME_SLOTS.map(time => {
+                                    if (time === REHAT_TIME) return `<td class="p-1 border bg-green-50"></td>`;
+                                    const assignments = teacherSchedules[tid]?.[day]?.[time] || [];
+                                    const hasOverride = assignments.some(a => a.proceededWithClash);
+                                    const isOrganicClash = assignments.length > 1;
+                                    
+                                    let cellClass = '';
+                                    if(hasOverride) cellClass = 'summary-clash-override';
+                                    else if (isOrganicClash) cellClass = 'summary-clash';
+
+                                    const content = assignments.map(a => a.text).join('<br>');
+                                    return `<td class="p-2 border align-middle text-center ${cellClass}" title="${day} ${time}">${content}</td>`;
+                                }).join('')
+                            ).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+        summaryDiv.innerHTML = summaryHtml;
     }
 
-    async function addScheduleEntry(slotId, subjectId, locationId) {
-        if (!subjectId) { alert("Please select a subject."); return; }
+    // --- Core Logic Functions ---
+    async function handleLocationChange(e) {
+        const selectEl = e.target;
+        const { slotId } = selectEl.dataset;
+        const newLocationId = selectEl.value;
+        const [day, time] = slotId.split('_');
+        
+        const existingEntry = Object.entries(schedule).find(([, entry]) => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingDocId = existingEntry ? existingEntry[0] : null;
+        const existingData = existingDocId ? schedule[existingDocId] : {};
+        
+        let clashFound = false;
+        let clashDetails = '';
+
+        if (newLocationId) {
+            const q = query(collection(db, getPath('schedule')), where("day", "==", day), where("time", "==", time), where("locationId", "==", newLocationId));
+            const querySnapshot = await getDocs(q);
+            for (const docSnap of querySnapshot.docs) {
+                const entry = docSnap.data();
+                if (entry.classId !== selectedClassId) {
+                    clashFound = true;
+                    clashDetails = `Location Clash: Location ${locations[newLocationId]?.name} is already booked for class ${classes[entry.classId]?.name} at this time.`;
+                    break;
+                }
+            }
+        }
+
+        if (clashFound) {
+            document.getElementById('clash-alert-message').textContent = clashDetails;
+            toggleModal('clash-alert-modal', true);
+            selectEl.value = existingData.locationId || '';
+            return;
+        }
+
+        const schedulePath = getPath('schedule');
+        const subjectIds = existingData.subjectIds || [];
+        
+        if (subjectIds.length > 0 || newLocationId) {
+            const docRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
+            await setDoc(docRef, { 
+                ...existingData,
+                day, time, slotId, 
+                classId: selectedClassId, 
+                locationId: newLocationId || null 
+            }, { merge: true });
+        } else if (existingDocId) {
+            await deleteDoc(doc(db, schedulePath, existingDocId));
+        }
+    }
+
+    async function handleSubjectSelectionSave(e) {
+        e.preventDefault();
+        const slotId = document.getElementById('modal-slot-id').value;
+        const selectedSubjectIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value);
         const [day, time] = slotId.split('_');
 
-        let clashes = [];
-        const teachersForSubject = subjects[subjectId]?.teacherIds || [];
-        if (teachersForSubject.length > 0) {
+        let clashFound = false;
+        let clashDetails = [];
+        const newTeachers = selectedSubjectIds.flatMap(sid => subjects[sid]?.teacherIds || []).filter((v, i, a) => a.indexOf(v) === i);
+
+        if (newTeachers.length > 0) {
             const q = query(collection(db, getPath('schedule')), where("day", "==", day), where("time", "==", time));
             const querySnapshot = await getDocs(q);
-            querySnapshot.forEach(doc => {
-                const entry = doc.data();
-                const scheduledTeachers = subjects[entry.subjectId]?.teacherIds || [];
-                const intersection = teachersForSubject.filter(tid => scheduledTeachers.includes(tid));
+            querySnapshot.forEach(docSnap => {
+                const entry = docSnap.data();
+                if (entry.classId === selectedClassId) return;
+
+                const scheduledSubjectIds = entry.subjectIds || [];
+                const scheduledTeachers = scheduledSubjectIds.flatMap(sid => subjects[sid]?.teacherIds || []).filter(Boolean);
+                const intersection = newTeachers.filter(tid => scheduledTeachers.includes(tid));
+
                 if (intersection.length > 0) {
-                    clashes.push(`Teacher Clash: ${intersection.map(tid => teachers[tid]?.name).join(', ')} is already scheduled for ${subjects[entry.subjectId]?.name} in class ${classes[entry.classId]?.name}.`);
+                    clashFound = true;
+                    const teacherNames = intersection.map(tid => teachers[tid]?.name).join(', ');
+                    const clashClass = classes[entry.classId]?.name;
+                    clashDetails.push(`Teacher Clash: ${teacherNames} already scheduled for another class (${clashClass}).`);
                 }
             });
         }
-        if (locationId) {
-            const q = query(collection(db, getPath('schedule')), where("day", "==", day), where("time", "==", time), where("locationId", "==", locationId));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                const entry = querySnapshot.docs[0].data();
-                clashes.push(`Location Clash: ${locations[locationId]?.name} is already booked for class ${classes[entry.classId]?.name}.`);
-            }
-        }
         
-        const saveData = async () => {
-            await addDoc(collection(db, getPath('schedule')), { day, time, slotId, classId: selectedClassId, subjectId, locationId: locationId || null });
-        };
-
-        if (clashes.length > 0) {
-            openClashConfirmationModal(clashes.join('\n'), saveData);
+        if (clashFound) {
+            openConfirmationModal(
+                "Scheduling Clash Detected!",
+                `Details:\n- ${[...new Set(clashDetails)].join('\n- ')}\n\nDo you want to proceed with this assignment anyway?`,
+                "Proceed Anyway",
+                () => {
+                    saveScheduleEntry(slotId, selectedSubjectIds, true);
+                },
+                true
+            );
         } else {
-            await saveData();
+            await saveScheduleEntry(slotId, selectedSubjectIds, false);
+        }
+
+        toggleModal('subject-selection-modal', false);
+    }
+
+    async function saveScheduleEntry(slotId, subjectIds, proceededWithClash) {
+        const [day, time] = slotId.split('_');
+        const existingEntry = Object.entries(schedule).find(([, entry]) => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingDocId = existingEntry ? existingEntry[0] : null;
+        const schedulePath = getPath('schedule');
+        const locationId = existingEntry ? schedule[existingDocId].locationId : null;
+
+        if (subjectIds.length > 0 || locationId) {
+            const docRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
+            await setDoc(docRef, {
+                day, time, slotId,
+                classId: selectedClassId,
+                subjectIds: subjectIds || [],
+                locationId: locationId || null,
+                proceededWithClash: proceededWithClash || false
+            }, { merge: true });
+        } else if (existingDocId) {
+            await deleteDoc(doc(db, schedulePath, existingDocId));
         }
     }
     
@@ -320,24 +444,33 @@
         
         openConfirmationModal(
             `Load Schedule: "${version.name}"?`,
-            "This will overwrite all current data. This action cannot be undone.",
+            "This will overwrite all current classes, teachers, subjects, locations, and the schedule. This action cannot be undone.",
             "Load Version",
             async () => {
                 const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule } = version.data;
-                const batch = writeBatch(db);
                 const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule'];
+                
+                const batch = writeBatch(db);
                 for (const coll of collectionsToClear) {
                     const snapshot = await getDocs(collection(db, getPath(coll)));
                     snapshot.forEach(doc => batch.delete(doc.ref));
                 }
+
                 const addDataToBatch = (coll, data) => {
-                    if (data) Object.entries(data).forEach(([id, itemData]) => batch.set(doc(db, getPath(coll), id), itemData));
+                    if (data) {
+                        for (const [id, itemData] of Object.entries(data)) {
+                            const { id: docId, ...restOfData } = itemData;
+                            batch.set(doc(db, getPath(coll), id), restOfData);
+                        }
+                    }
                 };
+
                 addDataToBatch('classes', vClasses);
                 addDataToBatch('teachers', vTeachers);
                 addDataToBatch('subjects', vSubjects);
                 addDataToBatch('locations', vLocations);
                 addDataToBatch('schedule', vSchedule);
+
                 await batch.commit();
                 showToast("Schedule version loaded successfully!");
             }
@@ -347,55 +480,39 @@
     function deleteVersion(versionId) {
         const version = versions[versionId];
         if (!version) return;
-        openConfirmationModal( `Delete Schedule: "${version.name}"?`, "This action cannot be undone.", "Delete",
+        openConfirmationModal(
+            `Delete Schedule: "${version.name}"?`,
+            "Are you sure you want to permanently delete this schedule version? This action cannot be undone.",
+            "Delete",
             async () => {
                 await deleteDoc(doc(db, getPath('versions'), versionId));
                 showToast("Version deleted.");
-            }, true 
+            },
+            true
         );
     }
 
-    function switchTab(targetTabId) {
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`tab-content-${targetTabId}`).classList.remove('hidden');
-        document.getElementById(`tab-${targetTabId}`).classList.add('active');
-    }
-
-    function toggleModal(modalId, show) {
-        const modal = document.getElementById(modalId);
-        if(!modal) return;
-        const modalContent = modal.querySelector('.modal');
-        if (show) {
-            modal.classList.remove('hidden');
-            setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20);
-        } else {
-            modalContent.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        }
-    }
+    // --- UI & Utility Functions ---
+    function toggleModal(modalId, show) { const modal = document.getElementById(modalId); const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
     
-    function openClashConfirmationModal(message, onConfirm) {
-        document.getElementById('clash-confirmation-message').textContent = message;
-        const confirmBtn = document.getElementById('clash-confirmation-proceed-btn');
-        const newConfirmBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        newConfirmBtn.addEventListener('click', () => { onConfirm(); toggleModal('clash-confirmation-modal', false); });
-        toggleModal('clash-confirmation-modal', true);
-    }
-    
-     function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false) {
+    function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false) {
         document.getElementById('confirmation-title').textContent = title;
         document.getElementById('confirmation-message').textContent = message;
         const confirmBtn = document.getElementById('confirmation-confirm-btn');
         confirmBtn.textContent = confirmText;
         confirmBtn.className = `px-4 py-2 text-sm rounded-md text-white ${isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`;
+        
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        newConfirmBtn.addEventListener('click', () => { onConfirm(); toggleModal('confirmation-modal', false); });
+        
+        newConfirmBtn.addEventListener('click', () => {
+            onConfirm();
+            toggleModal('confirmation-modal', false);
+        });
+
         toggleModal('confirmation-modal', true);
     }
-    
+
     function showToast(message) {
         const toast = document.getElementById('toast-notification');
         toast.textContent = message;
@@ -406,76 +523,98 @@
         }, 3000);
     }
 
+    function switchTab(targetTabId) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-content-${targetTabId}`).classList.remove('hidden');
+        document.getElementById(`tab-${targetTabId}`).classList.add('active');
+    }
+
     function attachEventListeners() {
         document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name }); e.target.reset(); });
         document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
         document.getElementById('add-location-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('location-name').value.trim(); if(name) await addDoc(collection(db, getPath('locations')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
         document.getElementById('add-version-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('version-name').value.trim(); if(name) { await saveVersion(name); showToast('Schedule version saved!'); e.target.reset(); } });
-        
-        document.getElementById('class-list').addEventListener('click', async e => { if (e.target.closest('.delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.closest('.delete-class').dataset.id)); });
-        document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.closest('.delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.closest('.delete-teacher').dataset.id)); });
-        document.getElementById('location-list').addEventListener('click', async e => { if (e.target.closest('.delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.closest('.delete-location').dataset.id)); });
+
+        document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
+        document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
+        document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
         
         document.getElementById('version-list').addEventListener('click', e => {
-            if (e.target.closest('.load-version')) loadVersion(e.target.closest('.load-version').dataset.id);
-            if (e.target.closest('.delete-version')) deleteVersion(e.target.closest('.delete-version').dataset.id);
+            if (e.target.classList.contains('load-version')) loadVersion(e.target.dataset.id);
+            if (e.target.classList.contains('delete-version')) deleteVersion(e.target.dataset.id);
         });
         
         document.getElementById('subject-list').addEventListener('click', e => {
-            const target = e.target;
-            if (target.closest('.delete-subject')) deleteDoc(doc(db, getPath('subjects'), target.closest('.delete-subject').dataset.id));
-            if (target.closest('.assign-teachers')) {
-                const subjectId = target.closest('.assign-teachers').dataset.id;
-                document.getElementById('modal-subject-name').textContent = subjects[subjectId].name;
-                document.getElementById('modal-subject-id').value = subjectId;
+            if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
+            if (e.target.classList.contains('assign-teachers')) {
+                const subjectId = e.target.dataset.id; const subject = subjects[subjectId]; document.getElementById('modal-subject-name').textContent = subject.name; document.getElementById('modal-subject-id').value = subjectId;
                 const listContainer = document.getElementById('modal-teacher-list');
-                listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subjects[subjectId].teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers to assign.</p>';
+                listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subject.teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers found to assign.</p>';
                 toggleModal('teacher-assignment-modal', true);
             }
         });
-        
-        document.getElementById('schedule-view').addEventListener('click', async e => {
-            const addBtn = e.target.closest('.add-entry-btn');
-            const deleteBtn = e.target.closest('.delete-entry-btn');
-            if (addBtn) {
-                document.getElementById('add-entry-slot-id').value = addBtn.dataset.slotId;
-                toggleModal('add-entry-modal', true);
-            }
-            if (deleteBtn) {
-                openConfirmationModal('Delete Entry?', 'Are you sure you want to delete this schedule entry?', 'Delete', async () => {
-                     await deleteDoc(doc(db, getPath('schedule'), deleteBtn.dataset.docId));
-                }, true);
-            }
-        });
 
+        document.getElementById('tab-content-management').addEventListener('click', e => { if (e.target.classList.contains('edit-btn')) { openEditModal(e.target.dataset.id, e.target.dataset.name, e.target.dataset.collection); } });
         document.getElementById('class-selector').addEventListener('change', e => { selectedClassId = e.target.value; renderScheduleForClass(); });
-        document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule'));
+        document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleLocationChange(e); });
+        document.getElementById('schedule-view').addEventListener('click', e => { if (e.target.classList.contains('select-subjects-btn')) openSubjectSelectionModal(e.target.dataset.slotId); });
+        
+        document.getElementById('subject-selection-form').addEventListener('submit', handleSubjectSelectionSave);
+        
+        // Tab Navigation
+        document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); 
         document.getElementById('tab-management').addEventListener('click', () => switchTab('management'));
         document.getElementById('tab-versions').addEventListener('click', () => switchTab('versions'));
         document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
 
+        // Modal Buttons
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
-        document.getElementById('add-entry-form').addEventListener('submit', async e => { e.preventDefault(); const slotId = document.getElementById('add-entry-slot-id').value; const subjectId = document.getElementById('add-entry-subject-id').value; const locationId = document.getElementById('add-entry-location-id').value; await addScheduleEntry(slotId, subjectId, locationId); toggleModal('add-entry-modal', false); e.target.reset(); });
-        
-        document.addEventListener('click', e => {
-            if (e.target.id === 'cancel-add-entry-btn') toggleModal('add-entry-modal', false);
-            if (e.target.id === 'cancel-teacher-assignment-btn') toggleModal('teacher-assignment-modal', false);
-            if (e.target.id === 'clash-confirmation-cancel-btn') toggleModal('clash-confirmation-modal', false);
-            if (e.target.id === 'confirmation-cancel-btn') toggleModal('confirmation-modal', false);
-        });
+        document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); 
+        document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
+        document.getElementById('edit-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-id').value; const collection = document.getElementById('edit-collection').value; const newName = document.getElementById('edit-name-input').value.trim(); if (id && collection && newName) { await updateDoc(doc(db, getPath(collection), id), { name: newName }); toggleModal('edit-modal', false); } });
+        document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
+        document.getElementById('confirmation-cancel-btn').addEventListener('click', () => toggleModal('confirmation-modal', false));
+        document.getElementById('cancel-subject-selection-btn').addEventListener('click', () => toggleModal('subject-selection-modal', false));
+
+    }
+    
+    function openSubjectSelectionModal(slotId) {
+        const [day, time] = slotId.split('_');
+        document.getElementById('subject-modal-title').textContent = `Select Subjects for ${day} at ${time}`;
+        document.getElementById('modal-slot-id').value = slotId;
+
+        const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === selectedClassId);
+        const selectedIds = existingEntry?.subjectIds || [];
+
+        const listContainer = document.getElementById('modal-subject-list');
+        listContainer.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => `
+            <label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                <input type="checkbox" name="subject" value="${id}" ${selectedIds.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                <span>${subject.name}</span>
+            </label>`).join('') : '<p class="text-sm text-gray-500">No subjects found.</p>';
+
+        toggleModal('subject-selection-modal', true);
+    }
+
+    function openEditModal(id, name, collection) {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-collection').value = collection;
+        document.getElementById('edit-name-input').value = name;
+        document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`;
+        toggleModal('edit-modal', true);
     }
 
     function initModals() {
-        const subjectOptions = `<option value="">-- Select Subject --</option>` + Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, sub]) => `<option value="${id}">${sub.name}</option>`).join('');
-        const locationOptions = `<option value="">-- Select Location (Optional) --</option>` + Object.entries(locations).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
-
         document.getElementById('modal-container').innerHTML = `
-            <div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-teacher-assignment-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
-            <div id="add-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Add Schedule Entry</h3><form id="add-entry-form"><input type="hidden" id="add-entry-slot-id"><div class="space-y-4"><select id="add-entry-subject-id" class="w-full p-2 border rounded-md" required>${subjectOptions}</select><select id="add-entry-location-id" class="w-full p-2 border rounded-md">${locationOptions}</select></div><div class="flex justify-end gap-3 mt-6"><button type="button" id="cancel-add-entry-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Entry</button></div></form></div></div>
-            <div id="clash-confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2 whitespace-pre-wrap" id="clash-confirmation-message"></p><p class="text-sm font-semibold mt-4">Do you want to proceed anyway?</p><div class="mt-5 flex justify-end gap-3"><button type="button" id="clash-confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="clash-confirmation-proceed-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">Proceed Anyway</button></div></div></div>
-            <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
-            <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`;
+            <div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
+            <div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>
+            <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
+            <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0 whitespace-pre-wrap"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
+            <div id="subject-selection-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4" id="subject-modal-title">Select Subjects</h3><form id="subject-selection-form"><input type="hidden" id="modal-slot-id"><div id="modal-subject-list" class="space-y-1 max-h-80 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-subject-selection-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Subjects</button></div></form></div></div>
+            <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`; 
+        document.getElementById('cancel-subject-selection-btn').addEventListener('click', () => toggleModal('subject-selection-modal', false));
     }
 
     function setupDataListeners() {
@@ -490,8 +629,6 @@
                 if (name === 'schedule') schedule = dataObject;
                 if (name === 'locations') locations = dataObject;
                 if (name === 'versions') versions = dataObject;
-
-                if (['subjects', 'locations'].includes(name)) initModals();
                 renderAll();
             }, err => console.error(`Error fetching ${name}:`, err));
         });
@@ -506,13 +643,7 @@
                 if (user) { userId = user.uid; setupDataListeners(); } 
                 else { signInAnonymously(auth); }
             });
-        } catch (error) {
-             console.error("Firebase initialization failed:", error);
-             document.body.innerHTML = `<div class="p-8 text-center bg-red-100 text-red-700 rounded-lg">
-                <h2 class="text-xl font-bold">Error: Database Connection Failed</h2>
-                <p class="mt-2">There was an issue initializing the connection to the Firebase database. Please check the console for more details.</p>
-             </div>`;
-        }
+        } catch (error) { console.error("Firebase initialization failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check console.</div>`; }
     }
 
     main();

@@ -4581,6 +4581,73 @@ document.addEventListener('click', (e)=>{
     wire();
   }
 })();
+
+/* ==== Teacher-mode autocomplete enhancement ==== */
+(function enhanceTeacherAutocomplete(){
+  function sessionKey(){ return (window.currentNameListSession==='petang') ? 'petang' : 'pagi'; }
+
+  function computeTeacherSet(){
+    var sKey = sessionKey();
+    var raw = (sKey==='petang' ? (window.namesPetangShared||[]) : (window.namesPagiShared||[]));
+    var set = new Set();
+
+    // from shared names (plain and combined "Teacher – Subject")
+    (raw||[]).forEach(function(v){
+      v = (v||'').toString().trim();
+      if(!v) return;
+      // Split "Teacher – Subject" (en dash) OR "Teacher - Subject" fallback
+      var m = v.match(/^(.+?)\s+[–-]\s+.+$/);
+      if(m){ set.add(m[1].trim()); } else {
+        // ignore bare subject-only (heuristic: contains spaces with bracket or starts with uppercase? keep simple)
+        set.add(v);
+      }
+    });
+
+    // from subjectsState mapping (subject -> teachers)
+    try{
+      var bucket = (window.subjectsState && window.subjectsState[sKey]) ? window.subjectsState[sKey] : {};
+      Object.keys(bucket||{}).forEach(function(sub){
+        (bucket[sub]||[]).forEach(function(t){ if(t) set.add(String(t).trim()); });
+      });
+    }catch(e){}
+
+    // normalize & dedupe case-insensitively
+    var map = new Map();
+    set.forEach(function(name){
+      var key = name.toUpperCase();
+      if(!map.has(key)) map.set(key, name);
+    });
+    return Array.from(map.values()).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); });
+  }
+
+  function refreshAutocompleteTeachers(){
+    try{
+      window.teacherAutocomplete = computeTeacherSet();
+      // If the app exposes a function to update UI suggestions, try to call it
+      if(typeof window.updateAutocompleteSuggestions === 'function'){
+        window.updateAutocompleteSuggestions(window.teacherAutocomplete);
+      }
+    }catch(e){ console.warn('refreshAutocompleteTeachers failed', e); }
+  }
+
+  // On focus into any timetable cell, refresh according to mode
+  document.addEventListener('focusin', function(e){
+    var td = e.target && e.target.closest && e.target.closest('td');
+    if(!td) return;
+    var mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
+    if(mode === 'teacher'){
+      refreshAutocompleteTeachers();
+    } else {
+      if(typeof window.refreshAutocompleteSubjects === 'function'){
+        window.refreshAutocompleteSubjects();
+      }
+    }
+  });
+
+  // Expose for manual refresh
+  window.refreshAutocompleteTeachers = refreshAutocompleteTeachers;
+})();
+/* ==== End Teacher-mode autocomplete enhancement ==== */
 </script>
 
 </body>

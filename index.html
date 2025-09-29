@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadual Anjal (Corrected Path)</title>
+    <title>Jadual Anjal (Final Connection)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -19,7 +19,7 @@
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">Connecting to your existing Firebase data.</p>
+        <p class="text-sm text-gray-500 mt-1">Connected to your existing Firebase data.</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -88,10 +88,12 @@
       appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
     };
     
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-jadual-final-integrated';
+    // --- CORRECTED CONFIGURATION ---
+    // Using the App ID from your original script to ensure it connects to your existing data.
+    const appId = 'default-shared-scheduler-app'; 
+    
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {};
-    let namesPagiShared = [], namesPetangShared = [];
     let selectedClassId = null;
     let currentNameListSession = 'pagi';
     let unsubscribePagi = null, unsubscribePetang = null, unsubscribeSubjects = null, unsubscribeClasses = null, unsubscribeSchedule = null;
@@ -210,37 +212,27 @@
     function initModals() { document.getElementById('modal-container').innerHTML = `<div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div><div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>`; }
 
     function setupDataListeners() {
-        // Unsubscribe from old listeners to prevent duplicates
-        if (unsubscribePagi) unsubscribePagi();
-        if (unsubscribePetang) unsubscribePetang();
-        if (unsubscribeSubjects) unsubscribeSubjects();
-        if (unsubscribeClasses) unsubscribeClasses();
-        if (unsubscribeSchedule) unsubscribeSchedule();
+        if (unsubscribePagi) unsubscribePagi(); if (unsubscribePetang) unsubscribePetang(); if (unsubscribeSubjects) unsubscribeSubjects(); if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeSchedule) unsubscribeSchedule();
         
-        // Listen to the active name list (Pagi or Petang)
         const nameListPath = doc(db, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
-        console.log(`Listening for data at: ${nameListPath.path}`);
-        const nameListListener = onSnapshot(nameListPath, docSnap => {
+        console.log(`%cListening for teachers at: ${nameListPath.path}`, 'color: blue; font-weight: bold;');
+        const nameListener = onSnapshot(nameListPath, docSnap => {
             const nameArray = docSnap.exists() ? (docSnap.data().names || []) : [];
             teachers = {};
             nameArray.forEach((name, i) => { teachers[`id_${i}_${name.replace(/\s+/g, '')}`] = {name}; });
             renderAll();
         });
 
-        if(currentNameListSession === 'pagi') unsubscribePagi = nameListListener;
-        else unsubscribePetang = nameListListener;
+        if(currentNameListSession === 'pagi') unsubscribePagi = nameListener;
+        else unsubscribePetang = nameListener;
         
-        // Listen to the new collections
-        const subjectsPath = getPath('subjects');
-        console.log(`Listening for data at: ${subjectsPath}`);
+        const subjectsPath = getPath('subjects'); console.log(`%cListening for subjects at: ${subjectsPath}`, 'color: green;');
         unsubscribeSubjects = onSnapshot(collection(db, subjectsPath), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); });
         
-        const classesPath = getPath('classes');
-        console.log(`Listening for data at: ${classesPath}`);
+        const classesPath = getPath('classes'); console.log(`%cListening for classes at: ${classesPath}`, 'color: purple;');
         unsubscribeClasses = onSnapshot(collection(db, classesPath), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); });
         
-        const schedulePath = getPath('schedule');
-        console.log(`Listening for data at: ${schedulePath}`);
+        const schedulePath = getPath('schedule'); console.log(`%cListening for schedule at: ${schedulePath}`, 'color: orange;');
         unsubscribeSchedule = onSnapshot(collection(db, schedulePath), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); });
     }
     

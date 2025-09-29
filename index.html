@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Schedule Planner - Master Schedule</title>
+    <title>School Schedule Planner with Playlists</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -22,7 +22,7 @@
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">Editing the Master Schedule (All changes are saved automatically)</p>
+        <p class="text-sm text-gray-500 mt-1">Manage multiple schedule playlists.</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -30,6 +30,7 @@
         <nav class="flex flex-wrap space-x-2 sm:space-x-4">
             <button id="tab-schedule" class="tab-btn px-3 py-2 font-medium text-sm rounded-md active">Schedule</button>
             <button id="tab-management" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Management</button>
+            <button id="tab-playlists" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Playlists</button>
             <button id="tab-summary" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Summary</button>
         </nav>
     </div>
@@ -102,6 +103,24 @@
             </div>
         </div>
     </div>
+    
+    <div id="tab-content-playlists" class="tab-panel hidden">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Manage Schedule Playlists</h2>
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-lg font-semibold mb-3 text-gray-800">Create New Playlist</h3>
+            <form id="add-playlist-form" class="flex items-center gap-2 mb-4">
+                <input type="text" id="playlist-name" placeholder="e.g., Final Term 1" class="flex-grow p-2 text-sm border rounded-md" required>
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    Save Current Schedule
+                </button>
+            </form>
+            <h3 class="text-lg font-semibold mb-3 text-gray-800">Saved Playlists</h3>
+            <div id="playlist-list" class="space-y-2">
+                <p class="text-sm text-gray-500">No playlists saved yet.</p>
+            </div>
+        </div>
+    </div>
 
     <div id="tab-content-summary" class="tab-panel hidden">
          <h2 class="text-xl font-semibold mb-4 text-gray-800">Class Schedule Summary</h2>
@@ -127,7 +146,7 @@
     };
     
     let db, auth, userId;
-    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, timeslots = {};
+    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, timeslots = {}, playlists = {};
     let selectedSubjectForClassAssignment = null;
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
@@ -145,6 +164,7 @@
         renderSubjects();
         renderTimeSlots();
         renderSubjectClassAssignment();
+        renderPlaylists();
         renderAllSchedules();
         renderSummaryGrid();
     }
@@ -249,6 +269,21 @@
                 </div>
             </div>`).join('') : `<p class="text-sm text-gray-500">No time slots defined.</p>`;
     }
+
+    function renderPlaylists() {
+        const playlistListDiv = document.getElementById('playlist-list');
+        playlistListDiv.innerHTML = Object.keys(playlists).length ? Object.entries(playlists).sort(([, a], [, b]) => b.createdAt - a.createdAt).map(([id, playlist]) => `
+            <div class="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
+                <div>
+                    <span class="font-semibold text-gray-800">${playlist.name}</span>
+                    <p class="text-xs text-gray-500">Saved on: ${new Date(playlist.createdAt).toLocaleString()}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button data-id="${id}" class="load-playlist bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-semibold hover:bg-green-200">LOAD</button>
+                    <button data-id="${id}" class="delete-playlist text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No playlists saved yet.</p>`;
+    }
     
     function renderAllSchedules() {
         const scheduleView = document.getElementById('schedule-view');
@@ -276,10 +311,12 @@
                     const teacherNames = entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || [])
                         .map(tid => teachers[tid]?.name)
                         .filter(Boolean).join(', ');
+                     const className = classes[entry.classId]?.name || 'No Class';
                     
                     return `
                         <div class="p-1.5 rounded border border-gray-200 bg-white mb-1 cursor-pointer hover:bg-indigo-50 edit-entry-btn" data-doc-id="${entry.id}">
-                            <p class="font-semibold text-xs text-gray-800">${subjectNames}</p>
+                            <p class="font-semibold text-xs text-gray-800">${className}</p>
+                            <p class="text-xs text-gray-600">${subjectNames}</p>
                             <p class="text-xs text-gray-500">${teacherNames}</p>
                         </div>
                     `;
@@ -443,6 +480,70 @@
         const docRef = docId ? doc(db, schedulePath, docId) : doc(collection(db, schedulePath));
         await setDoc(docRef, data, { merge: true });
     }
+
+    async function savePlaylist(name) {
+        if (!name) return;
+        const playlistData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule, timeslots } };
+        await addDoc(collection(db, getPath('playlists')), playlistData);
+    }
+
+    async function loadPlaylist(playlistId) {
+        const playlist = playlists[playlistId];
+        if (!playlist) return;
+        
+        openConfirmationModal(
+            `Load Playlist: "${playlist.name}"?`,
+            "This will overwrite all current live data. This action cannot be undone.",
+            "Load Playlist",
+            async () => {
+                const data = playlist.data;
+                const batch = writeBatch(db);
+                const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
+                for (const coll of collectionsToClear) {
+                    const snapshot = await getDocs(collection(db, getPath(coll)));
+                    snapshot.forEach(docSnap => batch.delete(docSnap.ref));
+                }
+                await batch.commit();
+
+                const wb = writeBatch(db);
+                const addDataToBatch = (coll, dataToadd) => {
+                     if (dataToadd) {
+                        for (const [id, itemData] of Object.entries(dataToadd)) {
+                            if (typeof itemData === 'object' && itemData !== null) {
+                                const { id: _docId, ...rest } = itemData;
+                                wb.set(doc(db, getPath(coll), id), rest);
+                            }
+                        }
+                    }
+                };
+
+                addDataToBatch('classes', data.classes);
+                addDataToBatch('teachers', data.teachers);
+                addDataToBatch('subjects', data.subjects);
+                addDataToBatch('locations', data.locations);
+                addDataToBatch('schedule', data.schedule);
+                addDataToBatch('timeslots', data.timeslots);
+                
+                await wb.commit();
+                showToast(`Playlist "${playlist.name}" loaded successfully!`);
+            }
+        );
+    }
+
+     function deletePlaylist(playlistId) {
+        const playlist = playlists[playlistId];
+        if (!playlist) return;
+        openConfirmationModal(
+            `Delete Playlist: "${playlist.name}"?`,
+            "Are you sure you want to permanently delete this playlist?",
+            "Delete",
+            async () => {
+                await deleteDoc(doc(db, getPath('playlists'), playlistId));
+                showToast("Playlist deleted.");
+            },
+            true
+        );
+    }
     
     // --- UI & Utility Functions ---
     function toggleModal(modalId, show) { const modal = document.getElementById(modalId); if (!modal) return; const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
@@ -555,8 +656,13 @@
             }
         });
         
+        document.getElementById('add-playlist-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('playlist-name').value.trim(); if(name) { await savePlaylist(name); showToast('Playlist saved!'); e.target.reset(); } });
+        document.getElementById('playlist-list').addEventListener('click', e => { if (e.target.classList.contains('load-playlist')) loadPlaylist(e.target.dataset.id); if (e.target.classList.contains('delete-playlist')) deletePlaylist(e.target.dataset.id); });
+
+
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); 
         document.getElementById('tab-management').addEventListener('click', () => switchTab('management'));
+        document.getElementById('tab-playlists').addEventListener('click', () => switchTab('playlists'));
         document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
 
     }
@@ -665,7 +771,7 @@
     }
 
     function setupDataListeners() {
-        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'timeslots'];
+        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'timeslots', 'playlists'];
         collectionsToWatch.forEach(name => {
             onSnapshot(collection(db, getPath(name)), snapshot => {
                 const dataObject = {};
@@ -677,6 +783,7 @@
                 if (name === 'schedule') schedule = dataObject;
                 if (name === 'locations') locations = dataObject;
                 if (name === 'timeslots') timeslots = dataObject;
+                if (name === 'playlists') playlists = dataObject;
                 
                 renderAll();
             }, err => console.error(`Error fetching ${name}:`, err));

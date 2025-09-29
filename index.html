@@ -88,6 +88,8 @@
       appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
     };
     
+    const appId = 'default-shared-scheduler-app'; 
+    
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {};
     let selectedClassId = null;
@@ -97,7 +99,7 @@
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
-    
+
     function renderAll() {
         renderClasses();
         renderTeachers();
@@ -160,7 +162,7 @@
         if (newSubjectId) {
             const newTeachers = subjects[newSubjectId]?.teacherIds || [];
             if (newTeachers.length) {
-                const q = query(collection(db, 'public/data/scheduler_v2_schedule'), where("day", "==", day), where("time", "==", time));
+                const q = query(collection(db, getPath('schedule')), where("day", "==", day), where("time", "==", time));
                 const querySnapshot = await getDocs(q); let clashFound = false, clashDetails = '';
                 for (const docSnap of querySnapshot.docs) {
                     const entry = docSnap.data(); if (entry.classId === selectedClassId) continue;
@@ -171,7 +173,7 @@
                 if (clashFound) { document.getElementById('clash-alert-message').textContent = clashDetails; toggleModal('clash-alert-modal', true); selectEl.value = existingDocId ? schedule[existingDocId].subjectId : ''; return; }
             }
         }
-        const schedulePath = 'public/data/scheduler_v2_schedule';
+        const schedulePath = getPath('schedule');
         const scheduleRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
         if (newSubjectId) { await setDoc(scheduleRef, { day, time, slotId, subjectId: newSubjectId, classId: selectedClassId }); } 
         else if (existingDocId) { await deleteDoc(scheduleRef); }
@@ -181,11 +183,11 @@
     function switchTab(targetTabId) { document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(`tab-content-${targetTabId}`).classList.remove('hidden'); document.getElementById(`tab-${targetTabId}`).classList.add('active'); }
 
     function attachEventListeners() {
-        document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, 'public/data/scheduler_v2_classes'), { name }); e.target.reset(); });
-        document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, 'public/data/scheduler_v2_subjects'), { name, teacherIds: [] }); e.target.reset(); });
-        document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, 'public/data/scheduler_v2_classes', e.target.dataset.id)); });
+        document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name }); e.target.reset(); });
+        document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
+        document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
         document.getElementById('subject-list').addEventListener('click', e => {
-            if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, 'public/data/scheduler_v2_subjects', e.target.dataset.id));
+            if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
             if (e.target.classList.contains('assign-teachers')) {
                 const subjectId = e.target.dataset.id; const subject = subjects[subjectId]; document.getElementById('modal-subject-name').textContent = subject.name; document.getElementById('modal-subject-id').value = subjectId;
                 const listContainer = document.getElementById('modal-teacher-list');
@@ -196,7 +198,7 @@
         document.getElementById('class-selector').addEventListener('change', e => { selectedClassId = e.target.value; renderScheduleForClass(); });
         document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleScheduleChange(e); });
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); document.getElementById('tab-management').addEventListener('click', () => switchTab('management')); document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
-        document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, 'public/data/scheduler_v2_subjects', subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
+        document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
         document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
         const pagiTab = document.getElementById('namePagiTab'); const petangTab = document.getElementById('namePetangTab');
         pagiTab.addEventListener('click', () => { currentNameListSession = 'pagi'; pagiTab.classList.add('border-indigo-500', 'text-indigo-600'); petangTab.classList.remove('border-indigo-500', 'text-indigo-600'); petangTab.classList.add('border-transparent', 'text-gray-500'); setupDataListeners(); });
@@ -208,8 +210,8 @@
     function setupDataListeners() {
         if (unsubscribePagi) unsubscribePagi(); if (unsubscribePetang) unsubscribePetang(); if (unsubscribeSubjects) unsubscribeSubjects(); if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeSchedule) unsubscribeSchedule();
         
-        // --- CORRECTED PATH TO YOUR EXISTING DATA ---
-        const nameListDocPath = doc(db, 'public', 'data', 'sharedNameLists', currentNameListSession);
+        // This path now correctly points to the 'pagi' or 'petang' document inside the 'sharedNameLists' collection.
+        const nameListDocPath = doc(db, getPath('sharedNameLists'), currentNameListSession);
         
         console.log(`%cListening for teachers at: ${nameListDocPath.path}`, 'color: blue; font-weight: bold;');
         const nameListener = onSnapshot(nameListDocPath, docSnap => {
@@ -221,15 +223,9 @@
 
         if(currentNameListSession === 'pagi') unsubscribePagi = nameListener; else unsubscribePetang = nameListener;
         
-        // These are new collections for this app, they will be created if they don't exist
-        const subjectsPath = 'public/data/scheduler_v2_subjects'; console.log(`%cListening for subjects at: ${subjectsPath}`, 'color: green;');
-        unsubscribeSubjects = onSnapshot(collection(db, subjectsPath), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching subjects:', err));
-        
-        const classesPath = 'public/data/scheduler_v2_classes'; console.log(`%cListening for classes at: ${classesPath}`, 'color: purple;');
-        unsubscribeClasses = onSnapshot(collection(db, classesPath), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching classes:', err));
-        
-        const schedulePath = 'public/data/scheduler_v2_schedule'; console.log(`%cListening for schedule at: ${schedulePath}`, 'color: orange;');
-        unsubscribeSchedule = onSnapshot(collection(db, schedulePath), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching schedule:', err));
+        unsubscribeSubjects = onSnapshot(collection(db, getPath('subjects')), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching subjects:', err));
+        unsubscribeClasses = onSnapshot(collection(db, getPath('classes')), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching classes:', err));
+        unsubscribeSchedule = onSnapshot(collection(db, getPath('schedule')), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching schedule:', err));
     }
     
     function main() {
@@ -248,4 +244,5 @@
 </script>
 </body>
 </html>
+
 

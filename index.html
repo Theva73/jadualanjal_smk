@@ -658,6 +658,11 @@
 #autocompleteSuggestions .fallback-hint { font-size:11px; padding:6px 8px; opacity:.7; border-bottom:1px solid rgba(0,0,0,.06); }
 </style>
 
+
+<style id="tscl-hide-legacy-buttons">
+  #nameListBtn, #subjectListBtn { display: none !important; pointer-events: none !important; }
+</style>
+
 </head>
 <body>
 <div class="main-container">
@@ -799,10 +804,20 @@
                 <button id="namePagiTab" data-session="pagi" class="active">Pagi (Morning)</button>
                 <button id="namePetangTab" data-session="petang">Petang (Afternoon)</button>
             </div>
-             <div class="input-group">
-                <input id="newNameInput" placeholder="Add new name to current shared session">
-                <button id="addNameBtnInModal" title="Add the name to the shared list">Add</button>
-             </div>
+             <div class="input-group" style="margin-bottom:8px;">
+  <input id="tsclTeacher" placeholder="Teacher (e.g., Remo)">
+</div>
+<div class="input-group" style="margin-bottom:8px;">
+  <input id="tsclSubject" placeholder="Subject (e.g., Arab, Maths)">
+</div>
+<div class="input-group" style="margin-bottom:8px;">
+  <input id="tsclClass" placeholder="Class (optional, e.g., 2 Amal)">
+</div>
+<div class="input-group">
+  <input id="tsclLocation" placeholder="Location (optional, e.g., Lab 1)">
+  <button id="addNameBtnInModal" title="Save to TSCL">Save</button>
+</div>
+<div class="small muted" style="margin-top:6px">This now writes to <code>tscl</code> (Teachers/Subjects/Classes/Locations). Old Name/Subject lists are no longer used.</div>
             <button id="importNameListBtn" title="Import names from a .txt file (one name per line) to current shared session">📂 Import Names (.txt) to Shared Session</button>
             <input type="file" id="nameListImportFile" accept=".txt" style="display:none;">
             <input type="text" id="searchNameInput" placeholder="🔍 Search names in current shared session..." title="Filter the list of names">
@@ -4473,184 +4488,278 @@ document.addEventListener('click', (e)=>{
     mergeSubjectsIntoNameLists();
   };
 })();
+
+/* ================== TSCL DATA LAYER (Overrides) ================== */
+(function initTSCL(){
+  // Ensure Firestore globals exist
+  if (typeof fbDb === 'undefined') { console.error('Firestore (fbDb) missing'); return; }
+
+  const tsclColl = collection(fbDb, 'tscl');
+  const pairsDoc = doc(fbDb, 'tscl_meta', 'pairs');
+
+  // In-memory cache
+  const TSCL = { teachers: [], subjects: [], pairs: {}, all: [] };
+  window.__TSCL = TSCL;
+
+  function computeFromSnapshot(docs){
+    const teachers = new Set(), subjects = new Set();
+    const pairs = {};
+    const all = [];
+    docs.forEach(d => {
+      const data = d.data() || {};
+      const t = String(data.teacher||'').trim();
+      const s = String(data.subject||'').trim();
+      const c = String(data.class||'').trim();
+      const l = String(data.location||'').trim();
+      const paired = !!data.paired;
+      all.push({id:d.id, teacher:t, subject:s, class:c, location:l, paired});
+      if (t) teachers.add(t);
+      if (s) subjects.add(s);
+      if (paired && t && s){
+        pairs[s] = pairs[s] || [];
+        if (!pairs[s].includes(t)) pairs[s].push(t);
+      }
+    });
+    // sort pair lists
+    Object.keys(pairs).forEach(k => pairs[k].sort((a,b)=>a.localeCompare(b)));
+    TSCL.teachers = Array.from(teachers).sort((a,b)=>a.localeCompare(b));
+    TSCL.subjects = Array.from(subjects).sort((a,b)=>a.localeCompare(b));
+    TSCL.pairs    = pairs;
+    TSCL.all      = all;
+  }
+
+  // Watch tscl records
+  onSnapshot(tsclColl, (qs)=>{
+    computeFromSnapshot(qs.docs);
+    try{ renderNameList && renderNameList(); }catch(e){}
+  });
+
+  // Watch explicit pairs doc (if you maintain it elsewhere)
+  onSnapshot(pairsDoc, (snap)=>{
+    if(snap.exists()){
+      const map = snap.data()?.map || {};
+      // merge/override pairs while keeping teacher/subject sets
+      TSCL.pairs = Object.fromEntries(Object.entries(map).map(([k,v])=>[k, Array.from(new Set(v||[])).sort((a,b)=>a.localeCompare(b))]));
+    }
+  });
+
+  // ---- Override the old getters with TSCL-backed versions ----
+  window.getTeacherList = function getTeacherList_TSCL(){
+    return Array.from(TSCL.teachers);
+  };
+  window.getSubjectsList = function getSubjectsList_TSCL(){
+    return Array.from(TSCL.subjects);
+  };
+  window.getSubjectTeacherCombos = function(){
+    const out = [];
+    const p = TSCL.pairs;
+    Object.keys(p).forEach(sub => (p[sub]||[]).forEach(t => out.push(`${sub} > ${t}`)));
+    // fallback: derive combos from raw docs if no pairs present
+    if (!out.length) {
+      TSCL.all.forEach(r => {
+        if (r.subject && r.teacher) out.push(`${r.subject} > ${r.teacher}`);
+      });
+    }
+    // unique
+    return Array.from(new Set(out)).sort((a,b)=>a.localeCompare(b));
+  };
+
+  // ---- Override Name List Renderer to show TSCL entries ----
+  window.renderNameList = function renderNameList_TSCL(){
+    const listEl = document.getElementById('nameList');
+    if(!listEl) return;
+    const combos = window.getSubjectTeacherCombos();
+    // show combined "Subject > Teacher" and subject-only + teacher-only lines
+    const soloTeachers = TSCL.teachers.filter(t => !combos.some(ct=>ct.endsWith(`> ${t}`)));
+    const soloSubjects = TSCL.subjects.filter(s => !combos.some(ct=>ct.startsWith(`${s} >`)));
+    const html = []
+      .concat(combos.map(v=>`<div class="name-item"><span>${v}</span></div>`))
+      .concat(soloSubjects.map(v=>`<div class="name-item"><span>${v}</span></div>`))
+      .concat(soloTeachers.map(v=>`<div class="name-item"><span>${v}</span></div>`));
+    listEl.innerHTML = html.join('') || '<div class="muted">No TSCL entries yet</div>';
+  };
+
+  // ---- Force Add button to write into TSCL (NOT old collections) ----
+  function wireAdd(){
+    const btn = document.getElementById('addNameBtnInModal');
+    if(!btn) return;
+    const freshBtn = btn.cloneNode(true); btn.parentNode.replaceChild(freshBtn, btn);
+    freshBtn.addEventListener('click', async (e)=>{
+      e.preventDefault(); e.stopImmediatePropagation();
+      const t = (document.getElementById('tsclTeacher')?.value || '').trim();
+      const s = (document.getElementById('tsclSubject')?.value || '').trim();
+      const c = (document.getElementById('tsclClass')?.value || '').trim();
+      const l = (document.getElementById('tsclLocation')?.value || '').trim();
+      const paired = !!(t && s); // auto-pair if both exist
+      if(!t && !s && !c && !l){ window.showMessage && window.showMessage('Please enter at least one field','error'); return; }
+      try{
+        const ref = doc(tsclColl); // new doc
+        await setDoc(ref, { teacher:t, subject:s, class:c, location:l, paired, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        // also update pairs doc if paired
+        if(paired){
+          await setDoc(pairsDoc, { map: { [s]: arrayUnion(t) } }, { merge: true });
+        }
+        window.showMessage && window.showMessage('Saved to TSCL','success');
+        // clear inputs
+        ['tsclTeacher','tsclSubject','tsclClass','tsclLocation'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value=''; });
+      }catch(err){
+        console.error(err); window.showMessage && window.showMessage('Save failed','error');
+      }
+    }, {capture:true});
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wireAdd); } else { wireAdd(); }
+
+  // ---- Hook autocomplete with TSCL ----
+  // If your existing code calls getTeacherList() or getSubjectsList(), our overrides above feed from TSCL.
+  // If you need subject>teacher combos:
+  window.refreshAutocompleteSubjects = function(){
+    try{
+      window.subjectCombos = window.getSubjectTeacherCombos();
+      if(typeof window.updateAutocompleteSuggestions === 'function'){
+        window.updateAutocompleteSuggestions(window.subjectCombos);
+      }
+    }catch(e){}
+  };
+
+  // Enhance focus behavior to refresh suggestions
+  document.addEventListener('focusin', function(e){
+    const td = e.target && e.target.closest && e.target.closest('td');
+    if(!td) return;
+    const mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
+    if(mode === 'subject'){
+      window.refreshAutocompleteSubjects && window.refreshAutocompleteSubjects();
+    } else {
+      if(typeof window.refreshAutocompleteTeachers === 'function'){
+        window.refreshAutocompleteTeachers();
+      } else {
+        // basic: expose teachers as suggestions if UI expects array
+        if(typeof window.updateAutocompleteSuggestions === 'function'){
+          window.updateAutocompleteSuggestions(window.getTeacherList());
+        }
+      }
+    }
+  });
+
+  // ---- Subject-only cell display (keep teacher in dataset) ----
+  window.renderCellChipsIfNeeded = function(cell){
+    if(!cell) return;
+    const el = cell.querySelector('.merged-cell-overlay') || cell;
+    const raw = (el.textContent||'').trim();
+    const parts = raw.split('//');
+    const main = parts[0].trim();
+    const notes = parts.slice(1).join('//').trim();
+    const m = main.match(/^(.+?)\s*>\s*(.+)$/); // Subject > Teacher
+    if(m){
+      const subject = m[1].trim();
+      const teacher = m[2].trim();
+      const wrap = document.createElement('span'); wrap.className='cell-chip';
+      const s = document.createElement('span'); s.className='chip-subject'; s.textContent = subject;
+      wrap.appendChild(s);
+      el.textContent=''; el.appendChild(wrap);
+      if(teacher) el.dataset.teacher = teacher;
+      if(subject) el.dataset.subject = subject;
+      if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
+    }
+  };
+
+})();
+/* ================== END TSCL LAYER ================== */
+
+/* Hide teacher chip if any legacy render leaves it in */
+(function(){
+  const css = document.createElement('style'); css.textContent = '.chip-teacher{display:none!important;}';
+  document.head.appendChild(css);
+})();
+</script>
+
+
+<script>
+(function addTSCLButton(){
+  function insertBtn(anchor){
+    try{
+      var btn = document.createElement('button');
+      btn.id = 'tsclManagerBtn';
+      btn.textContent = 'TSCL Manager';
+      btn.title = 'Open Teachers • Subjects • Classes • Locations';
+      btn.style.marginLeft = '8px';
+      btn.style.padding = '8px 12px';
+      btn.style.borderRadius = '10px';
+      btn.style.border = '1px solid #26303c';
+      btn.style.background = '#2ea043';
+      btn.style.color = '#fff';
+      btn.style.fontWeight = '600';
+      btn.style.cursor = 'pointer';
+      anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+      return btn;
+    }catch(e){ return null; }
+  }
+
+  function ensureBtn(){
+    // Hide/disable legacy buttons if they exist
+    ['nameListBtn','subjectListBtn'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el){
+        el.disabled = true;
+        el.style.pointerEvents='none';
+        el.style.display='none';
+      }
+    });
+
+    var anchor = document.getElementById('nameListBtn') || document.getElementById('subjectListBtn');
+    var btn = null;
+    if(anchor){
+      btn = insertBtn(anchor);
+    } else {
+      // fallback: add to a top toolbar if present, else fixed in corner
+      var topbar = document.querySelector('.toolbar, .top-bar, .header-actions');
+      if(topbar){
+        btn = document.createElement('button');
+        btn.id = 'tsclManagerBtn';
+        btn.textContent = 'TSCL Manager';
+        btn.className = 'btn';
+        topbar.appendChild(btn);
+      } else {
+        btn = document.createElement('button');
+        btn.id = 'tsclManagerBtn';
+        btn.textContent = 'TSCL Manager';
+        btn.style.position='fixed'; btn.style.right='16px'; btn.style.top='16px';
+        btn.style.zIndex='9999'; btn.style.padding='10px 14px'; btn.style.borderRadius='10px';
+        btn.style.border='1px solid #26303c'; btn.style.background='#2ea043'; btn.style.color='#fff'; btn.style.fontWeight='700';
+        document.body.appendChild(btn);
+      }
+    }
+    return btn;
+  }
+
+  function openTSCLModal(){
+    var modal = document.getElementById('nameModal') || document.getElementById('tsclModal');
+    if(!modal){
+      alert('TSCL modal not found');
+      return;
+    }
+    // update modal title if present
+    var t = modal.querySelector('.modal-header h3, .modal-title, h3');
+    if(t){ t.textContent = 'TSCL Manager'; }
+    modal.style.display = 'flex';
+    // focus first TSCL input if available
+    setTimeout(function(){
+      (document.getElementById('tsclTeacher') || document.getElementById('tsclSubject') || document.querySelector('#nameModal input'))?.focus();
+    }, 0);
+  }
+
+  function boot(){
+    var btn = ensureBtn();
+    if(btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault(); e.stopImmediatePropagation();
+        openTSCLModal();
+      }, {capture:true});
+    }
+  }
+
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+})();
 </script>
 
 </body>
 </html>
-<!-- TSCL Layer will be appended below -->
-<script>
-
-/* ================== TSCL DATA LAYER (Overrides) ================== */
-(function initTSCL_withWait(){
-  function getDbHandle(){
-    if (typeof fbDb !== 'undefined' && fbDb) return fbDb;
-    if (typeof db  !== 'undefined' && db)  return db;
-    if (typeof firebase !== 'undefined' && firebase.firestore && typeof firebase.firestore === 'function'){
-      try { return firebase.firestore(); } catch(e){}
-    }
-    return null;
-  }
-  function onceReady(cb, tries){
-    tries = (typeof tries==='number') ? tries : 120;
-    var t = setInterval(function(){
-      var h = getDbHandle();
-      if(h){ clearInterval(t); try{ cb(h); }catch(e){ console.error('TSCL init error:', e); } }
-      else if(--tries <= 0){ clearInterval(t); console.error('TSCL: Firestore DB still not found after waiting.'); }
-    }, 500);
-  }
-  onceReady(function(dbRef){
-    function collRef(name){
-      if (typeof collection === 'function'){ try { return collection(dbRef, name); } catch(e){} }
-      if (dbRef && typeof dbRef.collection === 'function') return dbRef.collection(name);
-      throw new Error('No Firestore collection() available');
-    }
-    function docRef(arg1, arg2){
-      if (typeof doc === 'function'){ if (typeof arg1 === 'string') return doc(dbRef, arg1, arg2); return doc(arg1, arg2); }
-      if (arg1 && typeof arg1.doc === 'function') return arg1.doc(arg2);
-      if (dbRef && typeof dbRef.doc === 'function') return dbRef.doc([arg1,arg2].join('/'));
-      throw new Error('No Firestore doc() available');
-    }
-    async function writeDoc(ref, data){
-      if (typeof setDoc === 'function') return await setDoc(ref, data, {merge:true});
-      if (ref && typeof ref.set === 'function') return await ref.set(data, {merge:true});
-      throw new Error('No Firestore setDoc/set available');
-    }
-    function nowTS(){
-      if (typeof serverTimestamp === 'function') return serverTimestamp();
-      if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp){
-        return firebase.firestore.FieldValue.serverTimestamp();
-      }
-      return new Date();
-    }
-    function watch(target, cb){
-      if (typeof onSnapshot === 'function') return onSnapshot(target, cb);
-      if (target && typeof target.onSnapshot === 'function') return target.onSnapshot(cb);
-      throw new Error('No Firestore onSnapshot available');
-    }
-
-    var tsclColl = collRef('tscl');
-    var pairsDoc = docRef('tscl_meta', 'pairs');
-
-    const TSCL = { teachers: [], subjects: [], pairs: {}, all: [] };
-    window.__TSCL = TSCL;
-
-    function computeFromSnapshot(qs){
-      var docs = qs && (qs.docs || qs);
-      const teachers = new Set(), subjects = new Set(), pairs = {}, all = [];
-      (docs||[]).forEach(function(d){
-        var data = (typeof d.data === 'function') ? (d.data()||{}) : (d||{});
-        var t = String(data.teacher||'').trim();
-        var s = String(data.subject||'').trim();
-        var c = String(data.class||'').trim();
-        var l = String(data.location||'').trim();
-        var paired = !!data.paired;
-        var id = d.id || ('id_' + Math.random().toString(36).slice(2));
-        all.push({id, teacher:t, subject:s, class:c, location:l, paired});
-        if(t) teachers.add(t);
-        if(s) subjects.add(s);
-        if(paired && t && s){ (pairs[s] = pairs[s] || []).push(t); }
-      });
-      Object.keys(pairs).forEach(function(k){ pairs[k] = Array.from(new Set(pairs[k])).sort(function(a,b){ return a.localeCompare(b); }); });
-      TSCL.teachers = Array.from(teachers).sort((a,b)=>a.localeCompare(b));
-      TSCL.subjects = Array.from(subjects).sort((a,b)=>a.localeCompare(b));
-      TSCL.pairs = pairs;
-      TSCL.all = all;
-    }
-
-    try { watch(tsclColl, function(qs){ computeFromSnapshot(qs); try{ renderNameList && renderNameList(); }catch(e){} }); } catch(e){ console.error('TSCL watch(tscl) failed:', e); }
-    try { watch(pairsDoc, function(snap){
-      try{
-        var data = (typeof snap.data === 'function') ? (snap.data()||{}) : (snap||{});
-        var map = data.map || {};
-        Object.keys(map).forEach(function(k){
-          var set = new Set([...(TSCL.pairs[k]||[]), ...Array.from(new Set(map[k]||[]))]);
-          TSCL.pairs[k] = Array.from(set).sort(function(a,b){ return a.localeCompare(b); });
-        });
-      }catch(e){}
-    }); } catch(e){}
-
-    window.getTeacherList = function(){ return Array.from(TSCL.teachers); };
-    window.getSubjectsList = function(){ return Array.from(TSCL.subjects); };
-    window.getSubjectTeacherCombos = function(){
-      var out = [];
-      Object.keys(TSCL.pairs).forEach(function(sub){ (TSCL.pairs[sub]||[]).forEach(function(t){ out.push(sub + ' > ' + t); }); });
-      if(!out.length){ TSCL.all.forEach(function(r){ if(r.subject && r.teacher) out.push(r.subject + ' > ' + r.teacher); }); }
-      return Array.from(new Set(out)).sort(function(a,b){ return a.localeCompare(b); });
-    };
-
-    window.renderNameList = function(){
-      var listEl = document.getElementById('nameList'); if(!listEl) return;
-      var combos = window.getSubjectTeacherCombos();
-      var soloTeachers = TSCL.teachers.filter(function(t){ return !combos.some(function(ct){ return ct.endsWith('> ' + t); }); });
-      var soloSubjects = TSCL.subjects.filter(function(s){ return !combos.some(function(ct){ return ct.indexOf(s + ' >') === 0; }); });
-      var html = []
-        .concat(combos.map(function(v){ return '<div class="name-item"><span>'+v+'</span></div>'; }))
-        .concat(soloSubjects.map(function(v){ return '<div class="name-item"><span>'+v+'</span></div>'; }))
-        .concat(soloTeachers.map(function(v){ return '<div class="name-item"><span>'+v+'</span></div>'; }));
-      listEl.innerHTML = html.join('') || '<div class="muted">No TSCL entries yet</div>';
-    };
-
-    function wireAdd(){
-      var btn = document.getElementById('addNameBtnInModal'); if(!btn) return;
-      var freshBtn = btn.cloneNode(true); btn.parentNode.replaceChild(freshBtn, btn);
-      freshBtn.addEventListener('click', async function(e){
-        e.preventDefault(); e.stopImmediatePropagation();
-        var t = (document.getElementById('tsclTeacher')||{}).value || '';
-        var s = (document.getElementById('tsclSubject')||{}).value || '';
-        var c = (document.getElementById('tsclClass')||{}).value || '';
-        var l = (document.getElementById('tsclLocation')||{}).value || '';
-        t = String(t).trim(); s = String(s).trim(); c = String(c).trim(); l = String(l).trim();
-        var paired = !!(t && s);
-        if(!t && !s && !c && !l){ window.showMessage && window.showMessage('Please enter at least one field','error'); return; }
-        try{
-          var id = 'tscl_' + Math.random().toString(36).slice(2);
-          var ref = docRef('tscl', id);
-          await writeDoc(ref, { teacher:t, subject:s, class:c, location:l, paired:paired, createdAt: nowTS(), updatedAt: nowTS() });
-          window.showMessage && window.showMessage('Saved to TSCL','success');
-          ['tsclTeacher','tsclSubject','tsclClass','tsclLocation'].forEach(function(i){ var n=document.getElementById(i); if(n) n.value=''; });
-        }catch(err){
-          console.error('TSCL save failed:', err);
-          window.showMessage && window.showMessage('Save failed','error');
-        }
-      }, {capture:true});
-    }
-    if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wireAdd); } else { wireAdd(); }
-
-    window.refreshAutocompleteSubjects = function(){
-      try{
-        window.subjectCombos = window.getSubjectTeacherCombos();
-        if(typeof window.updateAutocompleteSuggestions === 'function'){
-          window.updateAutocompleteSuggestions(window.subjectCombos);
-        }
-      }catch(e){}
-    };
-
-    document.addEventListener('focusin', function(e){
-      var td = e.target && e.target.closest && e.target.closest('td'); if(!td) return;
-      var mode = (window.currentEntryMode === 'subject') ? 'subject' : 'teacher';
-      if(mode==='subject'){ window.refreshAutocompleteSubjects && window.refreshAutocompleteSubjects(); }
-      else if(typeof window.refreshAutocompleteTeachers === 'function'){ window.refreshAutocompleteTeachers(); }
-    });
-
-    window.renderCellChipsIfNeeded = function(cell){
-      if(!cell) return;
-      var el = cell.querySelector('.merged-cell-overlay') || cell;
-      var raw = (el.textContent||'').trim();
-      var parts = raw.split('//'); var main = parts[0].trim(); var notes = parts.slice(1).join('//').trim();
-      var m = main.match(/^(.+?)\s*>\s*(.+)$/);
-      if(m){
-        var subject = m[1].trim(); var teacher = m[2].trim();
-        var wrap = document.createElement('span'); wrap.className='cell-chip';
-        var s = document.createElement('span'); s.className='chip-subject'; s.textContent = subject;
-        wrap.appendChild(s);
-        el.textContent=''; el.appendChild(wrap);
-        if(teacher) el.dataset.teacher = teacher;
-        if(subject) el.dataset.subject = subject;
-        if(notes){ el.appendChild(document.createTextNode(' // ' + notes)); }
-      }
-    };
-  });
-})();
-/* ================== END TSCL LAYER ================== */
-
-</script>

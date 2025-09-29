@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Schedule Planner with Playlists</title>
+    <title>School Schedule Planner - Master Schedule</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -14,13 +14,14 @@
         select:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
         .summary-clash { background-color: #fee2e2 !important; color: #b91c1c; font-weight: bold; }
         .summary-clash-override { background-color: #fef9c3 !important; color: #a16207; border: 1px solid #fde047; }
+        .sticky-header { position: -webkit-sticky; position: sticky; top: 0; z-index: 10; }
     </style>
 </head>
 <body class="p-2 sm:p-4">
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">New School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">A new, independent database in your Firebase project.</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
+        <p class="text-sm text-gray-500 mt-1">Editing the Master Schedule (All changes are saved automatically)</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -28,47 +29,55 @@
         <nav class="flex flex-wrap space-x-2 sm:space-x-4">
             <button id="tab-schedule" class="tab-btn px-3 py-2 font-medium text-sm rounded-md active">Schedule</button>
             <button id="tab-management" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Management</button>
-            <button id="tab-playlists" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Playlists</button>
             <button id="tab-summary" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Summary</button>
         </nav>
     </div>
 
     <!-- Tab Content -->
     <div id="tab-content-schedule" class="tab-panel">
-        <div class="mb-4">
-            <label for="playlist-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Playlist to View/Edit:</label>
-            <select id="playlist-selector" class="w-full max-w-xs p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
-        </div>
-        <div id="schedule-view" class="mt-6 space-y-8">
-            <p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a playlist to view schedules.</p>
+        <div id="schedule-view" class="space-y-8">
+            <p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Loading schedule...</p>
         </div>
     </div>
 
     <div id="tab-content-management" class="tab-panel hidden">
-         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">1. Manage Classes</h3>
                 <form id="add-class-form" class="flex gap-2 mb-3"><input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="class-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
+
             <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Teachers</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Subject Offerings</h3>
+                <label for="subject-class-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Subject:</label>
+                <select id="subject-class-selector" class="w-full p-2 mb-3 border border-gray-300 rounded-md shadow-sm"></select>
+                <form id="subject-class-assignment-form">
+                    <div id="subject-class-assignment-list" class="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-md bg-white">
+                        <p class="text-sm text-gray-500">Please select a subject to see which classes take it.</p>
+                    </div>
+                    <button type="submit" class="mt-3 w-full bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Assignments</button>
+                </form>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Teachers</h3>
                 <form id="add-teacher-form" class="flex gap-2 mb-3"><input type="text" id="teacher-name" placeholder="Teacher's name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="teacher-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
              <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Locations</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">4. Manage Locations</h3>
                 <form id="add-location-form" class="flex gap-2 mb-3"><input type="text" id="location-name" placeholder="e.g., Lab A, Hall B" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="location-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">4. Manage & Assign Subjects</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">5. Manage Subjects & Assign Teachers</h3>
                 <form id="add-subject-form" class="flex gap-2 mb-3"><input type="text" id="subject-name" placeholder="New subject name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="subject-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
         </div>
         <div class="mt-6 border-t pt-6">
-            <h3 class="text-xl font-semibold mb-3 text-gray-800">5. Manage Time Slots</h3>
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">6. Manage Time Slots</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-gray-50 p-4 rounded-lg">
                     <h4 class="font-semibold mb-3 text-gray-700">Add New Time Slot</h4>
@@ -92,24 +101,6 @@
             </div>
         </div>
     </div>
-    
-    <div id="tab-content-playlists" class="tab-panel hidden">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">Manage Playlists</h2>
-        <div class="bg-gray-50 p-4 rounded-lg">
-            <h3 class="text-lg font-semibold mb-3 text-gray-800">Create New Playlist</h3>
-            <form id="add-playlist-form" class="flex items-center gap-2 mb-4">
-                <input type="text" id="playlist-name" placeholder="e.g., Final Term 1" class="flex-grow p-2 text-sm border rounded-md" required>
-                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
-                    Save Current as Playlist
-                </button>
-            </form>
-            <h3 class="text-lg font-semibold mb-3 text-gray-800">Saved Playlists</h3>
-            <div id="playlist-list" class="space-y-2">
-                <p class="text-sm text-gray-500">No playlists saved yet.</p>
-            </div>
-        </div>
-    </div>
 
     <div id="tab-content-summary" class="tab-panel hidden">
          <h2 class="text-xl font-semibold mb-4 text-gray-800">Teacher Schedule Summary</h2>
@@ -123,7 +114,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
@@ -135,8 +126,8 @@
     };
     
     let db, auth, userId;
-    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, versions = {}, timeslots = {};
-    let activeVersionId = null; // Tracks the currently loaded playlist/version
+    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, timeslots = {};
+    let selectedSubjectForClassAssignment = null;
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
@@ -151,9 +142,8 @@
         renderTeachers();
         renderLocations();
         renderSubjects();
-        renderPlaylists();
         renderTimeSlots();
-        renderPlaylistSelector();
+        renderSubjectClassAssignment();
         renderAllSchedules();
         renderSummaryGrid();
     }
@@ -169,6 +159,34 @@
                     <button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
                 </div>
             </div>`).join('') : `<p class="text-sm text-gray-500">No classes found.</p>`;
+    }
+
+    function renderSubjectClassAssignment() {
+        const selector = document.getElementById('subject-class-selector');
+        const listContainer = document.getElementById('subject-class-assignment-list');
+        
+        const sortedSubjects = Object.entries(subjects).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+        
+        selector.innerHTML = sortedSubjects.length > 0
+            ? `<option value="">-- Select a Subject --</option>` + sortedSubjects.map(([id, subject]) => `<option value="${id}">${subject.name}</option>`).join('')
+            : `<option>Please add a subject first</option>`;
+        
+        selector.value = selectedSubjectForClassAssignment;
+
+        if (selectedSubjectForClassAssignment && subjects[selectedSubjectForClassAssignment]) {
+            const sortedClasses = Object.entries(classes).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+            
+            listContainer.innerHTML = sortedClasses.length > 0 ? sortedClasses.map(([id, cls]) => {
+                const isChecked = cls.subjectIds?.includes(selectedSubjectForClassAssignment) || false;
+                return `
+                <label class="flex items-center p-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="subject-class" value="${id}" ${isChecked ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                    <span>${cls.name}</span>
+                </label>`
+            }).join('') : `<p class="text-sm text-gray-500">No classes created yet.</p>`;
+        } else {
+            listContainer.innerHTML = `<p class="text-sm text-gray-500">Please select a subject to see which classes take it.</p>`;
+        }
     }
     
     function renderTeachers() {
@@ -231,104 +249,73 @@
             </div>`).join('') : `<p class="text-sm text-gray-500">No time slots defined.</p>`;
     }
     
-    function renderPlaylists() {
-        const playlistListDiv = document.getElementById('playlist-list');
-        playlistListDiv.innerHTML = Object.keys(versions).length ? Object.entries(versions).sort(([, a], [, b]) => b.createdAt - a.createdAt).map(([id, version]) => `
-            <div class="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
-                <div>
-                    <span class="font-semibold text-gray-800">${version.name}</span>
-                    <p class="text-xs text-gray-500">Saved on: ${new Date(version.createdAt).toLocaleString()}</p>
-                </div>
-                <div class="flex gap-2">
-                    <button data-id="${id}" class="load-playlist bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-semibold hover:bg-green-200">LOAD</button>
-                    <button data-id="${id}" class="delete-playlist text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
-                </div>
-            </div>`).join('') : `<p class="text-sm text-gray-500">No playlists saved yet.</p>`;
-    }
-
-    function renderPlaylistSelector() {
-        const selector = document.getElementById('playlist-selector');
-        const hasVersions = Object.keys(versions).length > 0;
-        selector.disabled = !hasVersions;
-
-        if (!hasVersions) {
-            selector.innerHTML = `<option>No saved playlists found</option>`;
-            return;
-        }
-
-        const sortedVersions = Object.entries(versions).sort(([, a], [, b]) => b.createdAt - a.createdAt);
-        selector.innerHTML = sortedVersions.map(([id, version]) =>
-            `<option value="${id}" ${id === activeVersionId ? 'selected' : ''}>${version.name}</option>`
-        ).join('');
-    }
-
     function renderAllSchedules() {
         const scheduleView = document.getElementById('schedule-view');
-        
-        if (!activeVersionId) {
-             scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a playlist to view schedules.</p>'; 
-             return;
-        }
-
-        const sortedClasses = Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name));
+        const sortedClasses = Object.entries(classes).sort(([, a], [, b]) => a.name.localeCompare(b.name));
 
         if (sortedClasses.length === 0) {
-            scheduleView.innerHTML = '<p class="text-gray-500 py-8 text-center">No classes found in this playlist. Add classes in the Management tab.</p>';
+            scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">No classes found. Add classes in the Management tab to get started.</p>';
             return;
         }
 
         const sortedTimeSlots = getSortedTimeSlots();
         if (sortedTimeSlots.length === 0) {
-            scheduleView.innerHTML = '<p class="text-gray-500 py-8 text-center">Please define time slots in the Management tab first.</p>';
+            scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please define time slots in the Management tab first.</p>';
             return;
         }
 
         const locationOptions = `<option value="">-- Lokasi --</option>` + Object.entries(locations).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
-        
-        const allTablesHTML = sortedClasses.map(([classId, cls]) => {
-            const classSchedule = Object.values(schedule).filter(entry => entry.classId === classId);
-            const timeHeaders = sortedTimeSlots.map(slot => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
 
-            const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${sortedTimeSlots.map(slot => {
-                const time = `${slot.start}-${slot.end}`;
-                if (slot.isBreak) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">${time}<br>Rehat</td>`;
-                const slotId = `${day}_${time}`;
-                const entry = classSchedule.find(e => e.slotId === slotId);
-                const subjectNames = entry?.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '<span class="text-gray-400">Not set</span>';
-                
-                return `<td class="p-1 border align-top min-w-[180px]"><div class="flex flex-col gap-1">
-                    <div class="p-1.5 text-xs bg-gray-50 rounded border border-dashed h-12 overflow-y-auto">${subjectNames}</div>
-                    <button data-class-id="${classId}" data-slot-id="${slotId}" class="select-subjects-btn w-full p-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">Select Subjects</button>
-                    <select data-class-id="${classId}" data-slot-id="${slotId}" data-type="location" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(locations).length ? 'disabled' : ''}>${locationOptions}</select>
-                </div></td>`;
-            }).join('')}</tr>`).join('');
+        const allDaysHTML = DAYS.map(day => {
+            const timeHeaders = sortedTimeSlots.map(slot => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
             
-            setTimeout(() => {
-                 classSchedule.forEach(entry => {
-                    const locationSelect = scheduleView.querySelector(`select[data-class-id='${classId}'][data-slot-id='${entry.slotId}'][data-type='location']`);
-                    if (locationSelect) locationSelect.value = entry.locationId || '';
-                });
-            }, 0);
+            const classRows = sortedClasses.map(([classId, cls]) => {
+                const timeCells = sortedTimeSlots.map(slot => {
+                    const time = `${slot.start}-${slot.end}`;
+                    if (slot.isBreak) {
+                        return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">Rehat</td>`;
+                    }
+                    const slotId = `${day}_${time}`;
+                    const entry = Object.values(schedule).find(e => e.classId === classId && e.slotId === slotId);
+                    const subjectNames = entry?.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '<span class="text-gray-400">Not set</span>';
+
+                    setTimeout(() => {
+                        const locationSelect = scheduleView.querySelector(`select[data-class-id='${classId}'][data-slot-id='${slotId}'][data-type='location']`);
+                        if (locationSelect && entry) locationSelect.value = entry.locationId || '';
+                    }, 0);
+
+                    return `<td class="p-1 border align-top min-w-[180px]"><div class="flex flex-col gap-1">
+                        <div class="p-1.5 text-xs bg-gray-50 rounded border border-dashed h-12 overflow-y-auto">${subjectNames}</div>
+                        <button data-class-id="${classId}" data-slot-id="${slotId}" class="select-subjects-btn w-full p-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">Select Subjects</button>
+                        <select data-class-id="${classId}" data-slot-id="${slotId}" data-type="location" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(locations).length ? 'disabled' : ''}>${locationOptions}</select>
+                    </div></td>`;
+                }).join('');
+
+                return `<tr>
+                    <td class="px-2 py-2 text-sm border font-semibold text-gray-600 bg-gray-50 sticky left-0">${cls.name}</td>
+                    ${timeCells}
+                </tr>`;
+            }).join('');
 
             return `
-                <div class="mb-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">${cls.name}</h2>
+                <div class="mb-8">
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">${day}</h2>
                     <div class="overflow-x-auto border rounded-lg">
                         <table class="min-w-full border-collapse">
-                            <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Day/Time</th>
+                            <thead class="bg-gray-100 sticky-header">
+                                <tr>
+                                    <th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100">Class</th>
                                     ${timeHeaders}
                                 </tr>
                             </thead>
-                            <tbody>${tableBody}</tbody>
+                            <tbody>${classRows}</tbody>
                         </table>
                     </div>
-                </div>`;
-
+                </div>
+            `;
         }).join('');
 
-        scheduleView.innerHTML = allTablesHTML;
+        scheduleView.innerHTML = allDaysHTML;
     }
 
     function renderSummaryGrid() {
@@ -533,90 +520,10 @@
         }
     }
     
-    async function savePlaylist(name) {
-        if (!name) return;
-        const versionData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule, timeslots } };
-        await addDoc(collection(db, getPath('versions')), versionData);
-    }
-
-    function updateLocalState(data) {
-        classes = data.classes || {};
-        teachers = data.teachers || {};
-        subjects = data.subjects || {};
-        locations = data.locations || {};
-        schedule = data.schedule || {};
-        timeslots = data.timeslots || {};
-    }
-
-    async function replaceAllDataInDBWithVersion(versionData) {
-        if (!versionData) return;
-        const batch = writeBatch(db);
-        const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
-        for (const coll of collectionsToClear) {
-            const snapshot = await getDocs(collection(db, getPath(coll)));
-            snapshot.forEach(docSnap => batch.delete(docSnap.ref));
-        }
-        await batch.commit();
-
-        const wb = writeBatch(db);
-        const addDataToBatch = (coll, data) => {
-            if (data) {
-                for (const [id, itemData] of Object.entries(data)) {
-                    if (typeof itemData === 'object' && itemData !== null) {
-                        const { id: _docId, ...rest } = itemData;
-                        wb.set(doc(db, getPath(coll), id), rest);
-                    }
-                }
-            }
-        };
-
-        addDataToBatch('classes', versionData.classes);
-        addDataToBatch('teachers', versionData.teachers);
-        addDataToBatch('subjects', versionData.subjects);
-        addDataToBatch('locations', versionData.locations);
-        addDataToBatch('schedule', versionData.schedule);
-        addDataToBatch('timeslots', versionData.timeslots);
-        
-        await wb.commit();
-    }
-
-    async function loadPlaylist(versionId) {
-        const version = versions[versionId];
-        if (!version) return;
-        
-        openConfirmationModal(
-            `Load Playlist: "${version.name}"?`,
-            "This will overwrite all current data. This action cannot be undone.",
-            "Load Playlist",
-            async () => {
-                await replaceAllDataInDBWithVersion(version.data);
-                activeVersionId = versionId;
-                updateLocalState(version.data);
-                renderAll();
-                showToast(`Playlist "${version.name}" loaded successfully!`);
-            }
-        );
-    }
-    
-    function deletePlaylist(versionId) {
-        const version = versions[versionId];
-        if (!version) return;
-        openConfirmationModal(
-            `Delete Playlist: "${version.name}"?`,
-            "Are you sure you want to permanently delete this playlist?",
-            "Delete",
-            async () => {
-                await deleteDoc(doc(db, getPath('versions'), versionId));
-                showToast("Playlist deleted.");
-            },
-            true
-        );
-    }
-
     // --- UI & Utility Functions ---
     function toggleModal(modalId, show) { const modal = document.getElementById(modalId); if (!modal) return; const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
     
-    function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false, onCancel = () => {}) {
+    function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false) {
         document.getElementById('confirmation-title').textContent = title;
         document.getElementById('confirmation-message').textContent = message;
         const confirmBtn = document.getElementById('confirmation-confirm-btn');
@@ -630,14 +537,7 @@
             toggleModal('confirmation-modal', false);
         });
 
-        const cancelBtn = document.getElementById('confirmation-cancel-btn');
-        const newCancelBtn = cancelBtn.cloneNode(true);
-        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-        newCancelBtn.addEventListener('click', () => {
-            onCancel();
-            toggleModal('confirmation-modal', false);
-        });
-
+        document.getElementById('confirmation-cancel-btn').onclick = () => toggleModal('confirmation-modal', false);
         toggleModal('confirmation-modal', true);
     }
 
@@ -659,11 +559,10 @@
     }
 
     function attachEventListeners() {
-        document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name }); e.target.reset(); });
+        document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name, subjectIds: [] }); e.target.reset(); });
         document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
         document.getElementById('add-location-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('location-name').value.trim(); if(name) await addDoc(collection(db, getPath('locations')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
-        document.getElementById('add-playlist-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('playlist-name').value.trim(); if(name) { await savePlaylist(name); showToast('Playlist saved!'); e.target.reset(); } });
         document.getElementById('add-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const start = document.getElementById('timeslot-start').value; const end = document.getElementById('timeslot-end').value; const isBreak = document.getElementById('timeslot-is-break').checked; if (start && end && start < end) { await addDoc(collection(db, getPath('timeslots')), { start, end, isBreak }); e.target.reset(); } else { showToast("Error: End time must be after start time."); }});
 
         document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
@@ -671,8 +570,45 @@
         document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
         document.getElementById('timeslot-list').addEventListener('click', e => { if (e.target.classList.contains('delete-timeslot')) deleteDoc(doc(db, getPath('timeslots'), e.target.dataset.id)); if (e.target.classList.contains('edit-timeslot')) openEditTimeSlotModal(e.target.dataset.id);});
         
-        document.getElementById('playlist-list').addEventListener('click', e => { if (e.target.classList.contains('load-playlist')) loadPlaylist(e.target.dataset.id); if (e.target.classList.contains('delete-playlist')) deletePlaylist(e.target.dataset.id); });
-        
+        document.getElementById('subject-class-selector').addEventListener('change', e => {
+            selectedSubjectForClassAssignment = e.target.value;
+            renderSubjectClassAssignment();
+        });
+
+        document.getElementById('subject-class-assignment-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const selectedSubjectId = selectedSubjectForClassAssignment;
+            if (!selectedSubjectId) {
+                showToast("Please select a subject first.");
+                return;
+            }
+
+            const checkedClassIds = Array.from(e.target.querySelectorAll('input[name="subject-class"]:checked')).map(el => el.value);
+            const batch = writeBatch(db);
+
+            Object.entries(classes).forEach(([classId, classData]) => {
+                const classRef = doc(db, getPath('classes'), classId);
+                const originalSubjectIds = classData.subjectIds || [];
+                let newSubjectIds = [...originalSubjectIds];
+
+                if (checkedClassIds.includes(classId)) {
+                    if (!originalSubjectIds.includes(selectedSubjectId)) {
+                        newSubjectIds.push(selectedSubjectId);
+                        batch.update(classRef, { subjectIds: newSubjectIds });
+                    }
+                } else {
+                    if (originalSubjectIds.includes(selectedSubjectId)) {
+                        newSubjectIds = originalSubjectIds.filter(id => id !== selectedSubjectId);
+                        batch.update(classRef, { subjectIds: newSubjectIds });
+                    }
+                }
+            });
+            
+            await batch.commit();
+            showToast("Subject offerings updated successfully!");
+        });
+
+
         document.getElementById('subject-list').addEventListener('click', e => {
             if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
             if (e.target.classList.contains('assign-teachers')) {
@@ -685,36 +621,14 @@
 
         document.getElementById('tab-content-management').addEventListener('click', e => { if (e.target.classList.contains('edit-btn')) { openEditModal(e.target.dataset.id, e.target.dataset.name, e.target.dataset.collection); } });
         
-        document.getElementById('playlist-selector').addEventListener('change', e => {
-            const newVersionId = e.target.value;
-            const previousVersionId = activeVersionId;
-            const versionToLoad = versions[newVersionId];
-            if (!versionToLoad) return;
-
-            openConfirmationModal(
-                `Load Playlist: "${versionToLoad.name}"?`,
-                "This will overwrite all current unsaved changes.", "Load Playlist",
-                async () => {
-                    await replaceAllDataInDBWithVersion(versionToLoad.data);
-                    activeVersionId = newVersionId;
-                    updateLocalState(versionToLoad.data);
-                    renderAll();
-                    showToast(`Playlist "${versionToLoad.name}" loaded successfully!`);
-                }, false, () => { e.target.value = previousVersionId; }
-            );
-        });
-
         document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleLocationChange(e); });
         document.getElementById('schedule-view').addEventListener('click', e => { if (e.target.classList.contains('select-subjects-btn')) openSubjectSelectionModal(e.target.dataset.classId, e.target.dataset.slotId); });
         document.getElementById('subject-selection-form').addEventListener('submit', handleSubjectSelectionSave);
         
-        // Tab Navigation
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); 
         document.getElementById('tab-management').addEventListener('click', () => switchTab('management'));
-        document.getElementById('tab-playlists').addEventListener('click', () => switchTab('playlists'));
         document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
 
-        // Modal Buttons
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
         document.getElementById('edit-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-timeslot-id').value; const start = document.getElementById('edit-timeslot-start').value; const end = document.getElementById('edit-timeslot-end').value; const isBreak = document.getElementById('edit-timeslot-is-break').checked; if (id && start && end && start < end) { await updateDoc(doc(db, getPath('timeslots'), id), { start, end, isBreak }); toggleModal('timeslot-edit-modal', false); } else { showToast("Error: End time must be after start time."); }});
         document.getElementById('cancel-edit-timeslot-btn').addEventListener('click', () => toggleModal('timeslot-edit-modal', false));
@@ -734,8 +648,14 @@
         document.getElementById('modal-class-id').value = classId;
         const existingEntry = Object.values(schedule).find(entry => entry.slotId === slotId && entry.classId === classId);
         const selectedIds = existingEntry?.subjectIds || [];
+        
+        const classSubjectIds = classes[classId]?.subjectIds || [];
+        const filteredSubjects = Object.entries(subjects)
+            .filter(([id]) => classSubjectIds.includes(id))
+            .sort(([,a],[,b]) => a.name.localeCompare(b.name));
+
         const listContainer = document.getElementById('modal-subject-list');
-        listContainer.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="subject" value="${id}" ${selectedIds.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${subject.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No subjects found.</p>';
+        listContainer.innerHTML = filteredSubjects.length > 0 ? filteredSubjects.map(([id, subject]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="subject" value="${id}" ${selectedIds.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${subject.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No subjects have been assigned to this class. Please assign them in the Management tab.</p>';
         toggleModal('subject-selection-modal', true);
     }
 
@@ -769,7 +689,7 @@
     }
 
     function setupDataListeners() {
-        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'versions', 'timeslots'];
+        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'timeslots'];
         collectionsToWatch.forEach(name => {
             onSnapshot(collection(db, getPath(name)), snapshot => {
                 const dataObject = {};
@@ -780,7 +700,6 @@
                 if (name === 'subjects') subjects = dataObject;
                 if (name === 'schedule') schedule = dataObject;
                 if (name === 'locations') locations = dataObject;
-                if (name === 'versions') versions = dataObject;
                 if (name === 'timeslots') timeslots = dataObject;
                 
                 renderAll();
@@ -789,33 +708,6 @@
     }
 
     async function initializeAppData() {
-        const versionsRef = collection(db, getPath('versions'));
-        const q = query(versionsRef, orderBy("createdAt", "desc"), limit(1));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            const latestVersionDoc = querySnapshot.docs[0];
-            const latestVersion = latestVersionDoc.data();
-            activeVersionId = latestVersionDoc.id; 
-            await replaceAllDataInDBWithVersion(latestVersion.data);
-            updateLocalState(latestVersion.data);
-            showToast(`Auto‑loaded playlist: "${latestVersion.name}"`);
-        } else {
-            const collectionsToFetch = ['classes', 'teachers', 'subjects', 'schedule', 'locations', 'timeslots'];
-            for (const name of collectionsToFetch) {
-                const snapshot = await getDocs(collection(db, getPath(name)));
-                const dataObject = {};
-                snapshot.forEach(docSnap => dataObject[docSnap.id] = { ...docSnap.data(), id: docSnap.id });
-                if (name === 'classes') classes = dataObject;
-                if (name === 'teachers') teachers = dataObject;
-                if (name === 'subjects') subjects = dataObject;
-                if (name === 'schedule') schedule = dataObject;
-                if (name === 'locations') locations = dataObject;
-                if (name === 'timeslots') timeslots = dataObject;
-            }
-        }
-        
-        renderAll();
         setupDataListeners();
     }
     

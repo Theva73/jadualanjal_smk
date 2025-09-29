@@ -3,103 +3,401 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced School Scheduler</title>
+    <title>Standalone Scheduler with Locations</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .tab-btn.active { border-color: #4f46e5; background-color: #eef2ff; color: #4338ca; font-weight: 600; }
-        .modal-backdrop { background-color: rgba(0,0,0,0.5); visibility: hidden; opacity: 0; transition: visibility 0s 0.3s, opacity 0.3s ease; }
-        .modal-backdrop.visible { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
-        .modal { transition: opacity 0.3s ease, transform 0.3s ease; transform: scale(0.95); opacity: 0; }
-        .modal-backdrop.visible .modal { transform: scale(1); opacity: 1; }
+        .modal-backdrop { background-color: rgba(0,0,0,0.5); }
+        .modal { transition: opacity 0.3s ease, transform 0.3s ease; }
+        select:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
         .summary-clash { background-color: #fee2e2 !important; color: #b91c1c; font-weight: bold; }
-        .schedule-cell-content { min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     </style>
 </head>
 <body class="p-2 sm:p-4">
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Advanced School Scheduler</h1>
-        <p class="text-sm text-gray-500 mt-1">With editable timetables, locations, and multi-subject entries.</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">New School Schedule Planner</h1>
+        <p class="text-sm text-gray-500 mt-1">A new, independent database in your Firebase project.</p>
     </header>
 
+    <!-- Tab Navigation -->
     <div class="mb-6 border-b border-gray-200">
-        <nav class="flex flex-wrap space-x-2 sm:space-x-4"><button id="tab-schedule" class="tab-btn px-3 py-2 font-medium text-sm rounded-md active">Schedule</button><button id="tab-management" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Management</button><button id="tab-summary" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Summary</button></nav>
+        <nav class="flex flex-wrap space-x-2 sm:space-x-4">
+            <button id="tab-schedule" class="tab-btn px-3 py-2 font-medium text-sm rounded-md active">Schedule</button>
+            <button id="tab-management" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Management</button>
+            <button id="tab-summary" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Summary</button>
+        </nav>
     </div>
 
-    <div id="tab-content-schedule" class="tab-panel"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div><label for="timetable-selector" class="block text-sm font-medium text-gray-700 mb-1">Select Timetable:</label><select id="timetable-selector" class="w-full max-w-xs p-2 border border-gray-300 rounded-md shadow-sm"></select></div><div><label for="class-selector" class="block text-sm font-medium text-gray-700 mb-1">Select Class:</label><select id="class-selector" class="w-full max-w-xs p-2 border border-gray-300 rounded-md shadow-sm"></select></div></div><div id="schedule-view" class="overflow-x-auto"><p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a timetable and a class to view the schedule.</p></div></div>
-    <div id="tab-content-management" class="tab-panel hidden"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><div class="bg-gray-50 p-4 rounded-lg"><h3 class="text-lg font-semibold mb-3 text-gray-800">1. Manage Classes</h3><form id="add-class-form" class="flex gap-2 mb-3"><input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form><div id="class-list" class="space-y-2 max-h-72 overflow-y-auto"></div></div><div class="bg-gray-50 p-4 rounded-lg"><h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Teachers</h3><form id="add-teacher-form" class="flex gap-2 mb-3"><input type="text" id="teacher-name" placeholder="Teacher's name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form><div id="teacher-list" class="space-y-2 max-h-72 overflow-y-auto"></div></div><div class="bg-gray-50 p-4 rounded-lg"><h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Locations</h3><form id="add-location-form" class="flex gap-2 mb-3"><input type="text" id="location-name" placeholder="e.g., Lab A" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form><div id="location-list" class="space-y-2 max-h-72 overflow-y-auto"></div></div><div class="bg-gray-50 p-4 rounded-lg"><h3 class="text-lg font-semibold mb-3 text-gray-800">4. Manage Subjects</h3><form id="add-subject-form" class="flex gap-2 mb-3"><input type="text" id="subject-name" placeholder="New subject" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form><div id="subject-list" class="space-y-2 max-h-72 overflow-y-auto"></div></div></div><div class="mt-6 bg-gray-50 p-4 rounded-lg"><h3 class="text-lg font-semibold mb-3 text-gray-800">5. Manage Timetables ("Playlists")</h3><div id="timetable-management-area"></div></div></div>
-    <div id="tab-content-summary" class="tab-panel hidden"><h2 class="text-xl font-semibold mb-4 text-gray-800">Teacher & Location Schedule Summary</h2><div id="summary-grid" class="overflow-x-auto"></div></div>
+    <!-- Tab Content -->
+    <div id="tab-content-schedule" class="tab-panel">
+        <div class="mb-4">
+            <label for="class-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Class to View/Edit Schedule:</label>
+            <select id="class-selector" class="w-full max-w-xs p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
+        </div>
+        <div id="schedule-view" class="overflow-x-auto">
+            <p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>
+        </div>
+    </div>
+
+    <div id="tab-content-management" class="tab-panel hidden">
+         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Manage Classes -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">1. Manage Classes</h3>
+                <form id="add-class-form" class="flex gap-2 mb-3"><input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
+                <div id="class-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+            <!-- Manage Teachers -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Teachers</h3>
+                <form id="add-teacher-form" class="flex gap-2 mb-3"><input type="text" id="teacher-name" placeholder="Teacher's name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
+                <div id="teacher-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+            <!-- Manage Locations (New) -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Locations</h3>
+                <form id="add-location-form" class="flex gap-2 mb-3"><input type="text" id="location-name" placeholder="e.g., Lab A, Hall B" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
+                <div id="location-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+            <!-- Manage Subjects -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">4. Manage & Assign Subjects</h3>
+                <form id="add-subject-form" class="flex gap-2 mb-3"><input type="text" id="subject-name" placeholder="New subject name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
+                <div id="subject-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tab-content-summary" class="tab-panel hidden">
+         <h2 class="text-xl font-semibold mb-4 text-gray-800">Teacher Schedule Summary</h2>
+         <div id="summary-grid" class="overflow-x-auto"></div>
+    </div>
 </div>
 
+<!-- Modals -->
 <div id="modal-container"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4", authDomain: "jadual-3f0aa.firebaseapp.com", projectId: "jadual-3f0aa", storageBucket: "jadual-3f0aa.firebasestorage.app", messagingSenderId: "496526436851", appId: "1:496526436851:web:78ff48b28bfc8c31f14a86" };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
+      authDomain: "jadual-3f0aa.firebaseapp.com",
+      projectId: "jadual-3f0aa",
+      storageBucket: "jadual-3f0aa.firebasestorage.app",
+      messagingSenderId: "496526436851",
+      appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
+    };
     
-    let db;
-    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, timetables = {};
-    let selectedClassId = null, selectedTimetableId = null;
+    let db, auth, userId;
+    let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {};
+    let selectedClassId = null;
+
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
-    const getPath = (collectionName) => `scheduler_v4_${collectionName}`;
+    const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
+    const REHAT_TIME = "10:15-10:30";
 
-    const renderList = (name, data, el) => { el.innerHTML = Object.keys(data).length ? Object.entries(data).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, item]) => `<div class="flex items-center justify-between p-2 bg-white rounded-md shadow-sm"><span>${item.name}</span><div class="flex gap-2"><button data-id="${id}" data-name="${item.name}" data-collection="${name}" class="edit-btn text-blue-500 text-xs font-semibold">EDIT</button><button data-id="${id}" data-collection="${name}" class="delete-btn text-red-500 text-xs font-semibold">DELETE</button></div></div>`).join('') : `<p class="text-sm text-gray-500">No ${name} found.</p>`; };
-    const renderSubjects = () => { const el = document.getElementById('subject-list'); el.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => { const teacherNames = subject.teacherIds?.map(tid => teachers[tid]?.name).filter(Boolean).join(', ') || 'None'; return `<div class="p-3 bg-white rounded-md shadow-sm"><div class="flex justify-between items-center"><span class="font-semibold text-gray-800">${subject.name}</span><div class="flex gap-2"><button data-id="${id}" data-name="${subject.name}" data-collection="subjects" class="edit-btn text-blue-500 text-xs">EDIT</button><button data-id="${id}" class="assign-teachers-btn bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">ASSIGN</button><button data-id="${id}" data-collection="subjects" class="delete-btn text-red-500 text-xs">DELETE</button></div></div><p class="text-xs text-gray-500 mt-1">Teachers: ${teacherNames}</p></div>`; }).join('') : `<p class="text-sm text-gray-500">No subjects yet.</p>`; };
-    const renderSelectors = () => { document.getElementById('timetable-selector').innerHTML = `<option value="">-- Timetable --</option>` + Object.entries(timetables).sort(([,a],[,b])=>a.name.localeCompare(b.name)).map(([id, tt]) => `<option value="${id}" ${id === selectedTimetableId ? 'selected' : ''}>${tt.name}</option>`).join(''); document.getElementById('class-selector').innerHTML = `<option value="">-- Class --</option>` + Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `<option value="${id}" ${id === selectedClassId ? 'selected' : ''}>${cls.name}</option>`).join(''); };
-    const renderAll = () => { ['classes', 'teachers', 'locations'].forEach(name => renderList(name, window[name], document.getElementById(`${name.slice(0, -1)}-list`))); renderSubjects(); renderTimetableManager(); renderSelectors(); renderScheduleGrid(); renderSummaryGrid(); };
-    function renderTimetableManager() { const c = document.getElementById('timetable-management-area'); c.innerHTML = `<div class="flex gap-4 items-end mb-4"><div class="flex-grow"><label class="text-sm font-medium">New Timetable Name</label><input type="text" id="new-timetable-name" class="w-full p-2 border rounded-md mt-1"></div><button id="add-timetable-btn" class="bg-green-600 text-white px-4 py-2 text-sm rounded-md hover:bg-green-700">Create</button></div><div id="timetable-editor-container"></div>`; if (selectedTimetableId && timetables[selectedTimetableId]) { renderTimetableEditor(selectedTimetableId); } else { document.getElementById('timetable-editor-container').innerHTML = ''; } }
-    function renderTimetableEditor(id) { const c = document.getElementById('timetable-editor-container'); const tt = timetables[id]; if (!tt) { c.innerHTML = ''; return; } c.innerHTML = `<div class="p-4 border rounded-md bg-white mt-2"><div class="flex justify-between items-center"><h4 class="font-bold">${tt.name}</h4><button data-id="${id}" data-collection="timetables" class="delete-btn text-red-500 text-xs">DELETE</button></div><div id="time-slots-for-${id}" class="space-y-2 mt-2">${(tt.timeSlots || []).sort((a,b)=>a.start.localeCompare(b.start)).map((ts, i) => `<div class="flex gap-2 items-center"><input type="time" value="${ts.start}" data-index="${i}" class="edit-ts-start p-1 border rounded-md"><span class="text-gray-500">-</span><input type="time" value="${ts.end}" data-index="${i}" class="edit-ts-end p-1 border rounded-md"><button data-index="${i}" class="remove-ts-btn text-red-500 text-xs font-semibold">REMOVE</button></div>`).join('')}</div><button class="add-ts-btn mt-3 text-sm text-indigo-600 font-semibold">+ Add Time Slot</button></div>`; }
-    function renderScheduleGrid() { const sView = document.getElementById('schedule-view'); if (!selectedClassId || !selectedTimetableId) { sView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a timetable and a class.</p>'; return; } const tt = timetables[selectedTimetableId]; if (!tt || !tt.timeSlots) { sView.innerHTML = '<p class="text-red-500">Error: Timetable missing time slots.</p>'; return; } const timeSlots = tt.timeSlots.sort((a,b) => a.start.localeCompare(b.start)); sView.innerHTML = `<table class="min-w-full border-collapse"><thead><tr class="bg-gray-100"><th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Day/Time</th>${timeSlots.map(ts => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${ts.start}-${ts.end}</th>`).join('')}</tr></thead><tbody>${DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${timeSlots.map(ts => { const slotId = `${day}_${ts.start}-${ts.end}`; const entry = Object.values(schedule).find(e => e.classId === selectedClassId && e.timetableId === selectedTimetableId && e.slotId === slotId); const content = entry ? `<div class="text-xs space-y-1">${(entry.subjectIds || []).map(sid => `<span class="block bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">${subjects[sid]?.name || ''}</span>`).join('')}${entry.locationId ? `<span class="block bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 mt-1">${locations[entry.locationId]?.name || ''}</span>` : ''}</div>` : ''; return `<td class="p-1 border align-top"><button data-slot-id="${slotId}" class="edit-slot-btn w-full h-full text-left p-1 schedule-cell-content">${content}</button></td>`; }).join('')}</tr>`).join('')}</tbody></table>`; }
-    function renderSummaryGrid() { const sDiv = document.getElementById('summary-grid'); if (!selectedTimetableId || !timetables[selectedTimetableId] || !timetables[selectedTimetableId].timeSlots) { sDiv.innerHTML = '<p class="text-sm text-gray-500">Select a timetable to see summary.</p>'; return; } const timeSlots = timetables[selectedTimetableId].timeSlots.sort((a,b) => a.start.localeCompare(b.start)); let teacherHtml = '<tr><td colspan="100%" class="p-2 font-bold bg-gray-100">Teacher Summary</td></tr>'; Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).forEach(([tid, teacher]) => { teacherHtml += `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${teacher.name}</td>`; DAYS.forEach(day => { timeSlots.forEach(ts => { const slotId = `${day}_${ts.start}-${ts.end}`; const entries = Object.values(schedule).filter(e => e.timetableId === selectedTimetableId && e.slotId === slotId && e.subjectIds?.some(sid => subjects[sid]?.teacherIds?.includes(tid))); const isClash = entries.length > 1; teacherHtml += `<td class="p-2 border align-middle text-center text-xs ${isClash ? 'summary-clash' : ''}">${entries.map(e => classes[e.classId]?.name).join(', ')}</td>`; }); }); teacherHtml += '</tr>'; }); let locationHtml = '<tr><td colspan="100%" class="p-2 font-bold bg-gray-100 mt-4">Location Summary</td></tr>'; Object.entries(locations).sort(([,a],[,b]) => a.name.localeCompare(b.name)).forEach(([lid, location]) => { locationHtml += `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${location.name}</td>`; DAYS.forEach(day => { timeSlots.forEach(ts => { const slotId = `${day}_${ts.start}-${ts.end}`; const entries = Object.values(schedule).filter(e => e.timetableId === selectedTimetableId && e.slotId === slotId && e.locationId === lid); const isClash = entries.length > 1; locationHtml += `<td class="p-2 border align-middle text-center text-xs ${isClash ? 'summary-clash' : ''}">${entries.map(e => classes[e.classId]?.name).join(', ')}</td>`; }); }); locationHtml += '</tr>'; }); const dayHeaders = DAYS.map(day => `<th colspan="${timeSlots.length}" class="p-2 border font-semibold text-center">${day}</th>`).join(''); const timeHeaders = timeSlots.map(ts => `<th class="p-2 border font-semibold whitespace-nowrap">${ts.start}-${ts.end}</th>`).join(''); sDiv.innerHTML = `<table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Name/Day</th>${dayHeaders}</tr><tr class="bg-gray-100">${DAYS.map(() => timeHeaders).join('')}</tr></thead><tbody>${teacherHtml}${locationHtml}</tbody></table>`; }
-    const toggleModal = (modalId, show) => document.getElementById(modalId).classList.toggle('visible', show);
-    function initModals() { document.getElementById('modal-container').innerHTML = `<div id="edit-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" class="cancel-btn px-4 py-2 text-sm rounded-md bg-gray-200">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md">Save</button></div></form></div></div><div id="assign-teachers-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="assign-subject-name" class="font-bold"></span></h3><form id="assign-teachers-form"><input type="hidden" id="assign-subject-id"><div id="assign-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" class="cancel-btn px-4 py-2 text-sm">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm">Save</button></div></form></div></div><div id="edit-slot-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal"><h3 class="text-lg font-semibold mb-4">Edit Slot</h3><form id="edit-slot-form"><input type="hidden" id="slot-id"><div class="grid grid-cols-2 gap-4"><div class="border p-2 rounded-md"><h4 class="font-medium mb-2">Subjects</h4><div id="slot-subject-list" class="max-h-48 overflow-y-auto space-y-1"></div></div><div class="border p-2 rounded-md"><h4 class="font-medium mb-2">Location</h4><select id="slot-location-select" class="w-full p-2 border rounded-md"></select></div></div><div class="flex justify-between items-center mt-4"><button type="button" id="clear-slot-btn" class="text-red-600 text-sm">Clear Slot</button><div class="flex gap-3"><button type="button" class="cancel-btn px-4 py-2 text-sm">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm">Save</button></div></div></form></div></div><div id="clash-alert-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal"><h3 class="text-lg font-medium text-red-700">Clash</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" class="ok-btn bg-red-600 text-white px-4 py-2 text-sm">OK</button></div></div></div>`; }
-    function attachEventListeners() {
-        const addFormHandler = async (e, collectionName) => { e.preventDefault(); const input = e.target.querySelector('input'); const name = input.value.trim(); if (name) await addDoc(collection(db, getPath(collectionName)), { name }); input.value = ''; };
-        document.getElementById('add-class-form').addEventListener('submit', e => addFormHandler(e, 'classes'));
-        document.getElementById('add-teacher-form').addEventListener('submit', e => addFormHandler(e, 'teachers'));
-        document.getElementById('add-location-form').addEventListener('submit', e => addFormHandler(e, 'locations'));
-        document.getElementById('add-subject-form').addEventListener('submit', e => { e.preventDefault(); const input = document.getElementById('subject-name'); const name = input.value.trim(); if (name) addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); input.value = ''; });
-        document.getElementById('add-timetable-btn').addEventListener('click', async () => { const name = document.getElementById('new-timetable-name').value.trim(); if(name) { const newTT = await addDoc(collection(db, getPath('timetables')), { name, timeSlots: [{start:"08:00", end:"09:00"}] }); selectedTimetableId = newTT.id; renderAll(); document.getElementById('new-timetable-name').value = ''; } });
-        document.getElementById('tab-content-management').addEventListener('click', e => { const btn = e.target.closest('button'); if (!btn) return; const { id, collection, name, index } = btn.dataset; if (btn.classList.contains('delete-btn')) deleteDoc(doc(db, getPath(collection), id)); if (btn.classList.contains('edit-btn')) { document.getElementById('edit-id').value = id; document.getElementById('edit-collection').value = collection; document.getElementById('edit-name-input').value = name; document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`; toggleModal('edit-modal', true); } if (btn.classList.contains('assign-teachers-btn')) { document.getElementById('assign-subject-id').value = id; document.getElementById('assign-subject-name').textContent = subjects[id]?.name; document.getElementById('assign-teacher-list').innerHTML = Object.entries(teachers).sort(([,a],[,b])=>a.name.localeCompare(b.name)).map(([tid, t]) => `<label class="flex items-center"><input type="checkbox" value="${tid}" ${subjects[id]?.teacherIds?.includes(tid) ? 'checked' : ''}> <span class="ml-2">${t.name}</span></label>`).join(''); toggleModal('assign-teachers-modal', true); } if (btn.classList.contains('add-ts-btn')) { const newSlots = [...(timetables[selectedTimetableId].timeSlots || []), {start: "09:00", end: "10:00"}]; updateDoc(doc(db, getPath('timetables'), selectedTimetableId), { timeSlots: newSlots }); } if (btn.classList.contains('remove-ts-btn')) { const newSlots = timetables[selectedTimetableId].timeSlots.filter((_, i) => i !== parseInt(index)); updateDoc(doc(db, getPath('timetables'), selectedTimetableId), { timeSlots: newSlots }); } });
-        document.getElementById('timetable-management-area').addEventListener('change', e => { const { index } = e.target.dataset; if (!index) return; const newSlots = [...timetables[selectedTimetableId].timeSlots]; if (e.target.classList.contains('edit-ts-start')) newSlots[index].start = e.target.value; if (e.target.classList.contains('edit-ts-end')) newSlots[index].end = e.target.value; updateDoc(doc(db, getPath('timetables'), selectedTimetableId), { timeSlots: newSlots }); });
-        document.getElementById('edit-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-id').value; const collection = document.getElementById('edit-collection').value; const newName = document.getElementById('edit-name-input').value.trim(); if(newName) await updateDoc(doc(db, getPath(collection), id), { name: newName }); toggleModal('edit-modal', false); });
-        document.getElementById('assign-teachers-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('assign-subject-id').value; const teacherIds = Array.from(document.querySelectorAll('#assign-teacher-list input:checked')).map(i => i.value); await updateDoc(doc(db, getPath('subjects'), id), { teacherIds }); toggleModal('assign-teachers-modal', false); });
-        document.getElementById('timetable-selector').addEventListener('change', e => { selectedTimetableId = e.target.value; renderAll(); });
-        document.getElementById('class-selector').addEventListener('change', e => { selectedClassId = e.target.value; renderAll(); });
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.getElementById(`tab-content-${btn.id.replace('tab-','')}`).classList.remove('hidden'); }));
-        document.getElementById('modal-container').addEventListener('click', e => { if (e.target.classList.contains('cancel-btn') || e.target.classList.contains('ok-btn')) e.target.closest('.modal-backdrop').classList.remove('visible'); });
-        document.getElementById('schedule-view').addEventListener('click', e => { const btn = e.target.closest('.edit-slot-btn'); if (btn) { const { slotId } = btn.dataset; document.getElementById('slot-id').value = slotId; const entry = Object.values(schedule).find(e => e.classId === selectedClassId && e.timetableId === selectedTimetableId && e.slotId === slotId); document.getElementById('slot-subject-list').innerHTML = Object.entries(subjects).sort(([,a],[,b])=>a.name.localeCompare(b.name)).map(([id, s]) => `<label class="flex items-center"><input type="checkbox" value="${id}" ${entry?.subjectIds?.includes(id) ? 'checked' : ''}> <span class="ml-2">${s.name}</span></label>`).join(''); document.getElementById('slot-location-select').innerHTML = `<option value="">-- No Location --</option>` + Object.entries(locations).sort(([,a],[,b])=>a.name.localeCompare(b.name)).map(([id, l]) => `<option value="${id}" ${entry?.locationId === id ? 'selected' : ''}>${l.name}</option>`).join(''); toggleModal('edit-slot-modal', true); } });
-        document.getElementById('edit-slot-form').addEventListener('submit', async e => { e.preventDefault(); const slotId = document.getElementById('slot-id').value; const subjectIds = Array.from(document.querySelectorAll('#slot-subject-list input:checked')).map(i => i.value); const locationId = document.getElementById('slot-location-select').value; const existingEntry = Object.values(schedule).find(e => e.classId === selectedClassId && e.timetableId === selectedTimetableId && e.slotId === slotId); const docRef = existingEntry ? doc(db, getPath('schedule'), existingEntry.id) : doc(collection(db, getPath('schedule'))); await setDoc(docRef, { classId: selectedClassId, timetableId: selectedTimetableId, slotId, subjectIds, locationId }, { merge: true }); toggleModal('edit-slot-modal', false); });
-        document.getElementById('clear-slot-btn').addEventListener('click', async () => { const slotId = document.getElementById('slot-id').value; const existingEntry = Object.values(schedule).find(e => e.classId === selectedClassId && e.timetableId === selectedTimetableId && e.slotId === slotId); if (existingEntry) { await deleteDoc(doc(db, getPath('schedule'), existingEntry.id)); } toggleModal('edit-slot-modal', false); });
+    const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
+
+    function renderAll() {
+        renderClasses();
+        renderTeachers();
+        renderLocations();
+        renderSubjects();
+        renderClassSelector();
+        renderScheduleForClass();
+        renderSummaryGrid();
+    }
+
+    function renderClasses() {
+        const classListDiv = document.getElementById('class-list');
+        classListDiv.innerHTML = Object.keys(classes).length ? Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `
+            <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                <span>${cls.name}</span>
+                <div class="flex gap-2">
+                    <button data-id="${id}" data-name="${cls.name}" data-collection="classes" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No classes found.</p>`;
     }
     
-    // --- Main Initialization ---
-    try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        initModals(); attachEventListeners();
-        onAuthStateChanged(getAuth(app), user => {
-            if (user) {
-                ['classes', 'teachers', 'subjects', 'locations', 'timetables', 'schedule'].forEach(name => {
-                    onSnapshot(collection(db, getPath(name)), snapshot => {
-                        window[name] = {};
-                        snapshot.forEach(doc => window[name][doc.id] = {...doc.data(), id: doc.id});
-                        renderAll();
-                    }, err => console.error(`Error fetching ${name}:`, err));
-                });
-            } else { signInAnonymously(getAuth(app)); }
-        });
-    } catch (error) {
-        console.error("Firebase initialization failed:", error);
-        document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check the console for details.</div>`;
+    function renderTeachers() {
+        const teacherListDiv = document.getElementById('teacher-list');
+        const teacherArray = Object.values(teachers);
+        teacherListDiv.innerHTML = teacherArray.length ? teacherArray.sort((a,b) => a.name.localeCompare(b.name)).map(teacher => `
+            <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                <span>${teacher.name}</span>
+                 <div class="flex gap-2">
+                    <button data-id="${teacher.id}" data-name="${teacher.name}" data-collection="teachers" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${teacher.id}" class="delete-teacher text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No teachers added yet.</p>`;
     }
+
+    function renderLocations() {
+        const locationListDiv = document.getElementById('location-list');
+        const locationArray = Object.values(locations);
+        locationListDiv.innerHTML = locationArray.length ? locationArray.sort((a, b) => a.name.localeCompare(b.name)).map(location => `
+            <div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                <span>${location.name}</span>
+                 <div class="flex gap-2">
+                    <button data-id="${location.id}" data-name="${location.name}" data-collection="locations" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                    <button data-id="${location.id}" class="delete-location text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                </div>
+            </div>`).join('') : `<p class="text-sm text-gray-500">No locations added yet.</p>`;
+    }
+
+    function renderSubjects() {
+        const subjectListDiv = document.getElementById('subject-list');
+        subjectListDiv.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => {
+            const teacherNames = subject.teacherIds?.map(tid => teachers[tid]?.name).filter(Boolean).join(', ') || 'None assigned';
+            return `<div class="p-3 bg-white rounded-md shadow-sm">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-gray-800">${subject.name}</span>
+                    <div class="flex gap-2">
+                        <button data-id="${id}" data-name="${subject.name}" data-collection="subjects" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                        <button data-id="${id}" class="assign-teachers bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">ASSIGN</button>
+                        <button data-id="${id}" class="delete-subject text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Teachers: ${teacherNames}</p>
+            </div>`;
+        }).join('') : `<p class="text-sm text-gray-500">No subjects created yet.</p>`;
+    }
+
+    function renderClassSelector() {
+        const selector = document.getElementById('class-selector');
+        const hasClasses = Object.keys(classes).length > 0;
+        selector.disabled = !hasClasses;
+        const currentSelected = selector.value;
+        selector.innerHTML = !hasClasses ? `<option>Please add a class first</option>` : `<option value="">-- Select a Class --</option>` + Object.entries(classes).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, cls]) => `<option value="${id}">${cls.name}</option>`).join('');
+        selector.value = currentSelected;
+    }
+
+    function renderScheduleForClass() {
+        const scheduleView = document.getElementById('schedule-view');
+        if (!selectedClassId) {
+            scheduleView.innerHTML = '<p id="schedule-placeholder" class="text-gray-500 py-8 text-center">Please select a class to view its schedule.</p>';
+            return;
+        }
+        const subjectOptions = `<option value="">-- Subjek --</option>` + Object.entries(subjects).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, sub]) => `<option value="${id}">${sub.name}</option>`).join('');
+        const locationOptions = `<option value="">-- Lokasi --</option>` + Object.entries(locations).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
+        
+        const tableBody = DAYS.map(day => `<tr><td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky left-0 z-10">${day}</td>${TIME_SLOTS.map(time => {
+            if (time === REHAT_TIME) return `<td class="p-1 border align-middle text-center bg-green-50 text-green-700 font-semibold text-xs">Rehat</td>`;
+            const slotId = `${day}_${time}`;
+            return `<td class="p-1 border align-top min-w-[180px]"><div class="flex flex-col gap-1">
+                <select data-slot-id="${slotId}" data-type="subject" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(subjects).length ? 'disabled' : ''}>${subjectOptions}</select>
+                <select data-slot-id="${slotId}" data-type="location" class="schedule-slot w-full p-1 text-xs border-gray-300 rounded-md" ${!Object.keys(locations).length ? 'disabled' : ''}>${locationOptions}</select>
+            </div></td>`;
+        }).join('')}</tr>`).join('');
+
+        scheduleView.innerHTML = `<table class="min-w-full border-collapse"><thead><tr class="bg-gray-100"><th class="px-2 py-2 text-sm font-semibold text-gray-600 border sticky left-0 bg-gray-100 z-10">Class/Time</th>${TIME_SLOTS.map(ts => `<th class="px-2 py-2 text-sm font-medium text-gray-600 border whitespace-nowrap">${ts}</th>`).join('')}</tr></thead><tbody>${tableBody}</tbody></table>`;
+        
+        const classSchedule = Object.values(schedule).filter(entry => entry.classId === selectedClassId);
+        classSchedule.forEach(entry => {
+            const subjectSelect = scheduleView.querySelector(`select[data-slot-id='${entry.slotId}'][data-type='subject']`);
+            const locationSelect = scheduleView.querySelector(`select[data-slot-id='${entry.slotId}'][data-type='location']`);
+            if (subjectSelect) subjectSelect.value = entry.subjectId || '';
+            if (locationSelect) locationSelect.value = entry.locationId || '';
+        });
+    }
+
+    function renderSummaryGrid() {
+        const summaryDiv = document.getElementById('summary-grid');
+        if (!Object.keys(teachers).length) {
+            summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No teachers to display.</p>`;
+            return;
+        }
+        const teacherSchedules = {};
+        Object.keys(teachers).forEach(tid => {
+            teacherSchedules[tid] = {};
+            DAYS.forEach(day => teacherSchedules[tid][day] = {});
+        });
+        Object.values(schedule).forEach(entry => {
+            const subject = subjects[entry.subjectId];
+            const className = classes[entry.classId]?.name || 'Unknown';
+            const locationName = locations[entry.locationId]?.name;
+            if (subject?.teacherIds) {
+                subject.teacherIds.forEach(tid => {
+                    if (teacherSchedules[tid] && teacherSchedules[tid][entry.day]) {
+                        if (!teacherSchedules[tid][entry.day][entry.time]) teacherSchedules[tid][entry.day][entry.time] = [];
+                        const entryText = locationName ? `${className} (${locationName})` : className;
+                        teacherSchedules[tid][entry.day][entry.time].push(entryText);
+                    }
+                });
+            }
+        });
+        const dayHeaders = DAYS.map(day => `<th colspan="${TIME_SLOTS.length}" class="p-2 border font-semibold text-center">${day}</th>`).join('');
+        const timeHeaders = TIME_SLOTS.map(ts => `<th class="p-2 border font-semibold whitespace-nowrap">${ts}</th>`).join('');
+        summaryDiv.innerHTML = `<p class="text-xs text-gray-500 mb-2">Clashes (multiple classes in one slot) are highlighted in red.</p><table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Nama/Masa</th>${dayHeaders}</tr><tr class="bg-gray-100">${DAYS.map(() => timeHeaders).join('')}</tr></thead><tbody>${Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([tid, teacher]) => `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${teacher.name}</td>${DAYS.map(day => TIME_SLOTS.map(time => { if (time === REHAT_TIME) return `<td class="p-1 border bg-green-50"></td>`; const classesAssigned = teacherSchedules[tid]?.[day]?.[time] || []; const isClash = classesAssigned.length > 1; return `<td class="p-2 border align-middle text-center ${isClash ? 'summary-clash' : ''}" title="${day} ${time}">${classesAssigned.join(', ')}</td>`; }).join('')).join('')}</tr>`).join('')}</tbody></table>`;
+    }
+
+    async function handleScheduleChange(e) {
+        const selectEl = e.target;
+        const { slotId, type } = selectEl.dataset;
+        const newValue = selectEl.value;
+        const [day, time] = slotId.split('_');
+        const subjectSelect = document.querySelector(`select[data-slot-id='${slotId}'][data-type='subject']`);
+        const locationSelect = document.querySelector(`select[data-slot-id='${slotId}'][data-type='location']`);
+        const currentSubjectId = subjectSelect.value;
+        const currentLocationId = locationSelect.value;
+        const existingEntry = Object.entries(schedule).find(([, entry]) => entry.slotId === slotId && entry.classId === selectedClassId);
+        const existingDocId = existingEntry ? existingEntry[0] : null;
+        const existingData = existingDocId ? schedule[existingDocId] : {};
+        let clashFound = false;
+        let clashDetails = '';
+        if (type === 'subject' && newValue) {
+            const newTeachers = subjects[newValue]?.teacherIds || [];
+            if (newTeachers.length) {
+                const q = query(collection(db, getPath('schedule')), where("day", "==", day), where("time", "==", time));
+                const querySnapshot = await getDocs(q);
+                for (const docSnap of querySnapshot.docs) {
+                    const entry = docSnap.data();
+                    if (entry.classId === selectedClassId) continue;
+                    const scheduledTeachers = subjects[entry.subjectId]?.teacherIds || [];
+                    const intersection = newTeachers.filter(tid => scheduledTeachers.includes(tid));
+                    if (intersection.length) {
+                        clashFound = true;
+                        clashDetails = `Teacher Clash: Teacher(s) ${intersection.map(tid => teachers[tid]?.name).join(', ')} are already scheduled for ${subjects[entry.subjectId]?.name} in class ${classes[entry.classId]?.name} at this time.`;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!clashFound && type === 'location' && newValue) {
+            const q = query(collection(db, getPath('schedule')), where("day", "==", day), where("time", "==", time), where("locationId", "==", newValue));
+            const querySnapshot = await getDocs(q);
+            for (const docSnap of querySnapshot.docs) {
+                const entry = docSnap.data();
+                if (entry.classId !== selectedClassId) {
+                    clashFound = true;
+                    clashDetails = `Location Clash: Location ${locations[newValue]?.name} is already booked for class ${classes[entry.classId]?.name} at this time.`;
+                    break;
+                }
+            }
+        }
+        if (clashFound) {
+            document.getElementById('clash-alert-message').textContent = clashDetails;
+            toggleModal('clash-alert-modal', true);
+            if (type === 'subject') selectEl.value = existingData.subjectId || '';
+            if (type === 'location') selectEl.value = existingData.locationId || '';
+            return;
+        }
+        const schedulePath = getPath('schedule');
+        const scheduleRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
+        if (currentSubjectId || currentLocationId) {
+            await setDoc(scheduleRef, {
+                day, time, slotId,
+                classId: selectedClassId,
+                subjectId: currentSubjectId || null,
+                locationId: currentLocationId || null
+            }, { merge: true });
+        } else if (existingDocId) {
+            await deleteDoc(scheduleRef);
+        }
+    }
+    
+    function toggleModal(modalId, show) { const modal = document.getElementById(modalId); const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
+    function switchTab(targetTabId) { document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(`tab-content-${targetTabId}`).classList.remove('hidden'); document.getElementById(`tab-${targetTabId}`).classList.add('active'); }
+
+    function attachEventListeners() {
+        document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name }); e.target.reset(); });
+        document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
+        document.getElementById('add-location-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('location-name').value.trim(); if(name) await addDoc(collection(db, getPath('locations')), { name }); e.target.reset(); });
+        document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
+        
+        document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
+        document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
+        document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
+        document.getElementById('subject-list').addEventListener('click', e => {
+            if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
+            if (e.target.classList.contains('assign-teachers')) {
+                const subjectId = e.target.dataset.id; const subject = subjects[subjectId]; document.getElementById('modal-subject-name').textContent = subject.name; document.getElementById('modal-subject-id').value = subjectId;
+                const listContainer = document.getElementById('modal-teacher-list');
+                listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subject.teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers found to assign.</p>';
+                toggleModal('teacher-assignment-modal', true);
+            }
+        });
+
+        document.getElementById('tab-content-management').addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn')) {
+                const id = e.target.dataset.id;
+                const name = e.target.dataset.name;
+                const collection = e.target.dataset.collection;
+                openEditModal(id, name, collection);
+            }
+        });
+
+        document.getElementById('class-selector').addEventListener('change', e => { selectedClassId = e.target.value; renderScheduleForClass(); });
+        document.getElementById('schedule-view').addEventListener('change', e => { if (e.target.classList.contains('schedule-slot')) handleScheduleChange(e); });
+        document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); document.getElementById('tab-management').addEventListener('click', () => switchTab('management')); document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
+        document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
+        document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const collection = document.getElementById('edit-collection').value;
+            const newName = document.getElementById('edit-name-input').value.trim();
+            if (id && collection && newName) {
+                await updateDoc(doc(db, getPath(collection), id), { name: newName });
+                toggleModal('edit-modal', false);
+            }
+        });
+        document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
+    }
+
+    function openEditModal(id, name, collection) {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-collection').value = collection;
+        document.getElementById('edit-name-input').value = name;
+        document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`;
+        toggleModal('edit-modal', true);
+    }
+
+    function initModals() {
+        document.getElementById('modal-container').innerHTML = `
+            <div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
+            <div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>
+            <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>`; 
+    }
+
+    function setupDataListeners() {
+        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule', 'locations'];
+        collectionsToWatch.forEach(name => {
+            const path = getPath(name);
+            onSnapshot(collection(db, path), snapshot => {
+                const dataObject = {};
+                snapshot.forEach(doc => dataObject[doc.id] = {...doc.data(), id: doc.id});
+                if (name === 'classes') classes = dataObject;
+                if (name === 'teachers') teachers = dataObject;
+                if (name === 'subjects') subjects = dataObject;
+                if (name === 'schedule') schedule = dataObject;
+                if (name === 'locations') locations = dataObject;
+                renderAll();
+            }, err => console.error(`Error fetching ${name}:`, err));
+        });
+    }
+    
+    function main() {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app); auth = getAuth(app);
+            initModals(); attachEventListeners();
+            onAuthStateChanged(auth, user => {
+                if (user) { userId = user.uid; setupDataListeners(); } 
+                else { signInAnonymously(auth); }
+            });
+        } catch (error) { console.error("Firebase initialization failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check console.</div>`; }
+    }
+
+    main();
 </script>
 </body>
 </html>
-
 

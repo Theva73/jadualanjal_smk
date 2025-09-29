@@ -102,6 +102,7 @@
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
 
+    // This path now correctly matches your original script's data structure
     const getPath = (collectionName) => `artifacts/${appId}/public/data/${collectionName}`;
 
     function renderAll() {
@@ -221,19 +222,18 @@
             teachers = {};
             nameArray.forEach((name, i) => { teachers[`id_${i}_${name.replace(/\s+/g, '')}`] = {name}; });
             renderAll();
-        });
+        }, err => console.error(`Error fetching name list (${currentNameListSession}):`, err));
 
-        if(currentNameListSession === 'pagi') unsubscribePagi = nameListener;
-        else unsubscribePetang = nameListener;
+        if(currentNameListSession === 'pagi') unsubscribePagi = nameListener; else unsubscribePetang = nameListener;
         
         const subjectsPath = getPath('subjects'); console.log(`%cListening for subjects at: ${subjectsPath}`, 'color: green;');
-        unsubscribeSubjects = onSnapshot(collection(db, subjectsPath), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); });
+        unsubscribeSubjects = onSnapshot(collection(db, subjectsPath), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching subjects:', err));
         
         const classesPath = getPath('classes'); console.log(`%cListening for classes at: ${classesPath}`, 'color: purple;');
-        unsubscribeClasses = onSnapshot(collection(db, classesPath), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); });
+        unsubscribeClasses = onSnapshot(collection(db, classesPath), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching classes:', err));
         
         const schedulePath = getPath('schedule'); console.log(`%cListening for schedule at: ${schedulePath}`, 'color: orange;');
-        unsubscribeSchedule = onSnapshot(collection(db, schedulePath), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); });
+        unsubscribeSchedule = onSnapshot(collection(db, schedulePath), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching schedule:', err));
     }
     
     function main() {
@@ -252,4 +252,5 @@
 </script>
 </body>
 </html>
+
 

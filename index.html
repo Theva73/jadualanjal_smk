@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadual Anjal (Final Integrated)</title>
+    <title>Jadual Anjal (Corrected Path)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -19,7 +19,7 @@
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">Using your existing Firebase name & subject lists.</p>
+        <p class="text-sm text-gray-500 mt-1">Connecting to your existing Firebase data.</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -46,10 +46,7 @@
          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">1. Manage Classes</h3>
-                <form id="add-class-form" class="flex gap-2 mb-3">
-                    <input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required>
-                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button>
-                </form>
+                <form id="add-class-form" class="flex gap-2 mb-3"><input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="class-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
@@ -62,10 +59,7 @@
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage & Assign Subjects</h3>
-                <form id="add-subject-form" class="flex gap-2 mb-3">
-                    <input type="text" id="subject-name" placeholder="New subject name" class="flex-grow p-2 text-sm border rounded-md" required>
-                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button>
-                </form>
+                <form id="add-subject-form" class="flex gap-2 mb-3"><input type="text" id="subject-name" placeholder="New subject name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="subject-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
         </div>
@@ -83,9 +77,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- Using Firebase Config from your original script ---
     const firebaseConfig = {
       apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
       authDomain: "jadual-3f0aa.firebaseapp.com",
@@ -97,59 +90,17 @@
     
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-jadual-final-integrated';
     let db, auth, userId;
-    
-    // Data stores
-    let teachers = {}; // Will be populated from your name lists
-    let subjects = {}; // New collection for subjects
-    let schedule = {}; // New collection for the schedule itself
-    let classes = {};  // New collection for classes
-    let namesPagiShared = [];
-    let namesPetangShared = [];
-    
+    let teachers = {}, subjects = {}, schedule = {}, classes = {};
+    let namesPagiShared = [], namesPetangShared = [];
     let selectedClassId = null;
-    let currentNameListSession = 'pagi'; // To match your original script's default
+    let currentNameListSession = 'pagi';
+    let unsubscribePagi = null, unsubscribePetang = null, unsubscribeSubjects = null, unsubscribeClasses = null, unsubscribeSchedule = null;
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
 
-    const getPath = (collectionName) => `schedulers/${appId}/${collectionName}`;
-
-    // --- LOGIC FROM YOUR ORIGINAL SCRIPT ---
-    let unsubscribePagiShared = null;
-    let unsubscribePetangShared = null;
-
-    function listenToSharedNameList(sessionToListen) {
-        if (!db || !userId) return () => {};
-        
-        // This path matches the structure from your original script
-        const docRef = doc(db, "artifacts", appId, "public/data/sharedNameLists", sessionToListen);
-
-        return onSnapshot(docRef, (docSnap) => {
-            const namesFromDb = docSnap.exists() ? (docSnap.data().names || []) : [];
-            const sanitizedNames = namesFromDb.map(name => String(name || '').trim()).filter(name => name.length > 0);
-            
-            if (sessionToListen === 'pagi') {
-                namesPagiShared = sanitizedNames;
-            } else {
-                namesPetangShared = sanitizedNames;
-            }
-            // Convert array of names into the teacher object structure the new app uses
-            const nameListAsTeacherObjects = {};
-            const activeList = (currentNameListSession === 'pagi') ? namesPagiShared : namesPetangShared;
-
-            activeList.forEach((name, index) => {
-                // We use a simple hash as an ID, as your original list doesn't have IDs
-                const id = `name_${index}_${name.replace(/\s+/g, '')}`;
-                nameListAsTeacherObjects[id] = { name };
-            });
-            teachers = nameListAsTeacherObjects;
-            renderAll();
-        }, (error) => {
-            console.error(`Error listening to ${sessionToListen} names:`, error);
-        });
-    }
-    // --- END OF LOGIC FROM YOUR ORIGINAL SCRIPT ---
+    const getPath = (collectionName) => `artifacts/${appId}/public/data/${collectionName}`;
 
     function renderAll() {
         renderClasses();
@@ -224,7 +175,8 @@
                 if (clashFound) { document.getElementById('clash-alert-message').textContent = clashDetails; toggleModal('clash-alert-modal', true); selectEl.value = existingDocId ? schedule[existingDocId].subjectId : ''; return; }
             }
         }
-        const scheduleRef = existingDocId ? doc(db, getPath('schedule'), existingDocId) : doc(collection(db, getPath('schedule')));
+        const schedulePath = getPath('schedule');
+        const scheduleRef = existingDocId ? doc(db, schedulePath, existingDocId) : doc(collection(db, schedulePath));
         if (newSubjectId) { await setDoc(scheduleRef, { day, time, slotId, subjectId: newSubjectId, classId: selectedClassId }); } 
         else if (existingDocId) { await deleteDoc(scheduleRef); }
     }
@@ -250,32 +202,56 @@
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); document.getElementById('tab-management').addEventListener('click', () => switchTab('management')); document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
         document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
-        
-        // Listener for Pagi/Petang tabs
-        const pagiTab = document.getElementById('namePagiTab');
-        const petangTab = document.getElementById('namePetangTab');
-        pagiTab.addEventListener('click', () => { currentNameListSession = 'pagi'; pagiTab.classList.add('border-indigo-500', 'text-indigo-600'); petangTab.classList.remove('border-indigo-500', 'text-indigo-600'); petangTab.classList.add('border-transparent', 'text-gray-500'); listenToSharedNameList('pagi'); });
-        petangTab.addEventListener('click', () => { currentNameListSession = 'petang'; petangTab.classList.add('border-indigo-500', 'text-indigo-600'); pagiTab.classList.remove('border-indigo-500', 'text-indigo-600'); pagiTab.classList.add('border-transparent', 'text-gray-500'); listenToSharedNameList('petang'); });
+        const pagiTab = document.getElementById('namePagiTab'); const petangTab = document.getElementById('namePetangTab');
+        pagiTab.addEventListener('click', () => { currentNameListSession = 'pagi'; pagiTab.classList.add('border-indigo-500', 'text-indigo-600'); petangTab.classList.remove('border-indigo-500', 'text-indigo-600'); petangTab.classList.add('border-transparent', 'text-gray-500'); setupDataListeners(); });
+        petangTab.addEventListener('click', () => { currentNameListSession = 'petang'; petangTab.classList.add('border-indigo-500', 'text-indigo-600'); pagiTab.classList.remove('border-indigo-500', 'text-indigo-600'); pagiTab.classList.add('border-transparent', 'text-gray-500'); setupDataListeners(); });
     }
 
     function initModals() { document.getElementById('modal-container').innerHTML = `<div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div><div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>`; }
 
+    function setupDataListeners() {
+        // Unsubscribe from old listeners to prevent duplicates
+        if (unsubscribePagi) unsubscribePagi();
+        if (unsubscribePetang) unsubscribePetang();
+        if (unsubscribeSubjects) unsubscribeSubjects();
+        if (unsubscribeClasses) unsubscribeClasses();
+        if (unsubscribeSchedule) unsubscribeSchedule();
+        
+        // Listen to the active name list (Pagi or Petang)
+        const nameListPath = doc(db, "artifacts", appId, "public/data/sharedNameLists", currentNameListSession);
+        console.log(`Listening for data at: ${nameListPath.path}`);
+        const nameListListener = onSnapshot(nameListPath, docSnap => {
+            const nameArray = docSnap.exists() ? (docSnap.data().names || []) : [];
+            teachers = {};
+            nameArray.forEach((name, i) => { teachers[`id_${i}_${name.replace(/\s+/g, '')}`] = {name}; });
+            renderAll();
+        });
+
+        if(currentNameListSession === 'pagi') unsubscribePagi = nameListListener;
+        else unsubscribePetang = nameListListener;
+        
+        // Listen to the new collections
+        const subjectsPath = getPath('subjects');
+        console.log(`Listening for data at: ${subjectsPath}`);
+        unsubscribeSubjects = onSnapshot(collection(db, subjectsPath), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); });
+        
+        const classesPath = getPath('classes');
+        console.log(`Listening for data at: ${classesPath}`);
+        unsubscribeClasses = onSnapshot(collection(db, classesPath), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); });
+        
+        const schedulePath = getPath('schedule');
+        console.log(`Listening for data at: ${schedulePath}`);
+        unsubscribeSchedule = onSnapshot(collection(db, schedulePath), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); });
+    }
+    
     function main() {
         try {
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app); auth = getAuth(app);
             initModals(); attachEventListeners();
             onAuthStateChanged(auth, user => {
-                if (user) {
-                    userId = user.uid;
-                    // Start listening to your name lists
-                    unsubscribePagiShared = listenToSharedNameList('pagi');
-                    unsubscribePetangShared = listenToSharedNameList('petang');
-                    // Listen to the new collections
-                    onSnapshot(collection(db, getPath('classes')), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); });
-                    onSnapshot(collection(db, getPath('subjects')), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); });
-                    onSnapshot(collection(db, getPath('schedule')), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); });
-                } else { signInAnonymously(auth); }
+                if (user) { userId = user.uid; setupDataListeners(); } 
+                else { signInAnonymously(auth); }
             });
         } catch (error) { console.error("Firebase initialization failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check console.</div>`; }
     }

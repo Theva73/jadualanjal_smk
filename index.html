@@ -123,7 +123,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, query, where, getDocs, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
@@ -505,35 +505,45 @@
             "This will overwrite all current classes, teachers, subjects, locations, time slots and the schedule. This action cannot be undone.",
             "Load Version",
             async () => {
-                const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule, timeslots: vTimeslots } = version.data;
-                const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
-                
-                const batch = writeBatch(db);
-                for (const coll of collectionsToClear) {
-                    const snapshot = await getDocs(collection(db, getPath(coll)));
-                    snapshot.forEach(doc => batch.delete(doc.ref));
-                }
-
-                const addDataToBatch = (coll, data) => {
-                    if (data) {
-                        for (const [id, itemData] of Object.entries(data)) {
-                            const { id: docId, ...restOfData } = itemData;
-                            batch.set(doc(db, getPath(coll), id), restOfData);
-                        }
-                    }
-                };
-
-                addDataToBatch('classes', vClasses);
-                addDataToBatch('teachers', vTeachers);
-                addDataToBatch('subjects', vSubjects);
-                addDataToBatch('locations', vLocations);
-                addDataToBatch('schedule', vSchedule);
-                addDataToBatch('timeslots', vTimeslots);
-
-                await batch.commit();
-                showToast("Schedule version loaded successfully!");
+                await autoLoadVersionData(version.data, version.name, false);
+                showToast(`Schedule version "${version.name}" loaded successfully!`);
             }
         );
+    }
+
+    async function autoLoadVersionData(versionData, versionName, isAutoLoad = true) {
+        if (!versionData) return;
+
+        const { classes: vClasses, teachers: vTeachers, subjects: vSubjects, locations: vLocations, schedule: vSchedule, timeslots: vTimeslots } = versionData;
+        const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
+        const batch = writeBatch(db);
+
+        for (const coll of collectionsToClear) {
+            const snapshot = await getDocs(collection(db, getPath(coll)));
+            snapshot.forEach(doc => batch.delete(doc.ref));
+        }
+
+        const addDataToBatch = (coll, data) => {
+            if (data) {
+                for (const [id, itemData] of Object.entries(data)) {
+                    if (typeof itemData !== 'object' || itemData === null) continue;
+                    const { id: docId, ...restOfData } = itemData;
+                    batch.set(doc(db, getPath(coll), id), restOfData);
+                }
+            }
+        };
+
+        addDataToBatch('classes', vClasses);
+        addDataToBatch('teachers', vTeachers);
+        addDataToBatch('subjects', vSubjects);
+        addDataToBatch('locations', vLocations);
+        addDataToBatch('schedule', vSchedule);
+        addDataToBatch('timeslots', vTimeslots || {});
+
+        await batch.commit();
+        if (isAutoLoad) {
+            showToast(`Automatically loaded schedule: "${versionName}"`);
+        }
     }
     
     function deleteVersion(versionId) {
@@ -696,15 +706,36 @@
             }, err => console.error(`Error fetching ${name}:`, err));
         });
     }
+
+    async function initialAutoLoad() {
+        const versionsRef = collection(db, getPath('versions'));
+        const q = query(versionsRef, orderBy("createdAt", "desc"), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const latestVersionDoc = querySnapshot.docs[0];
+            const latestVersion = latestVersionDoc.data();
+            console.log("Found latest version to auto-load:", latestVersion.name);
+            await autoLoadVersionData(latestVersion.data, latestVersion.name);
+        } else {
+            console.log("No saved versions found to auto-load.");
+        }
+    }
     
-    function main() {
+    async function main() {
         try {
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app); auth = getAuth(app);
             initModals(); attachEventListeners();
-            onAuthStateChanged(auth, user => {
-                if (user) { userId = user.uid; setupDataListeners(); } 
-                else { signInAnonymously(auth); }
+            onAuthStateChanged(auth, async (user) => {
+                if (user) { 
+                    userId = user.uid; 
+                    await initialAutoLoad();
+                    setupDataListeners(); 
+                } 
+                else { 
+                    signInAnonymously(auth); 
+                }
             });
         } catch (error) { console.error("Firebase initialization failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check console.</div>`; }
     }

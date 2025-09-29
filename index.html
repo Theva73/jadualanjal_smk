@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadual Anjal (Corrected Connection)</title>
+    <title>Standalone School Scheduler</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -18,8 +18,8 @@
 <body class="p-2 sm:p-4">
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
-        <p class="text-sm text-gray-500 mt-1">Connected to your existing Firebase data.</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">New School Schedule Planner</h1>
+        <p class="text-sm text-gray-500 mt-1">A new, independent database in your Firebase project.</p>
     </header>
 
     <!-- Tab Navigation -->
@@ -50,11 +50,8 @@
                 <div id="class-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Teachers (from your DB)</h3>
-                 <div class="name-session-tabs flex border-b mb-2">
-                    <button id="namePagiTab" data-session="pagi" class="flex-1 text-center p-2 text-sm font-medium border-b-2 border-indigo-500 text-indigo-600">Pagi (Morning)</button>
-                    <button id="namePetangTab" data-session="petang" class="flex-1 text-center p-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Petang (Afternoon)</button>
-                </div>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Teachers</h3>
+                <form id="add-teacher-form" class="flex gap-2 mb-3"><input type="text" id="teacher-name" placeholder="Teacher's name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="teacher-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
@@ -88,17 +85,17 @@
       appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
     };
     
-    const appId = 'default-shared-scheduler-app'; 
-    
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {};
     let selectedClassId = null;
-    let currentNameListSession = 'pagi';
-    let unsubscribePagi = null, unsubscribePetang = null, unsubscribeSubjects = null, unsubscribeClasses = null, unsubscribeSchedule = null;
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     const TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:15-10:15", "10:15-10:30", "10:30-11:00", "11:00-12:00", "12:00-13:00"];
     const REHAT_TIME = "10:15-10:30";
+
+    // --- NEW DATABASE PATHS ---
+    // All data for this app will be stored in collections with a "scheduler_v2_" prefix
+    const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
 
     function renderAll() {
         renderClasses();
@@ -117,7 +114,7 @@
     function renderTeachers() {
         const teacherListDiv = document.getElementById('teacher-list');
         const teacherArray = Object.values(teachers);
-        teacherListDiv.innerHTML = teacherArray.length ? teacherArray.sort((a,b) => a.name.localeCompare(b.name)).map(teacher => `<div class="p-2 bg-white rounded-md shadow-sm"><span>${teacher.name}</span></div>`).join('') : `<p class="text-sm text-gray-500">No teachers found in the '${currentNameListSession}' list.</p>`;
+        teacherListDiv.innerHTML = teacherArray.length ? teacherArray.sort((a,b) => a.name.localeCompare(b.name)).map(teacher => `<div class="flex justify-between items-center p-2 bg-white rounded-md shadow-sm"><span>${teacher.name}</span><button data-id="${teacher.id}" class="delete-teacher text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button></div>`).join('') : `<p class="text-sm text-gray-500">No teachers added yet.</p>`;
     }
 
     function renderSubjects() {
@@ -184,7 +181,9 @@
 
     function attachEventListeners() {
         document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name }); e.target.reset(); });
+        document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
+        document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
         document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
         document.getElementById('subject-list').addEventListener('click', e => {
             if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
@@ -200,32 +199,30 @@
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); document.getElementById('tab-management').addEventListener('click', () => switchTab('management')); document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
         document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
-        const pagiTab = document.getElementById('namePagiTab'); const petangTab = document.getElementById('namePetangTab');
-        pagiTab.addEventListener('click', () => { currentNameListSession = 'pagi'; pagiTab.classList.add('border-indigo-500', 'text-indigo-600'); petangTab.classList.remove('border-indigo-500', 'text-indigo-600'); petangTab.classList.add('border-transparent', 'text-gray-500'); setupDataListeners(); });
-        petangTab.addEventListener('click', () => { currentNameListSession = 'petang'; petangTab.classList.add('border-indigo-500', 'text-indigo-600'); pagiTab.classList.remove('border-indigo-500', 'text-indigo-600'); pagiTab.classList.add('border-transparent', 'text-gray-500'); setupDataListeners(); });
+        // Remove Pagi/Petang listeners as this version is fully independent
     }
 
     function initModals() { document.getElementById('modal-container').innerHTML = `<div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div><div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>`; }
 
     function setupDataListeners() {
-        if (unsubscribePagi) unsubscribePagi(); if (unsubscribePetang) unsubscribePetang(); if (unsubscribeSubjects) unsubscribeSubjects(); if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeSchedule) unsubscribeSchedule();
+        const collectionsToWatch = ['classes', 'teachers', 'subjects', 'schedule'];
         
-        // This path now correctly points to the 'pagi' or 'petang' document inside the 'sharedNameLists' collection.
-        const nameListDocPath = doc(db, getPath('sharedNameLists'), currentNameListSession);
-        
-        console.log(`%cListening for teachers at: ${nameListDocPath.path}`, 'color: blue; font-weight: bold;');
-        const nameListener = onSnapshot(nameListDocPath, docSnap => {
-            const nameArray = docSnap.exists() ? (docSnap.data().names || []) : [];
-            teachers = {};
-            nameArray.forEach((name, i) => { teachers[`id_${i}_${name.replace(/\s+/g, '')}`] = {name}; });
-            renderAll();
-        }, err => console.error(`Error fetching name list (${currentNameListSession}):`, err));
+        collectionsToWatch.forEach(name => {
+            const path = getPath(name);
+            console.log(`%cListening for data at: ${path}`, 'color: blue; font-weight: bold;');
+            onSnapshot(collection(db, path), snapshot => {
+                const dataObject = {};
+                snapshot.forEach(doc => dataObject[doc.id] = {...doc.data(), id: doc.id});
+                
+                // Update the correct global variable
+                if (name === 'classes') classes = dataObject;
+                if (name === 'teachers') teachers = dataObject;
+                if (name === 'subjects') subjects = dataObject;
+                if (name === 'schedule') schedule = dataObject;
 
-        if(currentNameListSession === 'pagi') unsubscribePagi = nameListener; else unsubscribePetang = nameListener;
-        
-        unsubscribeSubjects = onSnapshot(collection(db, getPath('subjects')), s => { subjects = {}; s.forEach(d => subjects[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching subjects:', err));
-        unsubscribeClasses = onSnapshot(collection(db, getPath('classes')), s => { classes = {}; s.forEach(d => classes[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching classes:', err));
-        unsubscribeSchedule = onSnapshot(collection(db, getPath('schedule')), s => { schedule = {}; s.forEach(d => schedule[d.id] = d.data()); renderAll(); }, err => console.error('Error fetching schedule:', err));
+                renderAll();
+            }, err => console.error(`Error fetching ${name}:`, err));
+        });
     }
     
     function main() {
@@ -244,5 +241,4 @@
 </script>
 </body>
 </html>
-
 

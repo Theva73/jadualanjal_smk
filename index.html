@@ -123,7 +123,7 @@
     </div>
 
     <div id="tab-content-summary" class="tab-panel hidden">
-         <h2 class="text-xl font-semibold mb-4 text-gray-800">Class Schedule Summary</h2>
+         <h2 class="text-xl font-semibold mb-4 text-gray-800">Teacher Schedule Summary</h2>
          <div id="summary-grid" class="overflow-x-auto"></div>
     </div>
 </div>
@@ -349,50 +349,64 @@
     function renderSummaryGrid() {
         const summaryDiv = document.getElementById('summary-grid');
         const sortedTimeSlots = getSortedTimeSlots();
-        const sortedClasses = Object.entries(classes).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+        const sortedTeachers = Object.values(teachers).sort((a, b) => a.name.localeCompare(b.name));
 
-
-        if (sortedClasses.length === 0) { summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No classes to display.</p>`; return; }
-        if (sortedTimeSlots.length === 0) { summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No time slots defined.</p>`; return; }
+        if (sortedTeachers.length === 0) { 
+            summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No teachers to display.</p>`; 
+            return; 
+        }
+        if (sortedTimeSlots.length === 0) { 
+            summaryDiv.innerHTML = `<p class="text-gray-500 py-8 text-center">No time slots defined.</p>`; 
+            return; 
+        }
 
         const dayHeaders = DAYS.map(day => `<th colspan="${sortedTimeSlots.length}" class="p-2 border font-semibold text-center">${day}</th>`).join('');
         const timeSubheaders = sortedTimeSlots.map(slot => `<th class="p-2 border font-semibold whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
 
-        const classRows = sortedClasses.map(([classId, cls]) => {
+        const teacherRows = sortedTeachers.map(teacher => {
             const dayCells = DAYS.map(day => {
                 return sortedTimeSlots.map(slot => {
                     const time = `${slot.start}-${slot.end}`;
-                     if (slot.isBreak) return `<td class="p-1 border bg-green-50"></td>`;
+                    if (slot.isBreak) return `<td class="p-1 border bg-green-50"></td>`;
                     
-                    // This logic might be affected by the removal of classId from schedule entries
-                    const entry = Object.values(schedule).find(e => e.classId === classId && e.day === day && e.time === time);
+                    const entry = Object.values(schedule).find(e => 
+                        e.day === day && 
+                        e.time === time && 
+                        e.subjectIds?.some(sid => subjects[sid]?.teacherIds?.includes(teacher.id))
+                    );
+
                     if (!entry) return `<td class="p-1 border"></td>`;
                     
                     const subjectNames = entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '';
-                    const teacherNames = entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', ') || '';
                     const locationName = locations[entry.locationId]?.name || '';
+                    
+                    const classNames = Object.values(classes)
+                        .filter(cls => cls.subjectIds?.some(subId => entry.subjectIds.includes(subId)))
+                        .map(cls => cls.name)
+                        .join(', ');
 
                     return `<td class="p-2 border align-middle text-center text-xs">
                         <p class="font-semibold">${subjectNames}</p>
-                        <p class="text-gray-600">${teacherNames}</p>
+                        <p class="text-gray-600">${classNames || 'N/A'}</p>
                         <p class="text-indigo-600">${locationName}</p>
                     </td>`;
 
                 }).join('');
             }).join('');
+            
             return `
                 <tr class="even:bg-gray-50">
-                    <td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${cls.name}</td>
+                    <td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${teacher.name}</td>
                     ${dayCells}
                 </tr>
-            `
+            `;
         }).join('');
         
         const summaryHtml = `
             <table class="min-w-full border-collapse text-xs">
                 <thead>
                     <tr class="bg-gray-100">
-                        <th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Class</th>
+                        <th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">Teacher</th>
                         ${dayHeaders}
                     </tr>
                     <tr class="bg-gray-100">
@@ -400,11 +414,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    ${classRows}
+                    ${teacherRows}
                 </tbody>
             </table>`;
+        
         summaryDiv.innerHTML = summaryHtml;
     }
+
 
     // --- Core Logic Functions ---
     async function handleScheduleEntrySave(e) {

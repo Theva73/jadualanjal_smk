@@ -552,15 +552,13 @@
                     if (slot.isBreak) {
                         row.push('REHAT');
                     } else {
-                        // Create a formatted string for the cell's raw content.
-                        // We use unique prefixes to identify data types later.
                         const cellText = entries.map(entry => {
                             const subjectNames = "SUBJECT:" + (entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '');
                             const teacherNames = "TEACHER:" + (entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '));
-                            const locationName = "LOCATION:" + (locations[entry.locationId]?.name || '');
+                            const locationName = "LOCATION:" + (locations[entry.locationId]?.name || 'Nil');
                             
                             return [subjectNames, teacherNames, locationName].join('\n');
-                        }).join('\n\n'); // Separator for multiple entries in the same slot
+                        }).join('\n\n');
                         row.push(cellText);
                     }
                 });
@@ -595,7 +593,6 @@
                     
                     if (data.row.section === 'body' && typeof data.cell.raw === 'string' && data.cell.raw.trim() !== '') {
                         const styledContent = [];
-                        // Split by the entry separator first
                         const entryGroups = data.cell.raw.split('\n\n');
                         entryGroups.forEach(group => {
                             const lines = group.split('\n');
@@ -606,9 +603,7 @@
                                     styledContent.push({ content: line.replace('TEACHER:', ''), styles: { fontStyle: 'normal', textColor: [0, 0, 0] } });
                                 } else if (line.startsWith('LOCATION:')) {
                                      const locationText = line.replace('LOCATION:', '');
-                                     if(locationText.trim() !== ''){
-                                        styledContent.push({ content: locationText, styles: { fontStyle: 'normal', textColor: [220, 38, 38] } });
-                                     }
+                                     styledContent.push({ content: locationText, styles: { fontStyle: 'normal', textColor: [220, 38, 38] } });
                                 }
                             });
                         });

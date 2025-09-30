@@ -13,7 +13,9 @@
         .modal { transition: opacity 0.3s ease, transform 0.3s ease; }
         select:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
         .sticky-header { position: -webkit-sticky; position: sticky; top: 0; z-index: 10; }
-        .sticky-left { position: -webkit-sticky; position: sticky; left: 0; z-index: 5; }
+        .sticky-left { position: -webkit-sticky; position: sticky; left: 0; z-index: 5; background-color: #fff; }
+        thead.sticky-header .sticky-left { z-index: 11; }
+
 
         /* Toggle Switch Styles */
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
@@ -52,7 +54,7 @@
     </div>
 
     <div id="tab-content-management" class="tab-panel hidden">
-         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">1. Manage Classes</h3>
                 <form id="add-class-form" class="flex gap-2 mb-3"><input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
@@ -60,35 +62,26 @@
             </div>
 
             <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Subject Offerings</h3>
-                <label for="subject-class-selector" class="block text-sm font-medium text-gray-700 mb-1">Select a Subject:</label>
-                <select id="subject-class-selector" class="w-full p-2 mb-3 border border-gray-300 rounded-md shadow-sm"></select>
-                <form id="subject-class-assignment-form">
-                    <div id="subject-class-assignment-list" class="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-md bg-white">
-                        <p class="text-sm text-gray-500">Please select a subject to see which classes take it.</p>
-                    </div>
-                    <button type="submit" class="mt-3 w-full bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Assignments</button>
-                </form>
-            </div>
-
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Teachers</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">2. Manage Teachers</h3>
                 <form id="add-teacher-form" class="flex gap-2 mb-3"><input type="text" id="teacher-name" placeholder="Teacher's name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="teacher-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
+
              <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">4. Manage Locations</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Locations</h3>
                 <form id="add-location-form" class="flex gap-2 mb-3"><input type="text" id="location-name" placeholder="e.g., Lab A, Hall B" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="location-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800">5. Manage Subjects & Assign Teachers</h3>
-                <form id="add-subject-form" class="flex gap-2 mb-3"><input type="text" id="subject-name" placeholder="New subject name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
-                <div id="subject-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg md:col-span-2">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">4. Manage Subjects, Classes, and Teachers</h3>
+                <p class="text-sm text-gray-600 mb-4">Add new subjects, then assign them to classes and teachers.</p>
+                <form id="add-subject-form" class="flex gap-2 mb-3"><input type="text" id="subject-name" placeholder="New subject name" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add Subject</button></form>
+                <div id="subject-management-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
             </div>
         </div>
         <div class="mt-6 border-t pt-6">
-            <h3 class="text-xl font-semibold mb-3 text-gray-800">6. Manage Time Slots</h3>
+            <h3 class="text-xl font-semibold mb-3 text-gray-800">5. Manage Time Slots</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-gray-50 p-4 rounded-lg">
                     <h4 class="font-semibold mb-3 text-gray-700">Add New Time Slot</h4>
@@ -166,7 +159,6 @@
     
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, timeslots = {}, playlists = {};
-    let selectedSubjectForClassAssignment = null;
     let summaryViewMode = 'teacher'; // 'teacher' or 'subject'
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
@@ -181,9 +173,8 @@
         renderClasses();
         renderTeachers();
         renderLocations();
-        renderSubjects();
+        renderSubjectManagementList();
         renderTimeSlots();
-        renderSubjectClassAssignment();
         renderPlaylists();
         renderAllSchedules();
         renderSummaryGrid();
@@ -200,34 +191,6 @@
                     <button data-id="${id}" class="delete-class text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
                 </div>
             </div>`).join('') : `<p class="text-sm text-gray-500">No classes found.</p>`;
-    }
-
-    function renderSubjectClassAssignment() {
-        const selector = document.getElementById('subject-class-selector');
-        const listContainer = document.getElementById('subject-class-assignment-list');
-        
-        const sortedSubjects = Object.entries(subjects).sort(([, a], [, b]) => a.name.localeCompare(b.name));
-        
-        selector.innerHTML = sortedSubjects.length > 0
-            ? `<option value="">-- Select a Subject --</option>` + sortedSubjects.map(([id, subject]) => `<option value="${id}">${subject.name}</option>`).join('')
-            : `<option>Please add a subject first</option>`;
-        
-        selector.value = selectedSubjectForClassAssignment;
-
-        if (selectedSubjectForClassAssignment && subjects[selectedSubjectForClassAssignment]) {
-            const sortedClasses = Object.entries(classes).sort(([, a], [, b]) => a.name.localeCompare(b.name));
-            
-            listContainer.innerHTML = sortedClasses.length > 0 ? sortedClasses.map(([id, cls]) => {
-                const isChecked = cls.subjectIds?.includes(selectedSubjectForClassAssignment) || false;
-                return `
-                <label class="flex items-center p-1.5 rounded hover:bg-gray-50 cursor-pointer">
-                    <input type="checkbox" name="subject-class" value="${id}" ${isChecked ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                    <span>${cls.name}</span>
-                </label>`
-            }).join('') : `<p class="text-sm text-gray-500">No classes created yet.</p>`;
-        } else {
-            listContainer.innerHTML = `<p class="text-sm text-gray-500">Please select a subject to see which classes take it.</p>`;
-        }
     }
     
     function renderTeachers() {
@@ -256,22 +219,34 @@
             </div>`).join('') : `<p class="text-sm text-gray-500">No locations added yet.</p>`;
     }
 
-    function renderSubjects() {
-        const subjectListDiv = document.getElementById('subject-list');
-        subjectListDiv.innerHTML = Object.keys(subjects).length ? Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, subject]) => {
-            const teacherNames = subject.teacherIds?.map(tid => teachers[tid]?.name).filter(Boolean).join(', ') || 'None assigned';
-            return `<div class="p-3 bg-white rounded-md shadow-sm">
-                <div class="flex justify-between items-center">
-                    <span class="font-semibold text-gray-800">${subject.name}</span>
-                    <div class="flex gap-2">
-                        <button data-id="${id}" data-name="${subject.name}" data-collection="subjects" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
-                        <button data-id="${id}" class="assign-teachers bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">ASSIGN</button>
-                        <button data-id="${id}" class="delete-subject text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+    function renderSubjectManagementList() {
+        const container = document.getElementById('subject-management-list');
+        if (!container) return;
+
+        container.innerHTML = Object.keys(subjects).length > 0
+            ? Object.values(subjects).sort((a,b) => a.name.localeCompare(b.name)).map(sub => {
+                const classNames = Object.values(classes)
+                    .filter(cls => cls.subjectIds?.includes(sub.id))
+                    .map(cls => cls.name)
+                    .join(', ') || 'None assigned';
+                const teacherNames = sub.teacherIds?.map(tid => teachers[tid]?.name).filter(Boolean).join(', ') || 'None assigned';
+
+                return `
+                <div class="p-3 bg-white rounded-md shadow-sm">
+                    <div class="flex justify-between items-center flex-wrap gap-y-2">
+                        <span class="font-semibold text-gray-800">${sub.name}</span>
+                        <div class="flex gap-2 flex-shrink-0">
+                            <button data-id="${sub.id}" data-name="${sub.name}" data-collection="subjects" class="edit-btn text-blue-500 hover:text-blue-700 text-xs font-semibold">EDIT</button>
+                            <button data-id="${sub.id}" class="assign-classes-btn bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">ASSIGN CLASSES</button>
+                            <button data-id="${sub.id}" class="assign-teachers-btn bg-green-100 text-green-700 px-2 py-1 rounded text-xs">ASSIGN TEACHERS</button>
+                            <button data-id="${sub.id}" class="delete-subject text-red-500 hover:text-red-700 text-xs font-semibold">DELETE</button>
+                        </div>
                     </div>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">Teachers: ${teacherNames}</p>
-            </div>`;
-        }).join('') : `<p class="text-sm text-gray-500">No subjects created yet.</p>`;
+                    <p class="text-xs text-gray-500 mt-2 truncate" title="${classNames}">Classes: ${classNames}</p>
+                    <p class="text-xs text-gray-500 mt-1 truncate" title="${teacherNames}">Teachers: ${teacherNames}</p>
+                </div>`;
+            }).join('')
+            : `<p class="text-sm text-gray-500">Create a subject to begin.</p>`;
     }
 
     function renderTimeSlots() {
@@ -699,52 +674,52 @@
         document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
         document.getElementById('timeslot-list').addEventListener('click', e => { if (e.target.classList.contains('delete-timeslot')) deleteDoc(doc(db, getPath('timeslots'), e.target.dataset.id)); if (e.target.classList.contains('edit-timeslot')) openEditTimeSlotModal(e.target.dataset.id);});
         
-        document.getElementById('subject-class-selector').addEventListener('change', e => {
-            selectedSubjectForClassAssignment = e.target.value;
-            renderSubjectClassAssignment();
-        });
-
-        document.getElementById('subject-class-assignment-form').addEventListener('submit', async e => {
-            e.preventDefault();
-            const selectedSubjectId = selectedSubjectForClassAssignment;
-            if (!selectedSubjectId) {
-                showToast("Please select a subject first.");
-                return;
-            }
-
-            const checkedClassIds = Array.from(e.target.querySelectorAll('input[name="subject-class"]:checked')).map(el => el.value);
-            const batch = writeBatch(db);
-
-            Object.entries(classes).forEach(([classId, classData]) => {
-                const classRef = doc(db, getPath('classes'), classId);
-                const originalSubjectIds = classData.subjectIds || [];
-                let newSubjectIds = [...originalSubjectIds];
-
-                if (checkedClassIds.includes(classId)) {
-                    if (!originalSubjectIds.includes(selectedSubjectId)) {
-                        newSubjectIds.push(selectedSubjectId);
-                        batch.update(classRef, { subjectIds: newSubjectIds });
-                    }
-                } else {
-                    if (originalSubjectIds.includes(selectedSubjectId)) {
-                        newSubjectIds = originalSubjectIds.filter(id => id !== selectedSubjectId);
-                        batch.update(classRef, { subjectIds: newSubjectIds });
-                    }
-                }
-            });
+        document.getElementById('subject-management-list').addEventListener('click', e => {
+            const target = e.target;
+            const subjectId = target.dataset.id;
             
-            await batch.commit();
-            showToast("Subject offerings updated successfully!");
-        });
+            if (target.classList.contains('delete-subject')) {
+                const subjectName = subjects[subjectId]?.name || 'this subject';
+                openConfirmationModal(
+                    `Delete Subject: "${subjectName}"?`,
+                    "This will permanently delete the subject and un-assign it from all classes and schedule entries. This action cannot be undone.",
+                    "Delete Subject",
+                    async () => {
+                        const batch = writeBatch(db);
+                        const subjectRef = doc(db, getPath('subjects'), subjectId);
+                        batch.delete(subjectRef);
 
+                        Object.values(classes).forEach(cls => {
+                            if (cls.subjectIds?.includes(subjectId)) {
+                                const classRef = doc(db, getPath('classes'), cls.id);
+                                const updatedSubjectIds = cls.subjectIds.filter(id => id !== subjectId);
+                                batch.update(classRef, { subjectIds: updatedSubjectIds });
+                            }
+                        });
 
-        document.getElementById('subject-list').addEventListener('click', e => {
-            if (e.target.classList.contains('delete-subject')) deleteDoc(doc(db, getPath('subjects'), e.target.dataset.id));
-            if (e.target.classList.contains('assign-teachers')) {
-                const subjectId = e.target.dataset.id; const subject = subjects[subjectId]; document.getElementById('modal-subject-name').textContent = subject.name; document.getElementById('modal-subject-id').value = subjectId;
-                const listContainer = document.getElementById('modal-teacher-list');
-                listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subject.teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers found to assign.</p>';
-                toggleModal('teacher-assignment-modal', true);
+                        Object.values(schedule).forEach(entry => {
+                            if (entry.subjectIds?.includes(subjectId)) {
+                                const entryRef = doc(db, getPath('schedule'), entry.id);
+                                const updatedSubjectIds = entry.subjectIds.filter(id => id !== subjectId);
+                                if (updatedSubjectIds.length > 0) {
+                                    batch.update(entryRef, { subjectIds: updatedSubjectIds });
+                                } else {
+                                    batch.delete(entryRef);
+                                }
+                            }
+                        });
+
+                        await batch.commit();
+                        showToast(`Subject "${subjectName}" deleted successfully.`);
+                    },
+                    true // isDestructive
+                );
+            }
+            if (target.classList.contains('assign-teachers-btn')) {
+                openTeacherAssignmentModal(subjectId);
+            }
+            if (target.classList.contains('assign-classes-btn')) {
+                openClassAssignmentModal(subjectId);
             }
         });
 
@@ -814,6 +789,30 @@
         toggleModal('schedule-entry-modal', true);
     }
 
+    function openTeacherAssignmentModal(subjectId) {
+        const subject = subjects[subjectId]; 
+        document.getElementById('modal-teacher-subject-name').textContent = subject.name; 
+        document.getElementById('modal-teacher-subject-id').value = subjectId;
+        const listContainer = document.getElementById('modal-teacher-list');
+        listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subject.teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers found to assign.</p>';
+        toggleModal('teacher-assignment-modal', true);
+    }
+    
+    function openClassAssignmentModal(subjectId) {
+        const subject = subjects[subjectId];
+        document.getElementById('modal-class-assignment-subject-name').textContent = subject.name;
+        document.getElementById('modal-class-assignment-subject-id').value = subjectId;
+        const listContainer = document.getElementById('modal-class-assignment-class-list');
+        listContainer.innerHTML = Object.keys(classes).length ? Object.values(classes).sort((a,b) => a.name.localeCompare(b.name)).map(cls => {
+            const isChecked = cls.subjectIds?.includes(subjectId);
+            return `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" name="class-for-subject" value="${cls.id}" ${isChecked ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                        <span>${cls.name}</span>
+                    </label>`;
+        }).join('') : '<p class="text-sm text-gray-500">No classes found to assign.</p>';
+        toggleModal('class-assignment-modal', true);
+    }
+
     function openEditModal(id, name, collection) {
         document.getElementById('edit-id').value = id;
         document.getElementById('edit-collection').value = collection;
@@ -835,11 +834,11 @@
     function initModals() {
         document.getElementById('modal-container').innerHTML = `
             <div id="schedule-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4" id="schedule-entry-modal-title">Add/Edit Entry</h3><form id="schedule-entry-form"><input type="hidden" id="modal-entry-day"><input type="hidden" id="modal-entry-time"><input type="hidden" id="modal-entry-doc-id"><div class="space-y-4"><div><label class="text-sm font-medium">Subject(s)</label><div id="modal-subject-list" class="space-y-1 max-h-40 overflow-y-auto mt-1 border p-2 rounded bg-gray-50"></div></div><div><label class="text-sm font-medium">Location</label><select id="modal-entry-location" class="w-full p-2 mt-1 border rounded"></select></div></div><div class="flex justify-between items-center gap-3 mt-6"><button type="button" id="delete-entry-btn" class="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button><div class="flex gap-3"><button type="button" id="cancel-schedule-entry-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></div></form></div></div>
-            <div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
-            <div id="clash-alert-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-medium text-red-700">Scheduling Clash Detected!</h3><p class="text-sm text-gray-600 mt-2" id="clash-alert-message"></p><div class="mt-5 text-right"><button type="button" id="close-clash-alert-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">OK</button></div></div></div>
-            <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
+            <div id="teacher-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Teachers to <span id="modal-teacher-subject-name" class="font-bold"></span></h3><form id="teacher-assignment-form"><input type="hidden" id="modal-teacher-subject-id"><div id="modal-teacher-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="teacher-assignment-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
+            <div id="class-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Assign Classes to <span id="modal-class-assignment-subject-name" class="font-bold"></span></h3><form id="class-assignment-form"><input type="hidden" id="modal-class-assignment-subject-id"><div id="modal-class-assignment-class-list" class="space-y-1 max-h-64 overflow-y-auto mb-4 border p-3 rounded-md bg-gray-50"></div><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="class-assignment-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></form></div></div>
+            <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="edit-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0 whitespace-pre-wrap"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
-            <div id="timeslot-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Edit Time Slot</h3><form id="edit-timeslot-form"><input type="hidden" id="edit-timeslot-id"><div class="space-y-3"><div class="flex gap-2 items-center"><input type="time" id="edit-timeslot-start" class="w-full p-2 text-sm border rounded-md" required><span>-</span><input type="time" id="edit-timeslot-end" class="w-full p-2 text-sm border rounded-md" required></div><div class="flex items-center"><input id="edit-timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><label for="edit-timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label></div></div><div class="flex justify-end gap-3 mt-4"><button type="button" id="cancel-edit-timeslot-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
+            <div id="timeslot-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Edit Time Slot</h3><form id="edit-timeslot-form"><input type="hidden" id="edit-timeslot-id"><div class="space-y-3"><div class="flex gap-2 items-center"><input type="time" id="edit-timeslot-start" class="w-full p-2 text-sm border rounded-md" required><span>-</span><input type="time" id="edit-timeslot-end" class="w-full p-2 text-sm border rounded-md" required></div><div class="flex items-center"><input id="edit-timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><label for="edit-timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label></div></div><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="timeslot-edit-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`; 
         
         document.getElementById('schedule-entry-form').addEventListener('submit', handleScheduleEntrySave);
@@ -855,13 +854,37 @@
             }
         });
 
-        document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
+        document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-teacher-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
+        
+        document.getElementById('class-assignment-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const subjectId = document.getElementById('modal-class-assignment-subject-id').value;
+            const checkedClassIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value);
+            const batch = writeBatch(db);
+
+            Object.entries(classes).forEach(([classId, classData]) => {
+                const classRef = doc(db, getPath('classes'), classId);
+                const originalSubjectIds = classData.subjectIds || [];
+                const isCurrentlyAssigned = originalSubjectIds.includes(subjectId);
+                const shouldBeAssigned = checkedClassIds.includes(classId);
+
+                if (shouldBeAssigned && !isCurrentlyAssigned) {
+                    batch.update(classRef, { subjectIds: [...originalSubjectIds, subjectId] });
+                } else if (!shouldBeAssigned && isCurrentlyAssigned) {
+                    batch.update(classRef, { subjectIds: originalSubjectIds.filter(id => id !== subjectId) });
+                }
+            });
+
+            await batch.commit();
+            toggleModal('class-assignment-modal', false);
+            showToast('Class assignments updated successfully!');
+        });
+
         document.getElementById('edit-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-timeslot-id').value; const start = document.getElementById('edit-timeslot-start').value; const end = document.getElementById('edit-timeslot-end').value; const isBreak = document.getElementById('edit-timeslot-is-break').checked; if (id && start && end && start < end) { await updateDoc(doc(db, getPath('timeslots'), id), { start, end, isBreak }); toggleModal('timeslot-edit-modal', false); } else { showToast("Error: End time must be after start time."); }});
-        document.getElementById('cancel-edit-timeslot-btn').addEventListener('click', () => toggleModal('timeslot-edit-modal', false));
-        document.getElementById('cancel-modal-btn').addEventListener('click', () => toggleModal('teacher-assignment-modal', false)); 
-        document.getElementById('close-clash-alert-btn').addEventListener('click', () => toggleModal('clash-alert-modal', false));
+        
+        document.getElementById('modal-container').addEventListener('click', e => { if (e.target.classList.contains('cancel-modal-btn')) toggleModal(e.target.dataset.modalId, false); });
+        
         document.getElementById('edit-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-id').value; const collection = document.getElementById('edit-collection').value; const newName = document.getElementById('edit-name-input').value.trim(); if (id && collection && newName) { await updateDoc(doc(db, getPath(collection), id), { name: newName }); toggleModal('edit-modal', false); } });
-        document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
     }
 
     function setupDataListeners() {

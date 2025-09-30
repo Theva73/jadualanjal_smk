@@ -47,7 +47,7 @@
 <body class="p-2 sm:p-4">
 <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-lg">
     <header class="mb-6 border-b pb-4">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Schedule Planner</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">SMKSPP Schedule Planner</h1>
         <p class="text-sm text-gray-500 mt-1">Manage multiple schedule playlists.</p>
     </header>
 
@@ -343,7 +343,6 @@
             }).join('');
 
             const isLastDay = DAYS.indexOf(day) === DAYS.length - 1;
-            // Add a thick border to all day rows except the last one for clear separation.
             const rowClass = isLastDay ? '' : 'border-b-4 border-slate-300';
 
             return `<tr class="${rowClass}">
@@ -419,12 +418,25 @@
 
         const buildGrid = (rowsData, rowTitle) => {
             const dayHeaders = DAYS.map(day => `<th colspan="${sortedTimeSlots.length}" class="p-2 border font-semibold text-center">${day}</th>`).join('');
-            const timeSubheaders = sortedTimeSlots.map(slot => `<th class="p-2 border font-semibold whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
+            
+            const timeSubheadersWithDividers = DAYS.map((day, dayIndex) => {
+                return sortedTimeSlots.map((slot, slotIndex) => {
+                    const isLastSlotInDay = slotIndex === sortedTimeSlots.length - 1;
+                    const isLastDay = dayIndex === DAYS.length - 1;
+                    const borderClass = isLastSlotInDay && !isLastDay ? 'border-r-4 border-slate-300' : '';
+                    return `<th class="p-2 border font-semibold whitespace-nowrap ${borderClass}">${slot.start}-${slot.end}</th>`;
+                }).join('');
+            }).join('');
             
             const rows = rowsData.map(item => {
-                const dayCells = DAYS.map(day => {
-                    return sortedTimeSlots.map(slot => {
-                        if (slot.isBreak) return `<td class="p-1 border bg-green-50"></td>`;
+                const dayCells = DAYS.map((day, dayIndex) => {
+                    return sortedTimeSlots.map((slot, slotIndex) => {
+                        const isLastSlotInDay = slotIndex === sortedTimeSlots.length - 1;
+                        const isLastDay = dayIndex === DAYS.length - 1;
+                        const borderClass = isLastSlotInDay && !isLastDay ? 'border-r-4 border-slate-300' : '';
+
+                        if (slot.isBreak) return `<td class="p-1 border bg-green-50 ${borderClass}"></td>`;
+                        
                         const slotId = `${day}_${slot.start}-${slot.end}`;
                         const entry = Object.values(schedule).find(e => e.slotId === slotId && e.subjectIds?.some(sid => subjects[sid]?.teacherIds?.includes(item.id)));
                         
@@ -446,13 +458,13 @@
                             cellContent += `<p class="font-semibold">${subjectNames}</p><p class="text-gray-600">${classNames}</p><p class="text-indigo-600">${locationName}</p>`;
                         }
                         
-                        return `<td class="p-2 border align-middle text-center text-xs ${cellClass}" title="${cellTitle}">${cellContent}</td>`;
+                        return `<td class="p-2 border align-middle text-center text-xs ${cellClass} ${borderClass}" title="${cellTitle}">${cellContent}</td>`;
                     }).join('');
                 }).join('');
                 return `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${item.name}</td>${dayCells}</tr>`;
             }).join('');
 
-            container.innerHTML = `<table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">${rowTitle}</th>${dayHeaders}</tr><tr class="bg-gray-100">${DAYS.map(() => timeSubheaders).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+            container.innerHTML = `<table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">${rowTitle}</th>${dayHeaders}</tr><tr class="bg-gray-100">${timeSubheadersWithDividers}</tr></thead><tbody>${rows}</tbody></table>`;
         };
         
         buildGrid(sortedTeachers, 'Teacher');
@@ -469,12 +481,25 @@
         
         const buildGrid = (rowsData, rowTitle) => {
             const dayHeaders = DAYS.map(day => `<th colspan="${sortedTimeSlots.length}" class="p-2 border font-semibold text-center">${day}</th>`).join('');
-            const timeSubheaders = sortedTimeSlots.map(slot => `<th class="p-2 border font-semibold whitespace-nowrap">${slot.start}-${slot.end}</th>`).join('');
+            
+            const timeSubheadersWithDividers = DAYS.map((day, dayIndex) => {
+                return sortedTimeSlots.map((slot, slotIndex) => {
+                    const isLastSlotInDay = slotIndex === sortedTimeSlots.length - 1;
+                    const isLastDay = dayIndex === DAYS.length - 1;
+                    const borderClass = isLastSlotInDay && !isLastDay ? 'border-r-4 border-slate-300' : '';
+                    return `<th class="p-2 border font-semibold whitespace-nowrap ${borderClass}">${slot.start}-${slot.end}</th>`;
+                }).join('');
+            }).join('');
             
             const rows = rowsData.map(item => {
-                const dayCells = DAYS.map(day => {
-                    return sortedTimeSlots.map(slot => {
-                        if (slot.isBreak) return `<td class="p-1 border bg-green-50"></td>`;
+                const dayCells = DAYS.map((day, dayIndex) => {
+                    return sortedTimeSlots.map((slot, slotIndex) => {
+                        const isLastSlotInDay = slotIndex === sortedTimeSlots.length - 1;
+                        const isLastDay = dayIndex === DAYS.length - 1;
+                        const borderClass = isLastSlotInDay && !isLastDay ? 'border-r-4 border-slate-300' : '';
+
+                        if (slot.isBreak) return `<td class="p-1 border bg-green-50 ${borderClass}"></td>`;
+
                         const slotId = `${day}_${slot.start}-${slot.end}`;
                         const entry = Object.values(schedule).find(e => e.slotId === slotId && e.subjectIds?.includes(item.id));
                         
@@ -495,13 +520,13 @@
                             cellContent += `<p class="font-semibold">${teacherNames}</p><p class="text-gray-600">${classNames}</p><p class="text-indigo-600">${locationName}</p>`;
                         }
                         
-                        return `<td class="p-2 border align-middle text-center text-xs ${cellClass}" title="${cellTitle}">${cellContent}</td>`;
+                        return `<td class="p-2 border align-middle text-center text-xs ${cellClass} ${borderClass}" title="${cellTitle}">${cellContent}</td>`;
                     }).join('');
                 }).join('');
                 return `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${item.name}</td>${dayCells}</tr>`;
             }).join('');
 
-            container.innerHTML = `<table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">${rowTitle}</th>${dayHeaders}</tr><tr class="bg-gray-100">${DAYS.map(() => timeSubheaders).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+            container.innerHTML = `<table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">${rowTitle}</th>${dayHeaders}</tr><tr class="bg-gray-100">${timeSubheadersWithDividers}</tr></thead><tbody>${rows}</tbody></table>`;
         };
         
         buildGrid(sortedSubjects, 'Subject');
@@ -1073,4 +1098,5 @@
 </script>
 </body>
 </html>
+
 

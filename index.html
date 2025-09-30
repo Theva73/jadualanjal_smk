@@ -6,20 +6,20 @@
     <title>School Schedule Planner - Master Schedule</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- PDF Generation Libraries with defer to ensure order -->
+    <!-- PDF Generation Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-<script>
-    // Ensure jsPDF and autoTable are attached properly
-    window.addEventListener("load", () => {
-        if (window.jspdf && window.jspdf.jsPDF) {
-            const { jsPDF } = window.jspdf;
-            if (typeof jsPDF.prototype.autoTable !== "function" && window.jspdfAutoTable) {
-                jsPDF.prototype.autoTable = window.jspdfAutoTable;
+    <script>
+        // Ensure jsPDF and autoTable are attached properly after the page loads
+        window.addEventListener("load", () => {
+            if (window.jspdf && window.jspdf.jsPDF) {
+                const { jsPDF } = window.jspdf;
+                if (typeof jsPDF.prototype.autoTable !== "function" && window.jspdfAutoTable) {
+                    jsPDF.prototype.autoTable = window.jspdfAutoTable;
+                }
             }
-        }
-    });
-</script>
+        });
+    </script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -31,7 +31,6 @@
         .sticky-left { position: -webkit-sticky; position: sticky; left: 0; z-index: 5; background-color: #fff; }
         thead.sticky-header .sticky-left { z-index: 11; }
 
-
         /* Toggle Switch Styles */
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
@@ -41,7 +40,6 @@
         .error-warning { background-color: #fef9c3 !important; border: 1px solid #fde047; }
         .error-icon { display: inline-block; margin-left: 4px; color: #b91c1c; }
         .warning-icon { display: inline-block; margin-left: 4px; color: #a16207; }
-
     </style>
 </head>
 <body class="p-2 sm:p-4">
@@ -554,14 +552,16 @@
                     if (slot.isBreak) {
                         row.push('REHAT');
                     } else {
-                        const cellContent = entries.map(entry => {
-                            const subjectNames = entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '';
-                            const teacherNames = entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', ');
-                            const locationName = locations[entry.locationId]?.name || '';
+                        // Create a formatted string for the cell's raw content.
+                        // We use unique prefixes to identify data types later.
+                        const cellText = entries.map(entry => {
+                            const subjectNames = "SUBJECT:" + (entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '');
+                            const teacherNames = "TEACHER:" + (entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '));
+                            const locationName = "LOCATION:" + (locations[entry.locationId]?.name || '');
                             
-                            return `${subjectNames}\n${teacherNames}\n${locationName}`;
-                        }).join('\n\n');
-                        row.push(cellContent);
+                            return [subjectNames, teacherNames, locationName].join('\n');
+                        }).join('\n\n'); // Separator for multiple entries in the same slot
+                        row.push(cellText);
                     }
                 });
                 body.push(row);
@@ -590,21 +590,27 @@
                     if (data.cell.raw === 'REHAT') {
                         data.cell.styles.halign = 'center';
                         data.cell.styles.valign = 'middle';
+                        return;
                     }
-                    else if (data.row.section === 'body' && typeof data.cell.raw === 'string' && data.cell.raw.trim() !== '') {
-                        const lines = data.cell.raw.split('\n\n');
+                    
+                    if (data.row.section === 'body' && typeof data.cell.raw === 'string' && data.cell.raw.trim() !== '') {
                         const styledContent = [];
-                        lines.forEach(lineGroup => {
-                            const parts = lineGroup.split('\n');
-                            if (parts[0]) { // Subject name
-                                styledContent.push({ content: parts[0], styles: { fontStyle: 'bold', textColor: [25, 25, 112] } });
-                            }
-                            if (parts[1]) { // Teacher names
-                                styledContent.push({ content: parts[1], styles: { fontStyle: 'normal', textColor: [0,0,0] } });
-                            }
-                             if (parts[2] && parts[2].trim() !== '') { // Location name
-                                styledContent.push({ content: parts[2], styles: { fontStyle: 'normal', textColor: [220, 38, 38] } });
-                            }
+                        // Split by the entry separator first
+                        const entryGroups = data.cell.raw.split('\n\n');
+                        entryGroups.forEach(group => {
+                            const lines = group.split('\n');
+                            lines.forEach(line => {
+                                if (line.startsWith('SUBJECT:')) {
+                                    styledContent.push({ content: line.replace('SUBJECT:', ''), styles: { fontStyle: 'bold', textColor: [25, 25, 112] } });
+                                } else if (line.startsWith('TEACHER:')) {
+                                    styledContent.push({ content: line.replace('TEACHER:', ''), styles: { fontStyle: 'normal', textColor: [0, 0, 0] } });
+                                } else if (line.startsWith('LOCATION:')) {
+                                     const locationText = line.replace('LOCATION:', '');
+                                     if(locationText.trim() !== ''){
+                                        styledContent.push({ content: locationText, styles: { fontStyle: 'normal', textColor: [220, 38, 38] } });
+                                     }
+                                }
+                            });
                         });
                         data.cell.content = styledContent;
                     }

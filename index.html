@@ -342,7 +342,11 @@
                 </td>`;
             }).join('');
 
-            return `<tr>
+            const isLastDay = DAYS.indexOf(day) === DAYS.length - 1;
+            // Add a thick border to all day rows except the last one for clear separation.
+            const rowClass = isLastDay ? '' : 'border-b-4 border-slate-300';
+
+            return `<tr class="${rowClass}">
                 <td class="px-2 py-2 text-sm border font-bold text-gray-700 bg-gray-50 sticky-left">${day}</td>
                 ${timeCells}
             </tr>`;
@@ -1069,5 +1073,4 @@
 </script>
 </body>
 </html>
-
 

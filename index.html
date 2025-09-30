@@ -6,9 +6,21 @@
     <title>School Schedule Planner - Master Schedule</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- PDF Generation Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf-autotable.min.js"></script>
+    <!-- PDF Generation Libraries with defer to ensure order -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script>
+    // Ensure jsPDF and autoTable are attached properly
+    window.addEventListener("load", () => {
+        if (window.jspdf && window.jspdf.jsPDF) {
+            const { jsPDF } = window.jspdf;
+            if (typeof jsPDF.prototype.autoTable !== "function" && window.jspdfAutoTable) {
+                jsPDF.prototype.autoTable = window.jspdfAutoTable;
+            }
+        }
+    });
+</script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .tab-btn.active { border-color: #4f46e5; background-color: #eef2ff; color: #4338ca; font-weight: 600; }
@@ -19,6 +31,7 @@
         .sticky-left { position: -webkit-sticky; position: sticky; left: 0; z-index: 5; background-color: #fff; }
         thead.sticky-header .sticky-left { z-index: 11; }
 
+
         /* Toggle Switch Styles */
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
@@ -28,6 +41,7 @@
         .error-warning { background-color: #fef9c3 !important; border: 1px solid #fde047; }
         .error-icon { display: inline-block; margin-left: 4px; color: #b91c1c; }
         .warning-icon { display: inline-block; margin-left: 4px; color: #a16207; }
+
     </style>
 </head>
 <body class="p-2 sm:p-4">
@@ -59,7 +73,7 @@
     </div>
 
     <div id="tab-content-management" class="tab-panel hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">1. Manage Classes</h3>
                 <form id="add-class-form" class="flex gap-2 mb-3"><input type="text" id="class-name" placeholder="e.g., 5 Sains 1" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
@@ -72,7 +86,7 @@
                 <div id="teacher-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
 
-            <div class="bg-gray-50 p-4 rounded-lg">
+             <div class="bg-gray-50 p-4 rounded-lg">
                 <h3 class="text-lg font-semibold mb-3 text-gray-800">3. Manage Locations</h3>
                 <form id="add-location-form" class="flex gap-2 mb-3"><input type="text" id="location-name" placeholder="e.g., Lab A, Hall B" class="flex-grow p-2 text-sm border rounded-md" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Add</button></form>
                 <div id="location-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
@@ -167,16 +181,6 @@
     let summaryViewMode = 'teacher'; // 'teacher' or 'subject'
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
-
-    /* ===== PDF Export Meta — controls the look to match your sample ===== */
-    const EXPORT_META = {
-      title: 'Jadual Anjal',          // big title (center)
-      subtitle: 'KELAS 3 & 5',        // secondary title (center)
-      dateLabel: 'RABU 4 SEPT 2025',  // text inside the blue band
-      dayForLookup: 'RABU',           // which day to pull from schedule for the single-day PDF
-      footerPrefix: 'Generated: '
-    };
-
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
 
     function getSortedTimeSlots() {
@@ -358,13 +362,15 @@
 
     function analyzeScheduleForErrors() {
         const errors = {};
-        const teacherSlotUsage = {};
+        const teacherSlotUsage = {}; // Tracks { 'teacherId_slotId': [entry1, entry2], ... }
 
+        // 1. Populate teacher usage and check for empty schedule entries
         for (const entry of Object.values(schedule)) {
             if (!entry.subjectIds || entry.subjectIds.length === 0) {
                 errors[entry.slotId] = { type: 'clash', message: 'This schedule entry is empty and has no subjects assigned.' };
                 continue;
             }
+
             const teachersInEntry = entry.subjectIds.flatMap(sid => subjects[sid]?.teacherIds || []);
             for (const teacherId of teachersInEntry) {
                 const key = `${teacherId}_${entry.slotId}`;
@@ -373,14 +379,18 @@
             }
         }
 
+        // 2. Check for teacher clashes
         for (const [key, entries] of Object.entries(teacherSlotUsage)) {
             if (entries.length > 1) {
                 const subjectNames = entries.map(e => e.subjectIds.map(sid => subjects[sid]?.name).join(', ')).join(' & ');
                 errors[key] = { type: 'clash', message: `CLASH: This teacher is double-booked for subjects: ${subjectNames}.` };
             }
         }
+        
+        // 3. Check for subjects with no teachers (will be checked during render)
         return errors;
     }
+
 
     function renderSummaryGrid() {
         const summaryDiv = document.getElementById('summary-grid');
@@ -493,103 +503,123 @@
         buildGrid(sortedSubjects, 'Subject');
     }
 
-    /* =========================
-       PDF Export (FULLY WIRED)
-       ========================= */
+
+    // --- Core Logic Functions ---
     function generateMasterSchedulePDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'landscape' });
-
-      const sortedClasses = Object.values(classes || {}).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-      const sortedTimeSlots = getSortedTimeSlots();
-      const hasTime = sortedTimeSlots.length > 0;
-      const hasClasses = sortedClasses.length > 0;
-
-      // Header (sample-like)
-      const W = doc.internal.pageSize.getWidth();
-      doc.setFontSize(18);
-      doc.text(EXPORT_META.title, W/2, 14, { align: 'center' });
-      doc.setFontSize(16);
-      doc.text(EXPORT_META.subtitle, W/2, 24, { align: 'center' });
-
-      // Blue band
-      doc.setFillColor(67, 97, 238);
-      doc.rect(10, 30, W-20, 8, 'F');
-      doc.setTextColor(255);
-      doc.setFontSize(12);
-      doc.text(EXPORT_META.dateLabel, W/2, 36, { align: 'center' });
-      doc.setTextColor(0);
-
-      // Table data
-      const fallbackTimes = ['07:15 - 08:15','08:15 - 09:15','09:15 - 10:15','10:15 - 10:30','10:30 - 11:00','11:00 - 12:00','12:00 - 01:00'];
-      const head = [[
-        'Kelas/Masa',
-        ...(hasTime ? sortedTimeSlots.map(s => `${s.start} - ${s.end}`) : fallbackTimes)
-      ]];
-
-      const sampleRowsIfEmpty = [{name:'5SN1'},{name:'5SN2'},{name:'5AP1'}];
-
-      const body = (hasClasses ? sortedClasses : sampleRowsIfEmpty).map(cls => {
-        const row = [cls.name || ''];
-        const loopSlots = hasTime ? sortedTimeSlots : head[0].slice(1).map(h => ({ start:h.split(' - ')[0], end:h.split(' - ')[1], isBreak:false }));
-        loopSlots.forEach(slot => {
-          if (slot.isBreak) { row.push('REHAT'); return; }
-
-          let cell = '';
-          if (hasTime) {
-            const slotId = `${EXPORT_META.dayForLookup}_${slot.start}-${slot.end}`;
-            const classSubjects = cls.subjectIds || [];
-            const entries = Object.values(schedule || {}).filter(e => e.slotId === slotId);
-            for (const e of entries) {
-              const matchSubId = (e.subjectIds||[]).find(sid => classSubjects.includes(sid));
-              if (matchSubId) {
-                const sub = subjects[matchSubId] || {};
-                const tNames = (sub.teacherIds||[]).map(tid => (teachers[tid]||{}).name).filter(Boolean);
-                cell = tNames.join(', ');
-                break;
-              }
+        try {
+            // Check if the main jspdf library is loaded
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                showToast("Error: PDF library not ready. Please wait a moment and try again.");
+                console.error("jsPDF library is missing from the window object.");
+                return;
             }
-          }
-          row.push(cell);
-        });
-        return row;
-      });
-
-      const breakColIdx = hasTime ? sortedTimeSlots.findIndex(s => s.isBreak) : -1;
-
-      doc.autoTable({
-        head,
-        body,
-        startY: 42,
-        theme: 'grid',
-        headStyles: { fillColor: [221,230,244], textColor: 33, fontStyle: 'bold', halign: 'center' },
-        styles:   { cellPadding: 2, fontSize: 8, valign: 'middle', halign: 'center', lineWidth: 0.1, lineColor: [160,160,160] },
-        columnStyles: { 0: { fontStyle: 'bold', halign: 'left', minCellWidth: 28 } },
-        didParseCell: (data) => {
-          if (breakColIdx >= 0 && data.column.index === breakColIdx + 1) {
-            if (String(data.cell.raw).toUpperCase() === 'REHAT') {
-              data.cell.styles.fontStyle = 'bold';
-              data.cell.styles.fillColor = [235, 248, 240];
-              data.cell.text = 'REHAT';
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+            // Fallback: try to attach plugin if only API path exists
+            if (typeof doc.autoTable !== 'function' && window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && typeof window.jspdf.jsPDF.API.autoTable === 'function') {
+                doc.autoTable = window.jspdf.jsPDF.API.autoTable.bind(doc);
             }
-          }
+
+
+            // Check if the autoTable plugin is attached
+            if (typeof doc.autoTable !== 'function') {
+                showToast("Error: PDF Table plugin not ready. Please wait a moment and try again.");
+                console.error("jsPDF-AutoTable plugin is not attached to jsPDF prototype.");
+                return;
+            }
+
+            if (Object.keys(classes).length === 0 || Object.keys(timeslots).length === 0) {
+                showToast("Please define classes and time slots before generating a PDF.");
+                return;
+            }
+
+            DAYS.forEach((day, index) => {
+                if (index > 0) doc.addPage();
+
+                const dayTitle = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
+                doc.setFontSize(18);
+                doc.text('Jadual Waktu Kelas', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                doc.setFontSize(14);
+                doc.text(dayTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+                const sortedClasses = Object.values(classes).sort((a, b) => a.name.localeCompare(b.name));
+                const sortedTimeSlots = getSortedTimeSlots();
+                
+                const head = [['Kelas/Masa', ...sortedTimeSlots.map(slot => `${slot.start} - ${slot.end}`)]];
+                const body = sortedClasses.map(cls => {
+                    const row = [cls.name];
+                    sortedTimeSlots.forEach(slot => {
+                        if (slot.isBreak) {
+                            row.push('REHAT');
+                            return;
+                        }
+
+                        const slotId = `${day}_${slot.start}-${slot.end}`;
+                        const classSubjects = cls.subjectIds || [];
+                        const entriesInSlot = Object.values(schedule).filter(e => e.slotId === slotId);
+                        let cellContent = '';
+
+                        for (const entry of entriesInSlot) {
+                            const matchingSubjectId = entry.subjectIds.find(sid => classSubjects.includes(sid));
+                            if (matchingSubjectId) {
+                                const subject = subjects[matchingSubjectId];
+                                const teacherNames = subject.teacherIds?.map(tid => teachers[tid]?.name).filter(Boolean).join(',\n') || '';
+                                cellContent = teacherNames;
+                                break; 
+                            }
+                        }
+                        row.push(cellContent);
+                    });
+                    return row;
+                });
+
+                const breakColumnIndex = sortedTimeSlots.findIndex(slot => slot.isBreak);
+                
+                doc.autoTable({
+                    head: head,
+                    body: body,
+                    startY: 28,
+                    theme: 'grid',
+                    headStyles: { fillColor: [45, 55, 72], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                    styles: {
+                        cellPadding: 1.5,
+                        fontSize: 7,
+                        valign: 'middle',
+                        halign: 'center',
+                        lineWidth: 0.1,
+                        lineColor: [150, 150, 150]
+                    },
+                    columnStyles: { 0: { fontStyle: 'bold', halign: 'left', minCellWidth: 25 } },
+                    didParseCell: (data) => {
+                        if (data.column.index === breakColumnIndex + 1 && data.cell.raw === 'REHAT') {
+                            data.cell.styles.fontStyle = 'bold';
+                            data.cell.styles.fontSize = 8;
+                            data.cell.text = 'R\nE\nH\nA\nT';
+                        }
+                    }
+                });
+
+                 const pageCount = doc.internal.getNumberOfPages();
+                 doc.setPage(pageCount);
+                 doc.setFontSize(8);
+                 doc.setTextColor(150);
+                 doc.text(
+                     `Generated: ${new Date().toLocaleString()}`,
+                     doc.internal.pageSize.getWidth() - 14,
+                     doc.internal.pageSize.getHeight() - 7,
+                     { align: 'right' }
+                 );
+
+            });
+
+            doc.save(`Jadual_Penuh_Mingguan_${new Date().toISOString().slice(0,10)}.pdf`);
+        } catch (error) {
+            console.error("Failed to generate PDF:", error);
+            showToast("An unexpected error occurred while generating the PDF.");
         }
-      });
-
-      // Footer
-      const pageCount = doc.internal.getNumberOfPages();
-      doc.setPage(pageCount);
-      doc.setFontSize(8);
-      doc.setTextColor(120);
-      const footer = EXPORT_META.footerPrefix +
-        new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-      doc.text(footer, W - 14, doc.internal.pageSize.getHeight() - 7, { align: 'right' });
-
-      // Save
-      doc.save(`Jadual_Anjal_${new Date().toISOString().slice(0,10)}.pdf`);
     }
 
-    // --- Core Logic for schedule editing (unchanged) ---
     async function handleScheduleEntrySave(e) {
         e.preventDefault();
         const form = e.target;
@@ -708,7 +738,7 @@
         );
     }
 
-    function deletePlaylist(playlistId) {
+     function deletePlaylist(playlistId) {
         const playlist = playlists[playlistId];
         if (!playlist) return;
         openConfirmationModal(
@@ -762,9 +792,7 @@
     }
 
     function attachEventListeners() {
-        // PDF button — wired
         document.getElementById('download-pdf-btn').addEventListener('click', generateMasterSchedulePDF);
-
         document.getElementById('summary-toggle').addEventListener('change', (e) => {
             summaryViewMode = e.target.checked ? 'teacher' : 'subject';
             renderSummaryGrid();
@@ -819,7 +847,7 @@
                         await batch.commit();
                         showToast(`Subject "${subjectName}" deleted successfully.`);
                     },
-                    true
+                    true // isDestructive
                 );
             }
             if (target.classList.contains('assign-teachers-btn')) {
@@ -845,10 +873,12 @@
         document.getElementById('add-playlist-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('playlist-name').value.trim(); if(name) { await savePlaylist(name); showToast('Playlist saved!'); e.target.reset(); } });
         document.getElementById('playlist-list').addEventListener('click', e => { if (e.target.classList.contains('load-playlist')) loadPlaylist(e.target.dataset.id); if (e.target.classList.contains('delete-playlist')) deletePlaylist(e.target.dataset.id); });
 
+
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); 
         document.getElementById('tab-management').addEventListener('click', () => switchTab('management'));
         document.getElementById('tab-playlists').addEventListener('click', () => switchTab('playlists'));
         document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
+
     }
     
     function openScheduleEntryModal(day, time, docId = null) {
@@ -944,7 +974,7 @@
             <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 id="edit-modal-title" class="text-lg font-semibold mb-4">Edit Name</h3><form id="edit-form"><input type="hidden" id="edit-id"><input type="hidden" id="edit-collection"><input type="text" id="edit-name-input" class="w-full p-2 border rounded-md" required><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="edit-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0 whitespace-pre-wrap"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
             <div id="timeslot-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Edit Time Slot</h3><form id="edit-timeslot-form"><input type="hidden" id="edit-timeslot-id"><div class="space-y-3"><div class="flex gap-2 items-center"><input type="time" id="edit-timeslot-start" class="w-full p-2 text-sm border rounded-md" required><span>-</span><input type="time" id="edit-timeslot-end" class="w-full p-2 text-sm border rounded-md" required></div><div class="flex items-center"><input id="edit-timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><label for="edit-timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label></div></div><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="timeslot-edit-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
-            <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`;
+            <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`; 
         
         document.getElementById('schedule-entry-form').addEventListener('submit', handleScheduleEntrySave);
         document.getElementById('cancel-schedule-entry-btn').addEventListener('click', () => toggleModal('schedule-entry-modal', false));
@@ -1039,3 +1069,5 @@
 </script>
 </body>
 </html>
+
+

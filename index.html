@@ -444,9 +444,17 @@
                         }
 
                         if (entry) {
-                            const subjectNames = entry.subjectIds.map(sid => subjects[sid]?.name).join(', ');
+                            // REFINED LOGIC: Filter to show only subjects taught by the current teacher in this slot.
+                            const subjectsForThisTeacher = entry.subjectIds.filter(sid => subjects[sid]?.teacherIds?.includes(item.id));
+                            const subjectNames = subjectsForThisTeacher.map(sid => subjects[sid]?.name).join(', ');
+                            
                             const locationName = locations[entry.locationId]?.name || '';
-                            const classNames = Object.values(classes).filter(cls => cls.subjectIds?.some(subId => entry.subjectIds.includes(subId))).map(cls => cls.name).join(', ');
+                            
+                            // Class names are derived from all subjects in the slot, assuming they are for the same classes.
+                            const classNames = Object.values(classes)
+                                .filter(cls => cls.subjectIds?.some(subId => entry.subjectIds.includes(subId)))
+                                .map(cls => cls.name).join(', ');
+                                
                             cellContent += `<p class="font-semibold">${subjectNames}</p><p class="text-gray-600">${classNames}</p><p class="font-semibold text-red-600">${locationName}</p>`;
                         }
                         
@@ -1015,5 +1023,4 @@
 </script>
 </body>
 </html>
-
 

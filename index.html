@@ -176,7 +176,7 @@
     
     let db, auth, userId;
     let teachers = {}, subjects = {}, schedule = {}, classes = {}, locations = {}, timeslots = {}, playlists = {};
-    let summaryViewMode = 'teacher'; // 'teacher' or 'subject'
+    let summaryViewMode = 'subject'; // 'teacher' or 'subject'
 
     const DAYS = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     const getPath = (collectionName) => `scheduler_v2_${collectionName}`;
@@ -997,7 +997,7 @@
     }
 
     async function initializeAppData() {
-        document.getElementById('summary-toggle').checked = true;
+        document.getElementById('summary-toggle').checked = false;
         setupDataListeners();
     }
     
@@ -1023,4 +1023,5 @@
 </script>
 </body>
 </html>
+
 

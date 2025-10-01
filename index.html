@@ -568,23 +568,20 @@
                         rawRow.push('REHAT');
                         drawingRow.push({ isBreak: true });
                     } else {
-                        let rawText = '';
-                        const cellDrawingData = [];
-                        entries.forEach((entry, index) => {
-                            if (index > 0) rawText += '\n\n';
-
+                        // We still need raw text for auto-height calculation, even if we overwrite drawing
+                        let rawText = entries.map(entry => {
                             const subjectNames = entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '';
                             const teacherNames = entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', ');
                             const locationName = locations[entry.locationId]?.name || 'Nil';
-                            
-                            rawText += `${subjectNames}\n${teacherNames}\n${locationName}`;
-                            
-                            cellDrawingData.push({
-                                subject: subjectNames,
-                                teacher: teacherNames,
-                                location: locationName
-                            });
-                        });
+                            return `Subject: ${subjectNames}\nTeacher: ${teacherNames}\nLocation: ${locationName}`;
+                        }).join('\n\n');
+                        
+                        const cellDrawingData = entries.map(entry => ({
+                            subject: entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '',
+                            teacher: entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '),
+                            location: locations[entry.locationId]?.name || 'Nil'
+                        }));
+
                         rawRow.push(rawText);
                         drawingRow.push({ isBreak: false, entries: cellDrawingData });
                     }
@@ -614,7 +611,7 @@
                 },
                 willDrawCell: (data) => {
                     if (data.row.section === 'body' && data.column.index > 0) {
-                        data.cell.text = ''; // Clear text only for schedule cells
+                        data.cell.text = ''; // Clear text to allow custom drawing
                     }
                 },
                 didDrawCell: (data) => {
@@ -639,29 +636,45 @@
                         const maxWidth = cell.width - 4;
                         
                         cellData.entries.forEach((entry, index) => {
-                            if (index > 0) y += 3;
+                            if (index > 0) y += 4; 
 
                             doc.setFontSize(7);
 
-                            // Subject
-                            doc.setFont('helvetica', 'bold');
-                            doc.setTextColor(25, 25, 112);
-                            const subjectLines = doc.splitTextToSize(entry.subject, maxWidth);
-                            doc.text(subjectLines, x, y);
-                            y += (subjectLines.length * 3);
-
-                            // Teacher
+                            // --- Subject ---
+                            // Prefix
                             doc.setFont('helvetica', 'normal');
                             doc.setTextColor(0, 0, 0);
-                            const teacherLines = doc.splitTextToSize(entry.teacher, maxWidth);
+                            const subjectPrefix = "Subject: ";
+                            doc.text(subjectPrefix, x, y);
+                            const subjectPrefixWidth = doc.getTextWidth(subjectPrefix);
+                            // Value
+                            doc.setFont('helvetica', 'bold');
+                            doc.setTextColor(25, 25, 112);
+                            const subjectLines = doc.splitTextToSize(entry.subject, maxWidth - subjectPrefixWidth);
+                            doc.text(subjectLines, x + subjectPrefixWidth, y);
+                            y += (subjectLines.length * 3);
+
+                            // --- Teacher ---
+                            // Prefix is part of the value string here as it's all one style
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(0, 0, 0);
+                            const teacherText = `Teacher: ${entry.teacher}`;
+                            const teacherLines = doc.splitTextToSize(teacherText, maxWidth);
                             doc.text(teacherLines, x, y);
                             y += (teacherLines.length * 3);
 
-                            // Location
+                            // --- Location ---
+                            // Prefix
                             doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(0, 0, 0);
+                            const locationPrefix = "Location: ";
+                            doc.text(locationPrefix, x, y);
+                            const locationPrefixWidth = doc.getTextWidth(locationPrefix);
+                            // Value
+                            doc.setFont('helvetica', 'bold');
                             doc.setTextColor(220, 38, 38);
-                            const locationLines = doc.splitTextToSize(entry.location, maxWidth);
-                            doc.text(locationLines, x, y);
+                            const locationLines = doc.splitTextToSize(entry.location, maxWidth - locationPrefixWidth);
+                            doc.text(locationLines, x + locationPrefixWidth, y);
                             y += (locationLines.length * 3);
                         });
                     }

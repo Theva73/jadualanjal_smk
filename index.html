@@ -526,43 +526,63 @@
     function generateMasterSchedulePDF() {
         try {
             if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-                showToast("Error: PDF library not ready."); return;
+                showToast("Error: PDF library not ready.");
+                return;
             }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
             if (typeof doc.autoTable !== 'function') {
-                showToast("Error: PDF Table plugin not ready."); return;
+                showToast("Error: PDF Table plugin not ready.");
+                return;
             }
 
             if (Object.keys(subjects).length === 0 || Object.keys(timeslots).length === 0) {
-                showToast("Please define subjects and time slots first."); return;
+                showToast("Please define subjects and time slots first.");
+                return;
             }
 
             const sortedTimeSlots = getSortedTimeSlots();
             const timeSlotHeaders = sortedTimeSlots.map(slot => `${slot.start} - ${slot.end}`);
             const head = [['Day', ...timeSlotHeaders]];
-            const body = [];
+            const rawBody = [];
+            const drawingData = [];
 
-            DAYS.forEach(day => {
-                const row = [day];
+            DAYS.forEach((day) => {
+                const rawRow = [day];
+                const drawingRow = [null]; // Placeholder for Day column
+
                 sortedTimeSlots.forEach(slot => {
                     const slotId = `${day}_${slot.start}-${slot.end}`;
                     const entries = Object.values(schedule).filter(e => e.slotId === slotId);
+
                     if (slot.isBreak) {
-                        row.push('REHAT');
+                        rawRow.push('REHAT');
+                        drawingRow.push({ isBreak: true });
                     } else {
-                        const cellText = entries.map(entry => {
-                            const subjectNames = "SUBJECT:" + (entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '');
-                            const teacherNames = "TEACHER:" + (entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '));
-                            const locationName = "LOCATION:" + (locations[entry.locationId]?.name || 'Nil');
+                        let rawText = '';
+                        const cellDrawingData = [];
+                        entries.forEach((entry, index) => {
+                            if (index > 0) rawText += '\n\n';
+
+                            const subjectNames = entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '';
+                            const teacherNames = entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', ');
+                            const locationName = locations[entry.locationId]?.name || 'Nil';
                             
-                            return [subjectNames, teacherNames, locationName].join('\n');
-                        }).join('\n\n');
-                        row.push(cellText);
+                            rawText += `${subjectNames}\n${teacherNames}\n${locationName}`;
+                            
+                            cellDrawingData.push({
+                                subject: subjectNames,
+                                teacher: teacherNames,
+                                location: locationName
+                            });
+                        });
+                        rawRow.push(rawText);
+                        drawingRow.push({ isBreak: false, entries: cellDrawingData });
                     }
                 });
-                body.push(row);
+                rawBody.push(rawRow);
+                drawingData.push(drawingRow);
             });
 
             doc.setFontSize(14);
@@ -570,7 +590,7 @@
 
             doc.autoTable({
                 head: head,
-                body: body,
+                body: rawBody,
                 startY: 15,
                 theme: 'grid',
                 headStyles: { 
@@ -582,32 +602,60 @@
                     lineWidth: 0.1, lineColor: [150, 150, 150] 
                 },
                 columnStyles: {
-                    0: { fontStyle: 'bold', halign: 'center', valign: 'middle', minCellWidth: 20 }
+                    0: { fontStyle: 'bold', halign: 'center', valign: 'middle' }
                 },
-                didParseCell: function (data) {
-                    if (data.cell.raw === 'REHAT') {
-                        data.cell.styles.halign = 'center';
-                        data.cell.styles.valign = 'middle';
-                        return;
+                willDrawCell: (data) => {
+                    if (data.row.section === 'body' && data.column.index > 0) {
+                        data.cell.text = ''; // Clear text only for schedule cells
                     }
-                    
-                    if (data.row.section === 'body' && typeof data.cell.raw === 'string' && data.cell.raw.trim() !== '') {
-                        const styledContent = [];
-                        const entryGroups = data.cell.raw.split('\n\n');
-                        entryGroups.forEach(group => {
-                            const lines = group.split('\n');
-                            lines.forEach(line => {
-                                if (line.startsWith('SUBJECT:')) {
-                                    styledContent.push({ content: line.replace('SUBJECT:', ''), styles: { fontStyle: 'bold', textColor: [25, 25, 112] } });
-                                } else if (line.startsWith('TEACHER:')) {
-                                    styledContent.push({ content: line.replace('TEACHER:', ''), styles: { fontStyle: 'normal', textColor: [0, 0, 0] } });
-                                } else if (line.startsWith('LOCATION:')) {
-                                     const locationText = line.replace('LOCATION:', '');
-                                     styledContent.push({ content: locationText, styles: { fontStyle: 'normal', textColor: [220, 38, 38] } });
-                                }
-                            });
+                },
+                didDrawCell: (data) => {
+                    if (data.row.section !== 'body' || data.column.index === 0) return;
+
+                    const cellData = drawingData[data.row.index][data.column.index];
+                    if (!cellData) return;
+
+                    const cell = data.cell;
+                    if (cellData.isBreak) {
+                        const text = 'REHAT';
+                        const textSize = doc.getTextDimensions(text);
+                        const textX = cell.x + (cell.width - textSize.w) / 2;
+                        const textY = cell.y + (cell.height / 2);
+                        doc.setFontSize(7);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(0,0,0);
+                        doc.text(text, textX, textY, { baseline: 'middle' });
+                    } else {
+                        let y = cell.y + 2.5;
+                        const x = cell.x + 2;
+                        const maxWidth = cell.width - 4;
+                        
+                        cellData.entries.forEach((entry, index) => {
+                            if (index > 0) y += 3;
+
+                            doc.setFontSize(7);
+
+                            // Subject
+                            doc.setFont('helvetica', 'bold');
+                            doc.setTextColor(25, 25, 112);
+                            const subjectLines = doc.splitTextToSize(entry.subject, maxWidth);
+                            doc.text(subjectLines, x, y);
+                            y += (subjectLines.length * 3);
+
+                            // Teacher
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(0, 0, 0);
+                            const teacherLines = doc.splitTextToSize(entry.teacher, maxWidth);
+                            doc.text(teacherLines, x, y);
+                            y += (teacherLines.length * 3);
+
+                            // Location
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(220, 38, 38);
+                            const locationLines = doc.splitTextToSize(entry.location, maxWidth);
+                            doc.text(locationLines, x, y);
+                            y += (locationLines.length * 3);
                         });
-                        data.cell.content = styledContent;
                     }
                 },
                 margin: { top: 15, right: 7, bottom: 10, left: 7 },
@@ -967,5 +1015,4 @@
 </script>
 </body>
 </html>
-
 

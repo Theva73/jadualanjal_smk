@@ -228,7 +228,6 @@
 
 <script>
     // --- DATA INITIALIZATION ---
-    // This section loads and combines schedule data from the external .js files.
     const allSchedules = [];
     if (typeof form5Schedules !== 'undefined' && Array.isArray(form5Schedules)) {
         allSchedules.push(...form5Schedules);
@@ -236,7 +235,7 @@
     if (typeof form4to1Schedules !== 'undefined' && Array.isArray(form4to1Schedules)) {
         allSchedules.push(...form4to1Schedules);
     }
-    const REHAT_SLOT = allSchedules.length > 0 ? allSchedules[0].rehatSlot : "10:15-10:30"; // Default fallback
+    const REHAT_SLOT = allSchedules.length > 0 ? allSchedules[0].rehatSlot : "10:15-10:30";
 
 
     // --- SHARED HELPER FUNCTIONS for data processing ---
@@ -618,11 +617,12 @@
     }
 
 
-    // --- CLASS VIEW LOGIC (FIXED) ---
+    // --- CLASS VIEW LOGIC (FIXED & MERGED) ---
     function setupClassView(currentDayName) {
         const navigationContainer = document.getElementById('class-navigation');
         const schedulesContainer = document.getElementById('class-schedules-container');
 
+        // CORRECTED: Iterate over allSchedules, not just form5Schedules
         allSchedules.forEach((schedule, index) => {
             const safeClassName = schedule.className.replace(/\s+/g, '-');
             const button = document.createElement('button');
@@ -710,4 +710,5 @@
 
 </body>
 </html>
+
 

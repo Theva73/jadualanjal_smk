@@ -617,12 +617,11 @@
     }
 
 
-    // --- CLASS VIEW LOGIC (FIXED & MERGED) ---
+    // --- CLASS VIEW LOGIC (REWRITTEN FOR ACCURACY) ---
     function setupClassView(currentDayName) {
         const navigationContainer = document.getElementById('class-navigation');
         const schedulesContainer = document.getElementById('class-schedules-container');
 
-        // CORRECTED: Iterate over allSchedules, not just form5Schedules
         allSchedules.forEach((schedule, index) => {
             const safeClassName = schedule.className.replace(/\s+/g, '-');
             const button = document.createElement('button');
@@ -631,8 +630,8 @@
             if (index === 0) button.classList.add('active');
             
             button.addEventListener('click', () => {
-                navigationContainer.querySelector('.active').classList.remove('active');
-                schedulesContainer.querySelector('.active').classList.remove('active');
+                navigationContainer.querySelector('.active')?.classList.remove('active');
+                schedulesContainer.querySelector('.active')?.classList.remove('active');
                 button.classList.add('active');
                 document.getElementById(`schedule-${safeClassName}`).classList.add('active');
             });
@@ -661,36 +660,31 @@
                 const bgClass = days.indexOf(day) % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                 tableHTML += `<tr class="${bgClass} ${highlightClass}"><td class="font-bold border border-gray-300 p-2">${day}</td>`;
                 
-                let renderedContent = new Array(filteredTimeSlots.length).fill(null);
+                let renderedCells = new Array(filteredTimeSlots.length).fill(null);
                 const daySchedule = schedule.scheduleData[day] || [];
 
                 daySchedule.forEach(entry => {
-                    const [start, end] = entry.period.split('-');
-                    let startIndex = -1, endIndex = -1;
-                    
-                    for(let i = 0; i < filteredTimeSlots.length; i++) {
-                        if(filteredTimeSlots[i].startsWith(start)) startIndex = i;
-                        if(filteredTimeSlots[i].endsWith(end)) endIndex = i;
-                    }
+                    const startIndex = filteredTimeSlots.findIndex(slot => slot.startsWith(entry.period.split('-')[0]));
+                    const endIndex = filteredTimeSlots.findIndex(slot => slot.endsWith(entry.period.split('-')[1]));
 
-                    if (startIndex > -1) {
-                         const colspan = (endIndex > -1 ? endIndex : startIndex) - startIndex + 1;
-                         const content = `<div class="subject">${entry.subject || ''}</div><div class="teacher">${entry.teacher || ''}</div><div class="location">${entry.location || ''}</div>`;
-                         renderedContent[startIndex] = { content, colspan };
-                         for(let i = 1; i < colspan; i++) {
-                             if(startIndex + i < renderedContent.length) {
-                                renderedContent[startIndex + i] = 'covered';
-                             }
-                         }
+                    if (startIndex !== -1) {
+                        const colspan = (endIndex !== -1 ? endIndex : startIndex) - startIndex + 1;
+                        const content = `<div class="subject">${entry.subject || ''}</div><div class="teacher">${entry.teacher || ''}</div><div class="location">${entry.location || ''}</div>`;
+                        renderedCells[startIndex] = { content, colspan };
+                        for (let i = 1; i < colspan; i++) {
+                            if (startIndex + i < renderedCells.length) {
+                                renderedCells[startIndex + i] = 'covered';
+                            }
+                        }
                     }
                 });
 
                 const rehatIndex = filteredTimeSlots.indexOf(schedule.rehatSlot);
-                if (rehatIndex > -1) {
-                    renderedContent[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true };
+                if (rehatIndex !== -1) {
+                    renderedCells[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true };
                 }
 
-                renderedContent.forEach(cell => {
+                renderedCells.forEach(cell => {
                     if (cell === 'covered') return;
                     if (cell) {
                         const rehatClass = cell.isRehat ? 'class-rehat-slot font-semibold writing-mode-vertical-rl' : '';
@@ -710,6 +704,5 @@
 
 </body>
 </html>
-
 
 

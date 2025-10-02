@@ -1,37 +1,36 @@
 // This file contains details for each teacher, including their full name and subjects.
 // The abbreviation (e.g., "AQILAH") must exactly match the normalized name from the schedule.
-
 const teacherData = {
     "AHMAD": {
-        fullName: "Ahmad Razikki Rosli",
+        fullName: "RAZIKKI",
         subjects: ["PJ", "SJ"]
     },
     "AQILAH": {
-        fullName: "Nurul Aqilah Humaira Bohari",
+        fullName: "NURUL",
         subjects: ["BM", "PNG"]
     },
     "ARFAH": {
-        fullName: "Norarfah Hasim",
+        fullName: "NORARFAH",
         subjects: ["FIZ", "SN"]
     },
     "AZHAR": {
-        fullName: "Azhar",
+        fullName: "AZHARUDDIN",
         subjects: ["SJ"]
     },
     "EFAH": {
-        fullName: "Efah Suhaila Salamon",
+        fullName: "EFAH",
         subjects: ["BM"]
     },
     "EIDAYU": {
-        fullName: "Eidayu",
+        fullName: "EDAIYU",
         subjects: ["MM"]
     },
     "FAEZAH": {
-        fullName: "Nur Faezah Mohd Nori",
+        fullName: "FAEZAH",
         subjects: ["MMT", "MM"]
     },
     "FARIS": {
-        fullName: "Muhammad Faris Bin Mazlan",
+        fullName: "FARIS",
         subjects: ["KKQ", "PI"]
     },
     "FAUZI": {
@@ -39,27 +38,27 @@ const teacherData = {
         subjects: ["PJ"]
     },
     "GOWRY": {
-        fullName: "Gowry",
+        fullName: "GOWRI",
         subjects: ["SJ", "IS"]
     },
     "GURCHAN": {
-        fullName: "Gurchan Kaur Dharam Singh",
+        fullName: "GURCHAN",
         subjects: ["PA", "PJ"]
     },
     "HAJAR": {
-        fullName: "Hajar",
+        fullName: "HAJAR",
         subjects: ["SI", "TAW", "PI"]
     },
     "HANIM": {
-        fullName: "Hanim Suria Hussin",
+        fullName: "HANIM",
         subjects: ["PNG"]
     },
     "HASLINA": {
-        fullName: "Haslina",
+        fullName: "HASLINA",
         subjects: ["AS"]
     },
     "HAZIQAH": {
-        fullName: "Nurhaziqah Hanim",
+        fullName: "NURHAZIQAH",
         subjects: ["BM"]
     },
     "IMELDA": {
@@ -67,11 +66,11 @@ const teacherData = {
         subjects: ["MM"]
     },
     "IQBAL": {
-        fullName: "Iqbal Hareez Osman",
+        fullName: "IQBAL",
         subjects: ["PS", "PNG"]
     },
     "IRDA": {
-        fullName: "Irda Syuhada Ishak",
+        fullName: "IRDA",
         subjects: ["BI"]
     },
     "IZZAH": {
@@ -79,115 +78,111 @@ const teacherData = {
         subjects: ["BA"]
     },
     "KALAI": {
-        fullName: "Kalaivani A/P Ananthanar",
+        fullName: "KALAIVANI",
         subjects: ["PJ", "PNG", "SJ"]
     },
     "KARTINI": {
-        fullName: "Kartini Ya'akub",
+        fullName: "KARTINI",
         subjects: ["SJ"]
     },
     "LAU": {
-        fullName: "Lau",
+        fullName: "LAU SHI",
         subjects: ["BC", "PJ"]
     },
     "LISAH": {
-        fullName: "Lisah",
+        fullName: "MASRULISAH",
         subjects: ["MM"]
     },
     "MALINA": {
-        fullName: "Malina",
+        fullName: "MALINA",
         subjects: ["FIZ", "MM"]
     },
     "MASRIZAN": {
-        fullName: "Masrizan",
+        fullName: "MASRIZAN",
         subjects: ["GE", "RBT"]
     },
     "MASRUL": {
-        fullName: "Masrulhuda Muhammad",
-        subjects: ["ASK", "M. KOM 2 BI"]
+        fullName: "MASRULHUDA",
+        subjects: ["ASK", "M.KOM 2 BI"]
     },
     "MASJUKI": {
-        fullName: "Masjuki",
+        fullName: "MASJUKI",
         subjects: ["KKQ", "BA", "PI"]
     },
     "NADIA": {
-        fullName: "Nadia",
+        fullName: "NADIA",
         subjects: ["BA", "PI"]
     },
     "NASUHA": {
-        fullName: "Nasuha",
+        fullName: "NASUHA",
         subjects: ["BM"]
     },
     "NAZA": {
-        fullName: "Naza",
+        fullName: "NAZARIAH",
         subjects: ["BM"]
     },
     "NAZRI": {
-        fullName: "Mohd Nazri Azis",
+        fullName: "NAZRI",
         subjects: ["SN M3"]
     },
     "NIK": {
-        fullName: "Nik Normahizan Yusuf",
+        fullName: "NORMAHIZAN",
         subjects: ["PS"]
     },
-    "NIK RUHAZANA": {
-        fullName: "Nik Ruhazana",
-        subjects: ["PS TAW"]
-    },
     "NIVETHA": {
-        fullName: "Nivetha A/P Balakrishnan",
+        fullName: "NIVETHA",
         subjects: ["BI"]
     },
     "NOROSNIZA": {
-        fullName: "Norosniza Osman",
+        fullName: "NOROSNIZA",
         subjects: ["BIO", "SN"]
     },
     "NURA": {
-        fullName: "Nura",
+        fullName: "NURA",
         subjects: ["BI"]
     },
     "NURAIN": {
-        fullName: "Siti Nurain Asman",
+        fullName: "NURAIN",
         subjects: ["PJ", "GE"]
     },
     "NURASHIDAH": {
-        fullName: "Nurashidah",
+        fullName: "NURASHIDAH",
         subjects: ["MMT"]
     },
     "QALILAH": {
-        fullName: "Siti Qalilah Radin",
+        fullName: "QHALILAH",
         subjects: ["KIM", "SJ", "SN"]
     },
     "RAIHAH": {
-        fullName: "Raihah Rosli",
+        fullName: "RAIHAH",
         subjects: ["MM"]
     },
     "RIDZUAN": {
-        fullName: "Ridzuan",
+        fullName: "RIDZUAN",
         subjects: ["SJ", "PJ"]
     },
     "ROSLINA": {
-        fullName: "Roslina",
+        fullName: "ROSLINA",
         subjects: ["RBT", "SN M1"]
     },
     "ROSIEATI": {
-        fullName: "Rosieati",
+        fullName: "ROSIEATI",
         subjects: ["SJ"]
     },
     "ROZALI": {
-        fullName: "Rozali",
+        fullName: "ROZALI",
         subjects: ["SN M1", "SN"]
     },
     "RUHAZANA": {
-        fullName: "Ruhazana Che Musa",
+        fullName: "RUHAZANA",
         subjects: ["TAW", "BM"]
     },
     "SALMA": {
-        fullName: "Siti Nur Salma Binti Rizuan",
+        fullName: "SALMA",
         subjects: ["BM", "SJ"]
     },
     "SARASWADI": {
-        fullName: "Saraswadi A/P Raman",
+        fullName: "SARAS",
         subjects: ["BT", "PS", "PJ"]
     },
     "SHAH": {
@@ -195,41 +190,47 @@ const teacherData = {
         subjects: ["PS"]
     },
     "SHARUL": {
-        fullName: "Sharul Anuar Md Arif",
+        fullName: "SHARUL",
         subjects: ["PA", "PJ", "RBT"]
     },
     "SUHAILA": {
-        fullName: "Suhaila",
+        fullName: "SUHAILA",
         subjects: ["SN M2", "PNG M2 SN", "PS M2 SN", "SN"]
     },
     "SYAMIMI": {
-        fullName: "Nur Syamimi Mohd Shafie",
+        fullName: "SYAMIMI",
         subjects: ["KIM", "MM"]
     },
+    "THEVA": {
+        fullName: "THEVA",
+        subjects: ["BI", "MM"]
+    },
     "TILLAGA": {
-        fullName: "Tillaga",
+        fullName: "TILLAGA",
         subjects: ["BI"]
     },
     "WAN HAFEZ": {
-        fullName: "Wan Hafez",
+        fullName: "HAFIZ",
         subjects: ["PJ"]
     },
+    "FARIZA": {
+        fullName: "NURFARIZA",
+        subjects: []
+    },
     "ZUHDAH": {
-        fullName: "Zuhdah",
+        fullName: "ZUHDAH",
         subjects: ["PI"]
     },
     "ZURAIHA": {
-        fullName: "Zuraiha",
+        fullName: "ZURAIHA",
         subjects: ["BM", "SJ", "SN M3"]
     },
     "ZURAIDAH": {
-        fullName: "Siti Zuraidah Mohd Kadis",
+        fullName: "ZURAIDAH",
         subjects: ["MM", "MMT"]
     },
     "ZURINA": {
-        fullName: "Zurina",
+        fullName: "ZURINA",
         subjects: ["BI"]
     }
 };
-
-

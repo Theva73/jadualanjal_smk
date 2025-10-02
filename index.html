@@ -23,19 +23,23 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .tab-btn.active { border-color: #4f46e5; background-color: #eef2ff; color: #4338ca; font-weight: 600; }
+        .tab-btn {
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active { 
+            border-color: #4f46e5; 
+            background-color: #eef2ff; 
+            color: #4338ca; 
+            font-weight: 600; 
+        }
         .modal-backdrop { background-color: rgba(0,0,0,0.5); }
         .modal { transition: opacity 0.3s ease, transform 0.3s ease; }
         select:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
         .sticky-header { position: -webkit-sticky; position: sticky; top: 0; z-index: 10; }
         .sticky-left { position: -webkit-sticky; position: sticky; left: 0; z-index: 5; background-color: #fff; }
         thead.sticky-header .sticky-left { z-index: 11; }
-
-        /* Toggle Switch Styles */
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
-        
-        /* Error Highlighting Styles */
         .error-clash { background-color: #fee2e2 !important; border: 1px solid #f87171; }
         .error-warning { background-color: #fef9c3 !important; border: 1px solid #fde047; }
         .error-icon { display: inline-block; margin-left: 4px; color: #b91c1c; }
@@ -51,9 +55,10 @@
 
     <!-- Tab Navigation & Global Actions -->
     <div class="mb-6 flex flex-wrap justify-between items-center border-b border-gray-200 pb-2 gap-4">
-        <nav class="flex flex-wrap space-x-2 sm:space-x-4">
+        <nav class="flex flex-wrap items-center space-x-2 sm:space-x-4">
             <button id="tab-schedule" class="tab-btn px-3 py-2 font-medium text-sm rounded-md active">Schedule</button>
             <button id="tab-management" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Management</button>
+            <button id="tab-kelas" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Jadual Kelas</button>
             <button id="tab-playlists" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Playlists</button>
             <button id="tab-summary" class="tab-btn px-3 py-2 font-medium text-sm rounded-md">Summary</button>
         </nav>
@@ -123,6 +128,10 @@
         </div>
     </div>
     
+    <div id="tab-content-kelas" class="tab-panel hidden">
+        <iframe src="https://theva73.github.io/jadualanjal_smk/form5.html" class="w-full border-0 rounded-md" style="height: 80vh;" title="Jadual Waktu Kelas Tingkatan 5"></iframe>
+    </div>
+
     <div id="tab-content-playlists" class="tab-panel hidden">
         <h2 class="text-xl font-semibold mb-4 text-gray-800">Manage Schedule Playlists</h2>
         <div class="bg-gray-50 p-4 rounded-lg">
@@ -444,17 +453,12 @@
                         }
 
                         if (entry) {
-                            // REFINED LOGIC: Filter to show only subjects taught by the current teacher in this slot.
                             const subjectsForThisTeacher = entry.subjectIds.filter(sid => subjects[sid]?.teacherIds?.includes(item.id));
                             const subjectNames = subjectsForThisTeacher.map(sid => subjects[sid]?.name).join(', ');
-                            
                             const locationName = locations[entry.locationId]?.name || '';
-                            
-                            // Class names are derived from all subjects in the slot, assuming they are for the same classes.
                             const classNames = Object.values(classes)
                                 .filter(cls => cls.subjectIds?.some(subId => entry.subjectIds.includes(subId)))
                                 .map(cls => cls.name).join(', ');
-                                
                             cellContent += `<p class="font-semibold">${subjectNames}</p><p class="text-gray-600">${classNames}</p><p class="font-semibold text-red-600">${locationName}</p>`;
                         }
                         
@@ -495,12 +499,9 @@
                     return sortedTimeSlots.map((slot, slotIndex) => {
                         const isLastSlotInDay = slotIndex === sortedTimeSlots.length - 1;
                         const borderClass = isLastSlotInDay && dayIndex < DAYS.length - 1 ? 'border-r-4 border-slate-300' : '';
-
                         if (slot.isBreak) return `<td class="p-1 border bg-green-50 ${borderClass}"></td>`;
-
                         const slotId = `${day}_${slot.start}-${slot.end}`;
                         const entry = Object.values(schedule).find(e => e.slotId === slotId && e.subjectIds?.includes(item.id));
-                        
                         let cellContent = '';
                         let cellClass = '';
                         let cellTitle = '';
@@ -523,435 +524,174 @@
                 }).join('');
                 return `<tr class="even:bg-gray-50"><td class="p-2 border font-bold sticky left-0 z-10" style="background-color: inherit;">${item.name}</td>${dayCells}</tr>`;
             }).join('');
-
             container.innerHTML = `<table class="min-w-full border-collapse text-xs"><thead><tr class="bg-gray-100"><th rowspan="2" class="p-2 border font-semibold sticky left-0 bg-gray-100 z-20">${rowTitle}</th>${dayHeaders}</tr><tr class="bg-gray-100">${timeSubheadersWithDividers}</tr></thead><tbody>${rows}</tbody></table>`;
         };
-        
         buildGrid(sortedSubjects, 'Subject');
     }
 
-    // --- PDF Generation ---
     function generateMasterSchedulePDF() {
         try {
-            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-                showToast("Error: PDF library not ready.");
-                return;
-            }
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') { showToast("Error: PDF library not ready."); return; }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-            if (typeof doc.autoTable !== 'function') {
-                showToast("Error: PDF Table plugin not ready.");
-                return;
-            }
-
-            if (Object.keys(subjects).length === 0 || Object.keys(timeslots).length === 0) {
-                showToast("Please define subjects and time slots first.");
-                return;
-            }
-
+            if (typeof doc.autoTable !== 'function') { showToast("Error: PDF Table plugin not ready."); return; }
+            if (Object.keys(subjects).length === 0 || Object.keys(timeslots).length === 0) { showToast("Please define subjects and time slots first."); return; }
             const sortedTimeSlots = getSortedTimeSlots();
             const timeSlotHeaders = sortedTimeSlots.map(slot => `${slot.start} - ${slot.end}`);
             const head = [['Day', ...timeSlotHeaders]];
             const body = [];
             const drawingData = [];
-
             DAYS.forEach((day) => {
                 const textRow = [day];
                 const drawingRow = [null]; 
-
                 sortedTimeSlots.forEach(slot => {
-                    if (slot.isBreak) {
-                        textRow.push('REHAT');
-                        drawingRow.push({ isBreak: true });
-                        return;
-                    }
-
+                    if (slot.isBreak) { textRow.push('REHAT'); drawingRow.push({ isBreak: true }); return; }
                     const slotId = `${day}_${slot.start}-${slot.end}`;
                     const entries = Object.values(schedule).filter(e => e.slotId === slotId);
-                    
-                    const cellDrawingData = entries.map(entry => ({
-                        subject: entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '',
-                        teacher: entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '),
-                        location: locations[entry.locationId]?.name || 'Nil'
-                    }));
-
-                    // This raw text is crucial for auto-calculating row height
-                    const rawText = cellDrawingData.map(data => 
-                        `Subject: ${data.subject}\nTeacher: ${data.teacher}\nLocation: ${data.location}`
-                    ).join('\n\n\n'); // Add extra newlines for spacing between entries
-                    
+                    const cellDrawingData = entries.map(entry => ({ subject: entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '', teacher: entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '), location: locations[entry.locationId]?.name || 'Nil' }));
+                    const rawText = cellDrawingData.map(data => `Subject: ${data.subject}\nTeacher: ${data.teacher}\nLocation: ${data.location}`).join('\n\n\n');
                     textRow.push(rawText);
                     drawingRow.push({ isBreak: false, entries: cellDrawingData });
                 });
                 body.push(textRow);
                 drawingData.push(drawingRow);
             });
-
             doc.setFontSize(14);
             doc.text('Jadual Waktu', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-
             doc.autoTable({
-                head: head,
-                body: body,
-                startY: 15,
-                theme: 'grid',
-                rowPageBreak: 'avoid', // Prevent rows (days) from splitting across pages
-                headStyles: { 
-                    fillColor: [220, 220, 220], textColor: 20, fontStyle: 'bold', 
-                    halign: 'center', fontSize: 8, cellPadding: 2 
-                },
-                styles: { 
-                    cellPadding: 2, fontSize: 7, valign: 'top', 
-                    lineWidth: 0.1, lineColor: [150, 150, 150] 
-                },
-                columnStyles: {
-                    0: { fontStyle: 'bold', halign: 'center', valign: 'middle' }
-                },
-                willDrawCell: (data) => {
-                    // We clear the text here so we can do our own custom drawing with colors and styles
-                    if (data.row.section === 'body' && data.column.index > 0) {
-                        data.cell.text = ''; 
-                    }
-                },
+                head: head, body: body, startY: 15, theme: 'grid', rowPageBreak: 'avoid', 
+                headStyles: { fillColor: [220, 220, 220], textColor: 20, fontStyle: 'bold', halign: 'center', fontSize: 8, cellPadding: 2 },
+                styles: { cellPadding: 2, fontSize: 7, valign: 'top', lineWidth: 0.1, lineColor: [150, 150, 150] },
+                columnStyles: { 0: { fontStyle: 'bold', halign: 'center', valign: 'middle' } },
+                willDrawCell: (data) => { if (data.row.section === 'body' && data.column.index > 0) { data.cell.text = ''; } },
                 didDrawCell: (data) => {
                     if (data.row.section !== 'body' || data.column.index === 0) return;
-
                     const cellData = drawingData[data.row.index]?.[data.column.index];
                     if (!cellData) return;
-
                     const cell = data.cell;
                     const doc = data.doc;
-
                     if (cellData.isBreak) {
-                        const text = 'REHAT';
-                        const textSize = doc.getTextDimensions(text);
-                        const textX = cell.x + (cell.width - textSize.w) / 2;
-                        const textY = cell.y + (cell.height / 2);
-                        doc.setFontSize(7);
-                        doc.setFont('helvetica', 'normal');
-                        doc.setTextColor(0,0,0);
-                        doc.text(text, textX, textY, { baseline: 'middle' });
+                        const text = 'REHAT'; const textSize = doc.getTextDimensions(text); const textX = cell.x + (cell.width - textSize.w) / 2; const textY = cell.y + (cell.height / 2);
+                        doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(0,0,0); doc.text(text, textX, textY, { baseline: 'middle' });
                     } else if (cellData.entries) {
-                        let y = cell.y + 2.5; // Initial padding from top
-                        const x = cell.x + 2;
-                        const lineSpacing = 1.5;
-                        const entrySpacing = 6; // Space between entries
-                        
+                        let y = cell.y + 2.5; const x = cell.x + 2; const lineSpacing = 1.5; const entrySpacing = 6;
                         cellData.entries.forEach((entry, index) => {
-                            if (index > 0) {
-                                // Draw separator line before the next entry
-                                y += entrySpacing / 2;
-                                if (y < cell.y + cell.height - 2) { // Don't draw line if it's too close to the bottom
-                                    doc.setDrawColor(220, 220, 220);
-                                    doc.setLineWidth(0.2);
-                                    doc.line(cell.x + 1, y, cell.x + cell.width - 1, y);
-                                }
-                                y += entrySpacing / 2;
-                            }
-                            
-                            if (y >= cell.y + cell.height) return;
-
-                            const maxWidth = cell.width - 4;
-                            doc.setFontSize(7);
-
-                            // --- Subject ---
-                            const subjectValue = entry.subject || '';
-                            const subjectPrefix = "Subject: ";
-                            doc.setFont('helvetica', 'normal');
-                            doc.setTextColor(0, 0, 0);
-                            doc.text(subjectPrefix, x, y);
-                            const subjectPrefixWidth = doc.getTextWidth(subjectPrefix);
-                            
-                            doc.setFont('helvetica', 'bold');
-                            doc.setTextColor(25, 25, 112); // Dark Blue
-                            const subjectDim = doc.getTextDimensions(subjectValue, { maxWidth: Math.max(1, maxWidth - subjectPrefixWidth) });
-                            doc.text(subjectValue, x + subjectPrefixWidth, y, { maxWidth: Math.max(1, maxWidth - subjectPrefixWidth) });
-                            y += subjectDim.h + lineSpacing;
-                            if (y >= cell.y + cell.height) return;
-
-                            // --- Teacher ---
-                            const teacherValue = `Teacher: ${entry.teacher || ''}`;
-                            doc.setFont('helvetica', 'normal');
-                            doc.setTextColor(0, 0, 0);
-                            const teacherDim = doc.getTextDimensions(teacherValue, { maxWidth: maxWidth });
-                            doc.text(teacherValue, x, y, { maxWidth: maxWidth });
-                            y += teacherDim.h + lineSpacing;
-                            if (y >= cell.y + cell.height) return;
-
-                            // --- Location ---
-                            const locationValue = entry.location || '';
-                            const locationPrefix = "Location: ";
-                            doc.setFont('helvetica', 'normal');
-                            doc.setTextColor(0, 0, 0);
-                            doc.text(locationPrefix, x, y);
-                            const locationPrefixWidth = doc.getTextWidth(locationPrefix);
-
-                            doc.setFont('helvetica', 'bold');
-                            doc.setTextColor(220, 38, 38); // Red
-                            doc.text(locationValue, x + locationPrefixWidth, y, { maxWidth: Math.max(1, maxWidth - locationPrefixWidth) });
+                            if (index > 0) { y += entrySpacing / 2; if (y < cell.y + cell.height - 2) { doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.2); doc.line(cell.x + 1, y, cell.x + cell.width - 1, y); } y += entrySpacing / 2; }
+                            if (y >= cell.y + cell.height) return; const maxWidth = cell.width - 4; doc.setFontSize(7);
+                            const subjectValue = entry.subject || ''; const subjectPrefix = "Subject: "; doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0); doc.text(subjectPrefix, x, y); const subjectPrefixWidth = doc.getTextWidth(subjectPrefix);
+                            doc.setFont('helvetica', 'bold'); doc.setTextColor(25, 25, 112); const subjectDim = doc.getTextDimensions(subjectValue, { maxWidth: Math.max(1, maxWidth - subjectPrefixWidth) }); doc.text(subjectValue, x + subjectPrefixWidth, y, { maxWidth: Math.max(1, maxWidth - subjectPrefixWidth) }); y += subjectDim.h + lineSpacing; if (y >= cell.y + cell.height) return;
+                            const teacherValue = `Teacher: ${entry.teacher || ''}`; doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0); const teacherDim = doc.getTextDimensions(teacherValue, { maxWidth: maxWidth }); doc.text(teacherValue, x, y, { maxWidth: maxWidth }); y += teacherDim.h + lineSpacing; if (y >= cell.y + cell.height) return;
+                            const locationValue = entry.location || ''; const locationPrefix = "Location: "; doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0); doc.text(locationPrefix, x, y); const locationPrefixWidth = doc.getTextWidth(locationPrefix);
+                            doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38); doc.text(locationValue, x + locationPrefixWidth, y, { maxWidth: Math.max(1, maxWidth - locationPrefixWidth) });
                         });
                     }
                 },
                 margin: { top: 15, right: 7, bottom: 10, left: 7 },
-                didDrawPage: (data) => {
-                    doc.setFontSize(7);
-                    doc.setTextColor(150);
-                    doc.text(`Generated: ${new Date().toLocaleString()}`, doc.internal.pageSize.getWidth() - 7, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
-                }
+                didDrawPage: (data) => { doc.setFontSize(7); doc.setTextColor(150); doc.text(`Generated: ${new Date().toLocaleString()}`, doc.internal.pageSize.getWidth() - 7, doc.internal.pageSize.getHeight() - 5, { align: 'right' }); }
             });
-
             doc.save(`Jadual_Ringkas_Terkini_${new Date().toISOString().slice(0,10)}.pdf`);
-        } catch (error) {
-            console.error("Failed to generate PDF:", error);
-            showToast("An unexpected error occurred while generating the PDF.");
-        }
+        } catch (error) { console.error("Failed to generate PDF:", error); showToast("An unexpected error occurred while generating the PDF."); }
     }
-
 
     async function handleScheduleEntrySave(e) {
         e.preventDefault();
         const form = e.target;
-        const day = form.querySelector('#modal-entry-day').value;
-        const time = form.querySelector('#modal-entry-time').value;
-        const locationId = form.querySelector('#modal-entry-location').value;
-        const docId = form.querySelector('#modal-entry-doc-id').value;
+        const day = form.querySelector('#modal-entry-day').value; const time = form.querySelector('#modal-entry-time').value; const locationId = form.querySelector('#modal-entry-location').value; const docId = form.querySelector('#modal-entry-doc-id').value;
         const selectedSubjectIds = Array.from(form.querySelectorAll('input[name="subject"]:checked')).map(el => el.value);
-
-        if (selectedSubjectIds.length === 0) {
-            showToast("Please select at least one subject.");
-            return;
-        }
-
+        if (selectedSubjectIds.length === 0) { showToast("Please select at least one subject."); return; }
         const slotId = `${day}_${time}`;
         const schedulePath = getPath('schedule');
         const data = { day, time, slotId, locationId: locationId || null, subjectIds: selectedSubjectIds || [] };
         const docRef = docId ? doc(db, schedulePath, docId) : doc(collection(db, schedulePath));
         await setDoc(docRef, data, { merge: true });
-
         toggleModal('schedule-entry-modal', false);
     }
-
-    async function savePlaylist(name) {
-        if (!name) return;
-        const playlistData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule, timeslots } };
-        await addDoc(collection(db, getPath('playlists')), playlistData);
-    }
-
+    async function savePlaylist(name) { if (!name) return; const playlistData = { name, createdAt: Date.now(), data: { classes, teachers, subjects, locations, schedule, timeslots } }; await addDoc(collection(db, getPath('playlists')), playlistData); }
     async function loadPlaylist(playlistId) {
-        const playlist = playlists[playlistId];
-        if (!playlist) return;
-        
-        openConfirmationModal(
-            `Load Playlist: "${playlist.name}"?`,
-            "This will overwrite all current live data. This action cannot be undone.",
-            "Load Playlist",
-            async () => {
-                const data = playlist.data;
-                const batch = writeBatch(db);
-                const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
-                for (const coll of collectionsToClear) {
-                    const snapshot = await getDocs(collection(db, getPath(coll)));
-                    snapshot.forEach(docSnap => batch.delete(docSnap.ref));
-                }
-                await batch.commit();
-
-                const wb = writeBatch(db);
-                const addDataToBatch = (coll, dataToAdd) => {
-                     if (dataToAdd) {
-                        for (const [id, itemData] of Object.entries(dataToAdd)) {
-                            if (typeof itemData === 'object' && itemData !== null) {
-                                const { id: _docId, ...rest } = itemData;
-                                wb.set(doc(db, getPath(coll), id), rest);
-                            }
-                        }
-                    }
-                };
-                addDataToBatch('classes', data.classes);
-                addDataToBatch('teachers', data.teachers);
-                addDataToBatch('subjects', data.subjects);
-                addDataToBatch('locations', data.locations);
-                addDataToBatch('schedule', data.schedule);
-                addDataToBatch('timeslots', data.timeslots);
-                
-                await wb.commit();
-                showToast(`Playlist "${playlist.name}" loaded successfully!`);
-            }
-        );
+        const playlist = playlists[playlistId]; if (!playlist) return;
+        openConfirmationModal(`Load Playlist: "${playlist.name}"?`, "This will overwrite all current live data. This action cannot be undone.", "Load Playlist", async () => {
+            const data = playlist.data; const batch = writeBatch(db);
+            const collectionsToClear = ['classes', 'teachers', 'subjects', 'locations', 'schedule', 'timeslots'];
+            for (const coll of collectionsToClear) { const snapshot = await getDocs(collection(db, getPath(coll))); snapshot.forEach(docSnap => batch.delete(docSnap.ref)); }
+            await batch.commit(); const wb = writeBatch(db);
+            const addDataToBatch = (coll, dataToAdd) => { if (dataToAdd) { for (const [id, itemData] of Object.entries(dataToAdd)) { if (typeof itemData === 'object' && itemData !== null) { const { id: _docId, ...rest } = itemData; wb.set(doc(db, getPath(coll), id), rest); } } } };
+            addDataToBatch('classes', data.classes); addDataToBatch('teachers', data.teachers); addDataToBatch('subjects', data.subjects); addDataToBatch('locations', data.locations); addDataToBatch('schedule', data.schedule); addDataToBatch('timeslots', data.timeslots);
+            await wb.commit(); showToast(`Playlist "${playlist.name}" loaded successfully!`);
+        });
     }
-
-     function deletePlaylist(playlistId) {
-        const playlist = playlists[playlistId];
-        if (!playlist) return;
-        openConfirmationModal(`Delete Playlist: "${playlist.name}"?`, "Are you sure?", "Delete", async () => {
-            await deleteDoc(doc(db, getPath('playlists'), playlistId));
-            showToast("Playlist deleted.");
-        }, true);
-    }
-    
-    // --- UI & Utility Functions ---
+    function deletePlaylist(playlistId) { const playlist = playlists[playlistId]; if (!playlist) return; openConfirmationModal(`Delete Playlist: "${playlist.name}"?`, "Are you sure?", "Delete", async () => { await deleteDoc(doc(db, getPath('playlists'), playlistId)); showToast("Playlist deleted."); }, true); }
     function toggleModal(modalId, show) { const modal = document.getElementById(modalId); if (!modal) return; const modalContent = modal.querySelector('.modal'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 20); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); } }
-    
     function openConfirmationModal(title, message, confirmText, onConfirm, isDestructive = false) {
-        document.getElementById('confirmation-title').textContent = title;
-        document.getElementById('confirmation-message').textContent = message;
-        const confirmBtn = document.getElementById('confirmation-confirm-btn');
-        confirmBtn.textContent = confirmText;
+        document.getElementById('confirmation-title').textContent = title; document.getElementById('confirmation-message').textContent = message; const confirmBtn = document.getElementById('confirmation-confirm-btn'); confirmBtn.textContent = confirmText;
         confirmBtn.className = `px-4 py-2 text-sm rounded-md text-white ${isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`;
-        
-        const newConfirmBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        newConfirmBtn.addEventListener('click', () => { onConfirm(); toggleModal('confirmation-modal', false); });
-        document.getElementById('confirmation-cancel-btn').onclick = () => toggleModal('confirmation-modal', false);
+        const newConfirmBtn = confirmBtn.cloneNode(true); confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn); newConfirmBtn.addEventListener('click', () => { onConfirm(); toggleModal('confirmation-modal', false); }); document.getElementById('confirmation-cancel-btn').onclick = () => toggleModal('confirmation-modal', false);
         toggleModal('confirmation-modal', true);
     }
-
-    function showToast(message) {
-        const toast = document.getElementById('toast-notification');
-        toast.textContent = message;
-        toast.classList.remove('hidden', 'opacity-0', 'translate-y-4');
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-y-4');
-            setTimeout(() => toast.classList.add('hidden'), 500);
-        }, 3000);
-    }
-
+    function showToast(message) { const toast = document.getElementById('toast-notification'); toast.textContent = message; toast.classList.remove('hidden', 'opacity-0', 'translate-y-4'); setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-4'); setTimeout(() => toast.classList.add('hidden'), 500); }, 3000); }
     function switchTab(targetTabId) {
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`tab-content-${targetTabId}`).classList.remove('hidden');
         document.getElementById(`tab-${targetTabId}`).classList.add('active');
     }
-
     function attachEventListeners() {
         document.getElementById('download-pdf-btn').addEventListener('click', generateMasterSchedulePDF);
-        document.getElementById('summary-toggle').addEventListener('change', (e) => {
-            summaryViewMode = e.target.checked ? 'teacher' : 'subject';
-            renderSummaryGrid();
-        });
-        
+        document.getElementById('summary-toggle').addEventListener('change', (e) => { summaryViewMode = e.target.checked ? 'teacher' : 'subject'; renderSummaryGrid(); });
         document.getElementById('add-class-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('class-name').value.trim(); if(name) await addDoc(collection(db, getPath('classes')), { name, subjectIds: [] }); e.target.reset(); });
         document.getElementById('add-teacher-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('teacher-name').value.trim(); if(name) await addDoc(collection(db, getPath('teachers')), { name }); e.target.reset(); });
         document.getElementById('add-location-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('location-name').value.trim(); if(name) await addDoc(collection(db, getPath('locations')), { name }); e.target.reset(); });
         document.getElementById('add-subject-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('subject-name').value.trim(); if(name) await addDoc(collection(db, getPath('subjects')), { name, teacherIds: [] }); e.target.reset(); });
         document.getElementById('add-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const start = document.getElementById('timeslot-start').value; const end = document.getElementById('timeslot-end').value; const isBreak = document.getElementById('timeslot-is-break').checked; if (start && end && start < end) { await addDoc(collection(db, getPath('timeslots')), { start, end, isBreak }); e.target.reset(); } else { showToast("Error: End time must be after start time."); }});
-
         document.getElementById('class-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-class')) await deleteDoc(doc(db, getPath('classes'), e.target.dataset.id)); });
         document.getElementById('teacher-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-teacher')) await deleteDoc(doc(db, getPath('teachers'), e.target.dataset.id)); });
         document.getElementById('location-list').addEventListener('click', async e => { if (e.target.classList.contains('delete-location')) await deleteDoc(doc(db, getPath('locations'), e.target.dataset.id)); });
         document.getElementById('timeslot-list').addEventListener('click', e => { if (e.target.classList.contains('delete-timeslot')) deleteDoc(doc(db, getPath('timeslots'), e.target.dataset.id)); if (e.target.classList.contains('edit-timeslot')) openEditTimeSlotModal(e.target.dataset.id);});
-        
         document.getElementById('subject-management-list').addEventListener('click', e => {
-            const target = e.target;
-            const subjectId = target.dataset.id;
-            
-            if (target.classList.contains('delete-subject')) {
-                openConfirmationModal(`Delete Subject?`, "This action cannot be undone.", "Delete", async () => {
-                    await deleteDoc(doc(db, getPath('subjects'), subjectId));
-                }, true);
-            }
+            const target = e.target; const subjectId = target.dataset.id;
+            if (target.classList.contains('delete-subject')) { openConfirmationModal(`Delete Subject?`, "This action cannot be undone.", "Delete", async () => { await deleteDoc(doc(db, getPath('subjects'), subjectId)); }, true); }
             if (target.classList.contains('assign-teachers-btn')) openTeacherAssignmentModal(subjectId);
             if (target.classList.contains('assign-classes-btn')) openClassAssignmentModal(subjectId);
         });
-
         document.getElementById('tab-content-management').addEventListener('click', e => { if (e.target.classList.contains('edit-btn')) { openEditModal(e.target.dataset.id, e.target.dataset.name, e.target.dataset.collection); } });
-        
         document.getElementById('schedule-view').addEventListener('click', e => {
-            const addBtn = e.target.closest('.add-entry-btn');
-            const editBtn = e.target.closest('.edit-entry-btn');
-            if (addBtn) openScheduleEntryModal(addBtn.dataset.day, addBtn.dataset.time);
-            else if (editBtn) openScheduleEntryModal(null, null, editBtn.dataset.docId);
+            const addBtn = e.target.closest('.add-entry-btn'); const editBtn = e.target.closest('.edit-entry-btn');
+            if (addBtn) openScheduleEntryModal(addBtn.dataset.day, addBtn.dataset.time); else if (editBtn) openScheduleEntryModal(null, null, editBtn.dataset.docId);
         });
-        
         document.getElementById('add-playlist-form').addEventListener('submit', async e => { e.preventDefault(); const name = document.getElementById('playlist-name').value.trim(); if(name) { await savePlaylist(name); showToast('Playlist saved!'); e.target.reset(); } });
         document.getElementById('playlist-list').addEventListener('click', e => { if (e.target.classList.contains('load-playlist')) loadPlaylist(e.target.dataset.id); if (e.target.classList.contains('delete-playlist')) deletePlaylist(e.target.dataset.id); });
-
-
         document.getElementById('tab-schedule').addEventListener('click', () => switchTab('schedule')); 
         document.getElementById('tab-management').addEventListener('click', () => switchTab('management'));
+        document.getElementById('tab-kelas').addEventListener('click', () => switchTab('kelas'));
         document.getElementById('tab-playlists').addEventListener('click', () => switchTab('playlists'));
         document.getElementById('tab-summary').addEventListener('click', () => switchTab('summary'));
     }
-    
     function openScheduleEntryModal(day, time, docId = null) {
-        const form = document.getElementById('schedule-entry-form');
-        const modalTitle = document.getElementById('schedule-entry-modal-title');
-        const subjectList = document.getElementById('modal-subject-list');
-        const locationSelector = document.getElementById('modal-entry-location');
-        const deleteBtn = document.getElementById('delete-entry-btn');
-
-        form.reset();
-        
-        const entry = docId ? schedule[docId] : null;
-        day = entry ? entry.day : day;
-        time = entry ? entry.time : time;
-
+        const form = document.getElementById('schedule-entry-form'); const modalTitle = document.getElementById('schedule-entry-modal-title'); const subjectList = document.getElementById('modal-subject-list'); const locationSelector = document.getElementById('modal-entry-location'); const deleteBtn = document.getElementById('delete-entry-btn'); form.reset();
+        const entry = docId ? schedule[docId] : null; day = entry ? entry.day : day; time = entry ? entry.time : time;
         modalTitle.textContent = docId ? `Edit Entry for ${day} at ${time}` : `Add Entry for ${day} at ${time}`;
-        document.getElementById('modal-entry-day').value = day;
-        document.getElementById('modal-entry-time').value = time;
-        document.getElementById('modal-entry-doc-id').value = docId || '';
-
+        document.getElementById('modal-entry-day').value = day; document.getElementById('modal-entry-time').value = time; document.getElementById('modal-entry-doc-id').value = docId || '';
         locationSelector.innerHTML = `<option value="">-- Optional: Select Location --</option>` + Object.entries(locations).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([id, loc]) => `<option value="${id}">${loc.name}</option>`).join('');
-        
         const allSubjects = Object.entries(subjects).sort(([,a],[,b]) => a.name.localeCompare(b.name));
         subjectList.innerHTML = allSubjects.length > 0 ? allSubjects.map(([id, subject]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="subject" value="${id}" class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${subject.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No subjects have been created yet.</p>';
-        
-        if (entry) {
-            entry.subjectIds?.forEach(sid => {
-                const checkbox = subjectList.querySelector(`input[value="${sid}"]`);
-                if (checkbox) checkbox.checked = true;
-            });
-            locationSelector.value = entry.locationId;
-            deleteBtn.classList.remove('hidden');
-        } else {
-            deleteBtn.classList.add('hidden');
-        }
-        
+        if (entry) { entry.subjectIds?.forEach(sid => { const checkbox = subjectList.querySelector(`input[value="${sid}"]`); if (checkbox) checkbox.checked = true; }); locationSelector.value = entry.locationId; deleteBtn.classList.remove('hidden'); } else { deleteBtn.classList.add('hidden'); }
         toggleModal('schedule-entry-modal', true);
     }
-
     function openTeacherAssignmentModal(subjectId) {
-        const subject = subjects[subjectId]; 
-        document.getElementById('modal-teacher-subject-name').textContent = subject.name; 
-        document.getElementById('modal-teacher-subject-id').value = subjectId;
-        const listContainer = document.getElementById('modal-teacher-list');
-        listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subject.teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers found to assign.</p>';
+        const subject = subjects[subjectId]; document.getElementById('modal-teacher-subject-name').textContent = subject.name; document.getElementById('modal-teacher-subject-id').value = subjectId;
+        const listContainer = document.getElementById('modal-teacher-list'); listContainer.innerHTML = Object.keys(teachers).length ? Object.entries(teachers).sort(([,a],[,b]) => a.name.localeCompare(b.name)).map(([id, teacher]) => `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="teacher" value="${id}" ${subject.teacherIds?.includes(id) ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${teacher.name}</span></label>`).join('') : '<p class="text-sm text-gray-500">No teachers found to assign.</p>';
         toggleModal('teacher-assignment-modal', true);
     }
-    
     function openClassAssignmentModal(subjectId) {
-        const subject = subjects[subjectId];
-        document.getElementById('modal-class-assignment-subject-name').textContent = subject.name;
-        document.getElementById('modal-class-assignment-subject-id').value = subjectId;
+        const subject = subjects[subjectId]; document.getElementById('modal-class-assignment-subject-name').textContent = subject.name; document.getElementById('modal-class-assignment-subject-id').value = subjectId;
         const listContainer = document.getElementById('modal-class-assignment-class-list');
         listContainer.innerHTML = Object.keys(classes).length ? Object.values(classes).sort((a,b) => a.name.localeCompare(b.name)).map(cls => {
             const isChecked = cls.subjectIds?.includes(subjectId);
-            return `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer">
-                        <input type="checkbox" name="class-for-subject" value="${cls.id}" ${isChecked ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                        <span>${cls.name}</span>
-                    </label>`;
+            return `<label class="flex items-center p-1.5 rounded hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="class-for-subject" value="${cls.id}" ${isChecked ? 'checked' : ''} class="mr-2 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><span>${cls.name}</span></label>`;
         }).join('') : '<p class="text-sm text-gray-500">No classes found to assign.</p>';
         toggleModal('class-assignment-modal', true);
     }
-
-    function openEditModal(id, name, collection) {
-        document.getElementById('edit-id').value = id;
-        document.getElementById('edit-collection').value = collection;
-        document.getElementById('edit-name-input').value = name;
-        document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`;
-        toggleModal('edit-modal', true);
-    }
-    
-    function openEditTimeSlotModal(id) {
-        const slot = timeslots[id];
-        if (!slot) return;
-        document.getElementById('edit-timeslot-id').value = id;
-        document.getElementById('edit-timeslot-start').value = slot.start;
-        document.getElementById('edit-timeslot-end').value = slot.end;
-        document.getElementById('edit-timeslot-is-break').checked = slot.isBreak;
-        toggleModal('timeslot-edit-modal', true);
-    }
-
+    function openEditModal(id, name, collection) { document.getElementById('edit-id').value = id; document.getElementById('edit-collection').value = collection; document.getElementById('edit-name-input').value = name; document.getElementById('edit-modal-title').textContent = `Edit ${collection.slice(0, -1)}`; toggleModal('edit-modal', true); }
+    function openEditTimeSlotModal(id) { const slot = timeslots[id]; if (!slot) return; document.getElementById('edit-timeslot-id').value = id; document.getElementById('edit-timeslot-start').value = slot.start; document.getElementById('edit-timeslot-end').value = slot.end; document.getElementById('edit-timeslot-is-break').checked = slot.isBreak; toggleModal('timeslot-edit-modal', true); }
     function initModals() {
         document.getElementById('modal-container').innerHTML = `
             <div id="schedule-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4" id="schedule-entry-modal-title">Add/Edit Entry</h3><form id="schedule-entry-form"><input type="hidden" id="modal-entry-day"><input type="hidden" id="modal-entry-time"><input type="hidden" id="modal-entry-doc-id"><div class="space-y-4"><div><label class="text-sm font-medium">Subject(s)</label><div id="modal-subject-list" class="space-y-1 max-h-40 overflow-y-auto mt-1 border p-2 rounded bg-gray-50"></div></div><div><label class="text-sm font-medium">Location</label><select id="modal-entry-location" class="w-full p-2 mt-1 border rounded"></select></div></div><div class="flex justify-between items-center gap-3 mt-6"><button type="button" id="delete-entry-btn" class="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button><div class="flex gap-3"><button type="button" id="cancel-schedule-entry-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save</button></div></div></form></div></div>
@@ -961,45 +701,22 @@
             <div id="confirmation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0 whitespace-pre-wrap"><h3 id="confirmation-title" class="text-lg font-semibold mb-2">Confirmation</h3><p id="confirmation-message" class="text-sm text-gray-600 mb-4"></p><div class="flex justify-end gap-3 mt-4"><button type="button" id="confirmation-cancel-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="button" id="confirmation-confirm-btn" class="px-4 py-2 text-sm rounded-md text-white">Confirm</button></div></div></div>
             <div id="timeslot-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-backdrop p-4"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal transform scale-95 opacity-0"><h3 class="text-lg font-semibold mb-4">Edit Time Slot</h3><form id="edit-timeslot-form"><input type="hidden" id="edit-timeslot-id"><div class="space-y-3"><div class="flex gap-2 items-center"><input type="time" id="edit-timeslot-start" class="w-full p-2 text-sm border rounded-md" required><span>-</span><input type="time" id="edit-timeslot-end" class="w-full p-2 text-sm border rounded-md" required></div><div class="flex items-center"><input id="edit-timeslot-is-break" type="checkbox" class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"><label for="edit-timeslot-is-break" class="ml-2 block text-sm text-gray-900">Mark as a break time</label></div></div><div class="flex justify-end gap-3 mt-4"><button type="button" data-modal-id="timeslot-edit-modal" class="cancel-modal-btn px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button></div></form></div></div>
             <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-4"></div>`; 
-        
         document.getElementById('schedule-entry-form').addEventListener('submit', handleScheduleEntrySave);
         document.getElementById('cancel-schedule-entry-btn').addEventListener('click', () => toggleModal('schedule-entry-modal', false));
         document.getElementById('delete-entry-btn').addEventListener('click', () => {
-            const docId = document.getElementById('modal-entry-doc-id').value;
-            if (docId) openConfirmationModal('Delete Entry?', 'Are you sure?', 'Delete', async () => {
-                await deleteDoc(doc(db, getPath('schedule'), docId));
-                toggleModal('schedule-entry-modal', false);
-                showToast('Entry deleted.');
-            }, true);
+            const docId = document.getElementById('modal-entry-doc-id').value; if (docId) openConfirmationModal('Delete Entry?', 'Are you sure?', 'Delete', async () => { await deleteDoc(doc(db, getPath('schedule'), docId)); toggleModal('schedule-entry-modal', false); showToast('Entry deleted.'); }, true);
         });
-
         document.getElementById('teacher-assignment-form').addEventListener('submit', async e => { e.preventDefault(); const subjectId = document.getElementById('modal-teacher-subject-id').value; const teacherIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); await updateDoc(doc(db, getPath('subjects'), subjectId), { teacherIds }); toggleModal('teacher-assignment-modal', false); });
-        
         document.getElementById('class-assignment-form').addEventListener('submit', async e => {
-            e.preventDefault();
-            const subjectId = document.getElementById('modal-class-assignment-subject-id').value;
-            const checkedClassIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value);
-            const batch = writeBatch(db);
-
+            e.preventDefault(); const subjectId = document.getElementById('modal-class-assignment-subject-id').value; const checkedClassIds = Array.from(e.target.querySelectorAll('input:checked')).map(el => el.value); const batch = writeBatch(db);
             Object.entries(classes).forEach(([classId, classData]) => {
-                const classRef = doc(db, getPath('classes'), classId);
-                const originalSubjectIds = classData.subjectIds || [];
-                const isCurrentlyAssigned = originalSubjectIds.includes(subjectId);
-                const shouldBeAssigned = checkedClassIds.includes(classId);
-
-                if (shouldBeAssigned && !isCurrentlyAssigned) batch.update(classRef, { subjectIds: [...originalSubjectIds, subjectId] });
-                else if (!shouldBeAssigned && isCurrentlyAssigned) batch.update(classRef, { subjectIds: originalSubjectIds.filter(id => id !== subjectId) });
+                const classRef = doc(db, getPath('classes'), classId); const originalSubjectIds = classData.subjectIds || []; const isCurrentlyAssigned = originalSubjectIds.includes(subjectId); const shouldBeAssigned = checkedClassIds.includes(classId);
+                if (shouldBeAssigned && !isCurrentlyAssigned) batch.update(classRef, { subjectIds: [...originalSubjectIds, subjectId] }); else if (!shouldBeAssigned && isCurrentlyAssigned) batch.update(classRef, { subjectIds: originalSubjectIds.filter(id => id !== subjectId) });
             });
-
-            await batch.commit();
-            toggleModal('class-assignment-modal', false);
-            showToast('Class assignments updated!');
+            await batch.commit(); toggleModal('class-assignment-modal', false); showToast('Class assignments updated!');
         });
-
         document.getElementById('edit-timeslot-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-timeslot-id').value; const start = document.getElementById('edit-timeslot-start').value; const end = document.getElementById('edit-timeslot-end').value; const isBreak = document.getElementById('edit-timeslot-is-break').checked; if (id && start && end && start < end) { await updateDoc(doc(db, getPath('timeslots'), id), { start, end, isBreak }); toggleModal('timeslot-edit-modal', false); } else { showToast("Error: End time must be after start time."); }});
-        
         document.getElementById('modal-container').addEventListener('click', e => { if (e.target.classList.contains('cancel-modal-btn')) toggleModal(e.target.dataset.modalId, false); });
-        
         document.getElementById('edit-form').addEventListener('submit', async e => { e.preventDefault(); const id = document.getElementById('edit-id').value; const collection = document.getElementById('edit-collection').value; const newName = document.getElementById('edit-name-input').value.trim(); if (id && collection && newName) { await updateDoc(doc(db, getPath(collection), id), { name: newName }); toggleModal('edit-modal', false); } });
     }
 
@@ -1009,15 +726,7 @@
             onSnapshot(collection(db, getPath(name)), snapshot => {
                 const dataObject = {};
                 snapshot.forEach(docSnap => dataObject[docSnap.id] = {...docSnap.data(), id: docSnap.id});
-                
-                if (name === 'classes') classes = dataObject;
-                if (name === 'teachers') teachers = dataObject;
-                if (name === 'subjects') subjects = dataObject;
-                if (name === 'schedule') schedule = dataObject;
-                if (name === 'locations') locations = dataObject;
-                if (name === 'timeslots') timeslots = dataObject;
-                if (name === 'playlists') playlists = dataObject;
-                
+                if (name === 'classes') classes = dataObject; if (name === 'teachers') teachers = dataObject; if (name === 'subjects') subjects = dataObject; if (name === 'schedule') schedule = dataObject; if (name === 'locations') locations = dataObject; if (name === 'timeslots') timeslots = dataObject; if (name === 'playlists') playlists = dataObject;
                 renderAll();
             }, err => console.error(`Error fetching ${name}:`, err));
         });
@@ -1034,14 +743,7 @@
             db = getFirestore(app); auth = getAuth(app);
             initModals(); attachEventListeners();
             onAuthStateChanged(auth, async (user) => {
-                if (user) { 
-                    if (!userId) { 
-                        userId = user.uid; 
-                        await initializeAppData();
-                    }
-                } else { 
-                    await signInAnonymously(auth); 
-                }
+                if (user) { if (!userId) { userId = user.uid; await initializeAppData(); } } else { await signInAnonymously(auth); }
             });
         } catch (error) { console.error("Firebase initialization failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600">Failed to initialize Firebase. Check console.</div>`; }
     }
@@ -1050,6 +752,5 @@
 </script>
 </body>
 </html>
-
 
 

@@ -1,63 +1,235 @@
-// This file stores detailed information about each teacher.
-// You can add or update teacher details here.
+// This file contains details for each teacher, including their full name and subjects.
+// The abbreviation (e.g., "AQILAH") must exactly match the normalized name from the schedule.
 
 const teacherData = {
-    // Format: "ABBREVIATION": { fullName: "Full Name", subjects: ["Subject 1", "Subject 2"] }
-    "Ahmad": { fullName: "Ahmad Razikki Rosli", subjects: ["Pendidikan Jasmani"] },
-    "Aqilah": { fullName: "Nurul Aqilah Humaira Bohari", subjects: ["Bahasa Melayu"] },
-    "Arfah": { fullName: "Norarfah Hasim", subjects: ["Fizik", "Sains"] },
-    "Azhar": { fullName: "Azhar Bin Selamat", subjects: ["Sejarah"] },
-    "Cik Salma": { fullName: "Siti Nur Salma Binti Rizuan", subjects: ["Bahasa Melayu"] },
-    "Efa": { fullName: "Efah Suhaila Salamon", subjects: ["Bahasa Melayu"] },
-    "Eidayu": { fullName: "Eidayu Binti Mohd Yusof", subjects: ["Matematik"] },
-    "Faezah": { fullName: "Nur Faezah Mohd Nori", subjects: ["Matematik Tambahan", "Matematik"] },
-    "Faris": { fullName: "Muhammad Faris Bin Mazlan", subjects: ["KKQ", "Pendidikan Islam"] },
-    "Fauzi": { fullName: "Fauzi Bin Ishak", subjects: ["Pendidikan Jasmani"] },
-    "Gowry": { fullName: "Gowry A/P Sinniah", subjects: ["Sejarah"] },
-    "Gurchan": { fullName: "Gurchan Kaur A/P Dharam Singh", subjects: ["Pendidikan Jasmani", "Pendidikan Moral"] },
-    "Hajar": { fullName: "Siti Hajar Binti Ismail", subjects: ["Pendidikan Islam", "Tasawwur Islam"] },
-    "Hanim": { fullName: "Hanim Suria Hussin", subjects: ["Perniagaan"] },
-    "Haslina": { fullName: "Haslina Binti Selamat", subjects: ["Asas Sains Komputer"] },
-    "Haziqah": { fullName: "Nurhaziqah Hanim", subjects: ["Bahasa Melayu"] },
-    "Imelda": { fullName: "Imelda Binti Bundan", subjects: ["Matematik"] },
-    "Iqbal": { fullName: "Iqbal Hareez Osman", subjects: ["Pendidikan Seni Visual"] },
-    "Irda": { fullName: "Irda Syuhada Ishak", subjects: ["Bahasa Inggeris"] },
-    "Izzah": { fullName: "Nurul Izzah Binti Zainal Abidin", subjects: ["Bahasa Arab"] },
-    "Kalai": { fullName: "Kalaivani A/P Ananthanar", subjects: ["Perniagaan", "Pendidikan Jasmani"] },
-    "Kartini": { fullName: "Kartini Ya'akub", subjects: ["Sejarah"] },
-    "Lau": { fullName: "Lau Lee Lee", subjects: ["Bahasa Cina"] },
-    "Lisah": { fullName: "Lisah Binti Saiman", subjects: ["Matematik"] },
-    "Malina": { fullName: "Malina Binti Mahpud", subjects: ["Fizik", "Matematik Tambahan"] },
-    "Masjuki": { fullName: "Masjuki Bin Rasik", subjects: ["KKQ", "Pendidikan Islam"] },
-    "Masrul": { fullName: "Masrulhuda Muhammad", subjects: ["Asas Sains Komputer"] },
-    "Masrizan": { fullName: "Masrizan Binti Mohamad", subjects: ["Geografi"] },
-    "Nadia": { fullName: "Nadia Binti Abdul Rahman", subjects: ["Bahasa Arab"] },
-    "Naza": { fullName: "Nazatul Shima Binti Mohd Naza", subjects: ["Bahasa Melayu"] },
-    "Nazri": { fullName: "Mohd Nazri Azis", subjects: ["Sains"] },
-    "Nik": { fullName: "Nik Normahizan Yusuf", subjects: ["Pendidikan Seni Visual"] },
-    "Nivetha": { fullName: "Nivetha A/P Balakrishnan", subjects: ["Bahasa Inggeris"] },
-    "Norosniza": { fullName: "Norosniza Osman", subjects: ["Biologi", "Sains"] },
-    "Nura": { fullName: "Nura Binti Abdul Rahim", subjects: ["Bahasa Inggeris"] },
-    "Nurain": { fullName: "Siti Nurain Asman", subjects: ["Geografi", "Pendidikan Jasmani"] },
-    "Nurashidah": { fullName: "Nurashidah Binti Abdul Rashid", subjects: ["Matematik Tambahan"] },
-    "Qalilah": { fullName: "Siti Qalilah Radin", subjects: ["Kimia", "Sains"] },
-    "Raihah": { fullName: "Raihah Rosli", subjects: ["Matematik"] },
-    "Ridzuwan": { fullName: "Ridzuwan Bin Hassan", subjects: ["Sejarah", "Pendidikan Jasmani"] },
-    "Rosieati": { fullName: "Rosieati Binti Othman", subjects: ["Sejarah"] },
-    "Roslina": { fullName: "Roslina Binti Mohd Ali", subjects: ["Sains", "RBT"] },
-    "Rozali": { fullName: "Rozali Bin Zakaria", subjects: ["Sains"] },
-    "Ruhazana": { fullName: "Ruhazana Che Musa", subjects: ["Tasawwur Islam", "Bahasa Melayu"] },
-    "Saraswadi": { fullName: "Saraswadi A/P Raman", subjects: ["Pendidikan Seni Visual", "Bahasa Tamil"] },
-    "Shah": { fullName: "Shah Bin Abdul Rahman", subjects: ["Pendidikan Seni Visual"] },
-    "Sharul": { fullName: "Sharul Anuar Md Arif", subjects: ["Pendidikan Moral", "Pendidikan Jasmani", "RBT"] },
-    "Suhaila": { fullName: "Suhaila Binti Mohd Lassim", subjects: ["Sains"] },
-    "Syamimi": { fullName: "Nur Syamimi Mohd Shafie", subjects: ["Kimia", "Matematik"] },
-    "Theva": { fullName: "Thevandran A/L Bathumalai", subjects: ["Bahasa Inggeris"] },
-    "Tillaga": { fullName: "Tillaga A/P Subramaniam", subjects: ["Bahasa Inggeris"] },
-    "Wan Hafez": { fullName: "Wan Hafez Bin Wan Hassan", subjects: ["Pendidikan Jasmani", "Bahasa Inggeris"] },
-    "Zuhdah": { fullName: "Zuhdah Binti Husin", subjects: ["Pendidikan Islam"] },
-    "Zuraiha": { fullName: "Zuraiha Binti Abd Wahab", subjects: ["Bahasa Melayu", "Sejarah"] },
-    "Zurina": { fullName: "Zurina Binti Abd Jamil", subjects: ["Bahasa Inggeris"] },
-    "Zuraidah": { fullName: "Siti Zuraidah Mohd Kadis", subjects: ["Matematik", "Matematik Tambahan"] }
+    "AHMAD": {
+        fullName: "Ahmad Razikki Rosli",
+        subjects: ["PJ", "SJ"]
+    },
+    "AQILAH": {
+        fullName: "Nurul Aqilah Humaira Bohari",
+        subjects: ["BM", "PNG"]
+    },
+    "ARFAH": {
+        fullName: "Norarfah Hasim",
+        subjects: ["FIZ", "SN"]
+    },
+    "AZHAR": {
+        fullName: "Azhar",
+        subjects: ["SJ"]
+    },
+    "EFAH": {
+        fullName: "Efah Suhaila Salamon",
+        subjects: ["BM"]
+    },
+    "EIDAYU": {
+        fullName: "Eidayu",
+        subjects: ["MM"]
+    },
+    "FAEZAH": {
+        fullName: "Nur Faezah Mohd Nori",
+        subjects: ["MMT", "MM"]
+    },
+    "FARIS": {
+        fullName: "Muhammad Faris Bin Mazlan",
+        subjects: ["KKQ", "PI"]
+    },
+    "FAUZI": {
+        fullName: "Fauzi",
+        subjects: ["PJ"]
+    },
+    "GOWRY": {
+        fullName: "Gowry",
+        subjects: ["SJ", "IS"]
+    },
+    "GURCHAN": {
+        fullName: "Gurchan Kaur Dharam Singh",
+        subjects: ["PA", "PJ"]
+    },
+    "HAJAR": {
+        fullName: "Hajar",
+        subjects: ["SI", "TAW", "PI"]
+    },
+    "HANIM": {
+        fullName: "Hanim Suria Hussin",
+        subjects: ["PNG"]
+    },
+    "HASLINA": {
+        fullName: "Haslina",
+        subjects: ["AS"]
+    },
+    "HAZIQAH": {
+        fullName: "Nurhaziqah Hanim",
+        subjects: ["BM"]
+    },
+    "IMELDA": {
+        fullName: "Imelda",
+        subjects: ["MM"]
+    },
+    "IQBAL": {
+        fullName: "Iqbal Hareez Osman",
+        subjects: ["PS", "PNG"]
+    },
+    "IRDA": {
+        fullName: "Irda Syuhada Ishak",
+        subjects: ["BI"]
+    },
+    "IZZAH": {
+        fullName: "Izzah",
+        subjects: ["BA"]
+    },
+    "KALAI": {
+        fullName: "Kalaivani A/P Ananthanar",
+        subjects: ["PJ", "PNG", "SJ"]
+    },
+    "KARTINI": {
+        fullName: "Kartini Ya'akub",
+        subjects: ["SJ"]
+    },
+    "LAU": {
+        fullName: "Lau",
+        subjects: ["BC", "PJ"]
+    },
+    "LISAH": {
+        fullName: "Lisah",
+        subjects: ["MM"]
+    },
+    "MALINA": {
+        fullName: "Malina",
+        subjects: ["FIZ", "MM"]
+    },
+    "MASRIZAN": {
+        fullName: "Masrizan",
+        subjects: ["GE", "RBT"]
+    },
+    "MASRUL": {
+        fullName: "Masrulhuda Muhammad",
+        subjects: ["ASK", "M. KOM 2 BI"]
+    },
+    "MASJUKI": {
+        fullName: "Masjuki",
+        subjects: ["KKQ", "BA", "PI"]
+    },
+    "NADIA": {
+        fullName: "Nadia",
+        subjects: ["BA", "PI"]
+    },
+    "NASUHA": {
+        fullName: "Nasuha",
+        subjects: ["BM"]
+    },
+    "NAZA": {
+        fullName: "Naza",
+        subjects: ["BM"]
+    },
+    "NAZRI": {
+        fullName: "Mohd Nazri Azis",
+        subjects: ["SN M3"]
+    },
+    "NIK": {
+        fullName: "Nik Normahizan Yusuf",
+        subjects: ["PS"]
+    },
+    "NIK RUHAZANA": {
+        fullName: "Nik Ruhazana",
+        subjects: ["PS TAW"]
+    },
+    "NIVETHA": {
+        fullName: "Nivetha A/P Balakrishnan",
+        subjects: ["BI"]
+    },
+    "NOROSNIZA": {
+        fullName: "Norosniza Osman",
+        subjects: ["BIO", "SN"]
+    },
+    "NURA": {
+        fullName: "Nura",
+        subjects: ["BI"]
+    },
+    "NURAIN": {
+        fullName: "Siti Nurain Asman",
+        subjects: ["PJ", "GE"]
+    },
+    "NURASHIDAH": {
+        fullName: "Nurashidah",
+        subjects: ["MMT"]
+    },
+    "QALILAH": {
+        fullName: "Siti Qalilah Radin",
+        subjects: ["KIM", "SJ", "SN"]
+    },
+    "RAIHAH": {
+        fullName: "Raihah Rosli",
+        subjects: ["MM"]
+    },
+    "RIDZUAN": {
+        fullName: "Ridzuan",
+        subjects: ["SJ", "PJ"]
+    },
+    "ROSLINA": {
+        fullName: "Roslina",
+        subjects: ["RBT", "SN M1"]
+    },
+    "ROSIEATI": {
+        fullName: "Rosieati",
+        subjects: ["SJ"]
+    },
+    "ROZALI": {
+        fullName: "Rozali",
+        subjects: ["SN M1", "SN"]
+    },
+    "RUHAZANA": {
+        fullName: "Ruhazana Che Musa",
+        subjects: ["TAW", "BM"]
+    },
+    "SALMA": {
+        fullName: "Siti Nur Salma Binti Rizuan",
+        subjects: ["BM", "SJ"]
+    },
+    "SARASWADI": {
+        fullName: "Saraswadi A/P Raman",
+        subjects: ["BT", "PS", "PJ"]
+    },
+    "SHAH": {
+        fullName: "Shah",
+        subjects: ["PS"]
+    },
+    "SHARUL": {
+        fullName: "Sharul Anuar Md Arif",
+        subjects: ["PA", "PJ", "RBT"]
+    },
+    "SUHAILA": {
+        fullName: "Suhaila",
+        subjects: ["SN M2", "PNG M2 SN", "PS M2 SN", "SN"]
+    },
+    "SYAMIMI": {
+        fullName: "Nur Syamimi Mohd Shafie",
+        subjects: ["KIM", "MM"]
+    },
+    "TILLAGA": {
+        fullName: "Tillaga",
+        subjects: ["BI"]
+    },
+    "WAN HAFEZ": {
+        fullName: "Wan Hafez",
+        subjects: ["PJ"]
+    },
+    "ZUHDAH": {
+        fullName: "Zuhdah",
+        subjects: ["PI"]
+    },
+    "ZURAIHA": {
+        fullName: "Zuraiha",
+        subjects: ["BM", "SJ", "SN M3"]
+    },
+    "ZURAIDAH": {
+        fullName: "Siti Zuraidah Mohd Kadis",
+        subjects: ["MM", "MMT"]
+    },
+    "ZURINA": {
+        fullName: "Zurina",
+        subjects: ["BI"]
+    }
 };
+
 

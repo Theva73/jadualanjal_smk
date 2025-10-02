@@ -132,7 +132,9 @@
     }
     
     // --- HTML TEMPLATES ---
-    function getReliefViewHTML() { return `<div class="max-w-4xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Relief Assignment Tool</h2><div class="p-3 bg-gray-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-2 text-left">1. Select Absent Teacher(s):</label><div id="absent-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div><label class="block text-sm font-medium text-gray-700 mb-2 text-left">2. Select Available Relief Staff:</label><div id="replacement-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div class="flex flex-col justify-between"><div><label for="relief-day-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">3. Select Day:</label><select id="relief-day-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"></select></div><button id="find-relief-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm font-semibold">Generate Relief Plan</button></div></div></div></div><div id="relief-results" class="mt-6"></div><div id="roster-generation-section" class="mt-6 text-center" style="display: none;"><button id="generate-rosters-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Generate Relief Rosters</button></div><div id="relief-rosters-display" class="mt-6"></div>`; }
+    function getReliefViewHTML() { 
+        return `<div class="max-w-4xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Relief Assignment Tool</h2><div class="p-3 bg-gray-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-gray-700 text-left">1. Select Absent Teacher(s):</label><button id="clear-absent-btn" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2">Clear</button></div><div id="absent-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-gray-700 text-left">2. Select Available Relief Staff:</label><button id="clear-relief-btn" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2">Clear</button></div><div id="replacement-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div class="flex flex-col justify-between"><div><label for="relief-day-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">3. Select Day:</label><select id="relief-day-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"></select></div><button id="find-relief-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm font-semibold">Generate Relief Plan</button></div></div></div></div><div id="relief-results" class="mt-6"></div><div id="roster-generation-section" class="mt-6 text-center" style="display: none;"><button id="generate-rosters-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Generate Relief Rosters</button></div><div id="relief-rosters-display" class="mt-6"></div>`; 
+    }
     function getGroupAvailabilityViewHTML() { return `<div class="max-w-3xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Find Common Free Time</h2><div class="p-3 bg-gray-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="teacher-multi-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">1. Select Teachers:</label><div id="teacher-multi-select" class="teacher-select-container bg-white text-left"></div></div><div><label for="day-select-group" class="block text-sm font-medium text-gray-700 mb-2 text-left">2. Select Day:</label><select id="day-select-group" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-base mb-3"></select></div></div><button id="find-common-slots-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm text-sm font-semibold">Find Availability</button></div></div><div id="common-slots-results" class="mt-4"></div>`; }
     function getTeacherViewHTML() { return `<div class="mb-4 max-w-lg mx-auto"><label for="teacher-select" class="block text-base font-medium text-gray-700 mb-2 text-center">Select a Teacher:</label><select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base"><option value="">-- Please choose a teacher --</option></select></div><div id="teacher-schedule-display" class="overflow-x-auto"></div>`; }
     function getClassViewHTML() { return `<nav class="mb-4"><h2 class="text-lg font-semibold text-center mb-3">Pilih Kelas</h2><div id="class-navigation" class="flex flex-wrap justify-center gap-2"></div></nav><div id="class-schedules-container"></div>`; }
@@ -141,6 +143,8 @@
     function setupReliefViewLogic(currentDayName) {
         const absentTeacherContainer = document.getElementById('absent-teacher-multiselect');
         const replacementTeacherContainer = document.getElementById('replacement-teacher-multiselect');
+        const clearAbsentBtn = document.getElementById('clear-absent-btn');
+        const clearReliefBtn = document.getElementById('clear-relief-btn');
         const reliefDaySelect = document.getElementById('relief-day-select');
         const findBtn = document.getElementById('find-relief-btn');
         const resultsContainer = document.getElementById('relief-results');
@@ -170,66 +174,74 @@
             replacementTeacherContainer.innerHTML += teacherHTML;
         });
 
-        function updateReplacementPoolOrder() {
+        function updateReplacementList() {
             const absentTeachers = Array.from(absentTeacherContainer.querySelectorAll('input:checked')).map(input => input.value);
-            const allLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
+            const allReliefLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
+
+            allReliefLabels.forEach(label => {
+                const reliefTeacherName = label.querySelector('input').value;
+                if (absentTeachers.includes(reliefTeacherName)) {
+                    label.style.display = 'none';
+                    const checkbox = label.querySelector('input');
+                    if (checkbox.checked) {
+                        checkbox.checked = false;
+                        label.classList.remove('checked');
+                    }
+                } else {
+                    label.style.display = 'flex';
+                }
+            });
+
+            const visibleReliefLabels = allReliefLabels.filter(label => label.style.display !== 'none');
 
             if (absentTeachers.length === 0) {
-                // If no absent teachers are selected, sort alphabetically by full name and reset.
-                allLabels.sort((a, b) => {
-                    const nameA = a.querySelector('.teacher-full-name').textContent;
-                    const nameB = b.querySelector('.teacher-full-name').textContent;
-                    return nameA.localeCompare(nameB);
-                });
-                allLabels.forEach(label => replacementTeacherContainer.appendChild(label));
+                visibleReliefLabels.sort((a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent));
+                visibleReliefLabels.forEach(label => replacementTeacherContainer.appendChild(label));
                 return;
             }
 
             const absentSubjects = new Set();
-            absentTeachers.forEach(teacher => {
-                (teacherDetails[teacher]?.subjects || []).forEach(subject => absentSubjects.add((subject || '').split(' ')[0]));
-            });
+            absentTeachers.forEach(teacher => { (teacherDetails[teacher]?.subjects || []).forEach(subject => absentSubjects.add((subject || '').split(' ')[0])); });
 
             const subjectMatches = [];
             const others = [];
-
-            allLabels.forEach(label => {
+            visibleReliefLabels.forEach(label => {
                 const teacherName = label.querySelector('input').value;
-                const teacherSubjects = teacherDetails[teacherName]?.subjects || [];
-                const hasMatch = teacherSubjects.some(subject => absentSubjects.has((subject || '').split(' ')[0]));
-
-                if (hasMatch) {
-                    subjectMatches.push(label);
-                } else {
-                    others.push(label);
-                }
+                const hasMatch = (teacherDetails[teacherName]?.subjects || []).some(subject => absentSubjects.has((subject || '').split(' ')[0]));
+                (hasMatch ? subjectMatches : others).push(label);
             });
             
-            const sortLabels = (a, b) => {
-                const nameA = a.querySelector('.teacher-full-name').textContent;
-                const nameB = b.querySelector('.teacher-full-name').textContent;
-                return nameA.localeCompare(nameB);
-            };
-
+            const sortLabels = (a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent);
             subjectMatches.sort(sortLabels);
             others.sort(sortLabels);
 
-            // Re-append to the container in the new, prioritized order.
-            subjectMatches.forEach(label => replacementTeacherContainer.appendChild(label));
-            others.forEach(label => replacementTeacherContainer.appendChild(label));
+            [...subjectMatches, ...others].forEach(label => replacementTeacherContainer.appendChild(label));
         }
 
-        // Perform initial alphabetical sort.
-        updateReplacementPoolOrder();
+        updateReplacementList();
 
         absentTeacherContainer.addEventListener('change', (e) => {
             if(e.target.tagName === 'INPUT') {
                 e.target.closest('label').classList.toggle('checked', e.target.checked);
-                updateReplacementPoolOrder(); // Re-sort the replacement list on change.
+                updateReplacementList();
             }
         });
         replacementTeacherContainer.addEventListener('change', (e) => { if(e.target.tagName === 'INPUT') e.target.closest('label').classList.toggle('checked', e.target.checked); });
+        
+        clearAbsentBtn.addEventListener('click', () => {
+            absentTeacherContainer.querySelectorAll('input:checked').forEach(input => {
+                input.checked = false;
+                input.closest('label').classList.remove('checked');
+            });
+            updateReplacementList();
+        });
 
+        clearReliefBtn.addEventListener('click', () => {
+            replacementTeacherContainer.querySelectorAll('input:checked').forEach(input => {
+                input.checked = false;
+                input.closest('label').classList.remove('checked');
+            });
+        });
 
         days.forEach(day => {
             const selected = day === currentDayName ? 'selected' : '';
@@ -513,4 +525,5 @@
 
 </body>
 </html>
+
 

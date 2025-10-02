@@ -170,8 +170,66 @@
             replacementTeacherContainer.innerHTML += teacherHTML;
         });
 
-        absentTeacherContainer.addEventListener('change', (e) => { if(e.target.tagName === 'INPUT') e.target.closest('label').classList.toggle('checked', e.target.checked); });
+        function updateReplacementPoolOrder() {
+            const absentTeachers = Array.from(absentTeacherContainer.querySelectorAll('input:checked')).map(input => input.value);
+            const allLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
+
+            if (absentTeachers.length === 0) {
+                // If no absent teachers are selected, sort alphabetically by full name and reset.
+                allLabels.sort((a, b) => {
+                    const nameA = a.querySelector('.teacher-full-name').textContent;
+                    const nameB = b.querySelector('.teacher-full-name').textContent;
+                    return nameA.localeCompare(nameB);
+                });
+                allLabels.forEach(label => replacementTeacherContainer.appendChild(label));
+                return;
+            }
+
+            const absentSubjects = new Set();
+            absentTeachers.forEach(teacher => {
+                (teacherDetails[teacher]?.subjects || []).forEach(subject => absentSubjects.add((subject || '').split(' ')[0]));
+            });
+
+            const subjectMatches = [];
+            const others = [];
+
+            allLabels.forEach(label => {
+                const teacherName = label.querySelector('input').value;
+                const teacherSubjects = teacherDetails[teacherName]?.subjects || [];
+                const hasMatch = teacherSubjects.some(subject => absentSubjects.has((subject || '').split(' ')[0]));
+
+                if (hasMatch) {
+                    subjectMatches.push(label);
+                } else {
+                    others.push(label);
+                }
+            });
+            
+            const sortLabels = (a, b) => {
+                const nameA = a.querySelector('.teacher-full-name').textContent;
+                const nameB = b.querySelector('.teacher-full-name').textContent;
+                return nameA.localeCompare(nameB);
+            };
+
+            subjectMatches.sort(sortLabels);
+            others.sort(sortLabels);
+
+            // Re-append to the container in the new, prioritized order.
+            subjectMatches.forEach(label => replacementTeacherContainer.appendChild(label));
+            others.forEach(label => replacementTeacherContainer.appendChild(label));
+        }
+
+        // Perform initial alphabetical sort.
+        updateReplacementPoolOrder();
+
+        absentTeacherContainer.addEventListener('change', (e) => {
+            if(e.target.tagName === 'INPUT') {
+                e.target.closest('label').classList.toggle('checked', e.target.checked);
+                updateReplacementPoolOrder(); // Re-sort the replacement list on change.
+            }
+        });
         replacementTeacherContainer.addEventListener('change', (e) => { if(e.target.tagName === 'INPUT') e.target.closest('label').classList.toggle('checked', e.target.checked); });
+
 
         days.forEach(day => {
             const selected = day === currentDayName ? 'selected' : '';
@@ -455,5 +513,4 @@
 
 </body>
 </html>
-
 

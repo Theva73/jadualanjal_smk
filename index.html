@@ -553,40 +553,37 @@
             const sortedTimeSlots = getSortedTimeSlots();
             const timeSlotHeaders = sortedTimeSlots.map(slot => `${slot.start} - ${slot.end}`);
             const head = [['Day', ...timeSlotHeaders]];
-            const rawBody = [];
+            const body = [];
             const drawingData = [];
 
             DAYS.forEach((day) => {
-                const rawRow = [day];
-                const drawingRow = [null]; // Placeholder for Day column
+                const textRow = [day];
+                const drawingRow = [null]; 
 
                 sortedTimeSlots.forEach(slot => {
+                    if (slot.isBreak) {
+                        textRow.push('REHAT');
+                        drawingRow.push({ isBreak: true });
+                        return;
+                    }
+
                     const slotId = `${day}_${slot.start}-${slot.end}`;
                     const entries = Object.values(schedule).filter(e => e.slotId === slotId);
+                    
+                    const cellDrawingData = entries.map(entry => ({
+                        subject: entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '',
+                        teacher: entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '),
+                        location: locations[entry.locationId]?.name || 'Nil'
+                    }));
 
-                    if (slot.isBreak) {
-                        rawRow.push('REHAT');
-                        drawingRow.push({ isBreak: true });
-                    } else {
-                        // We still need raw text for auto-height calculation, even if we overwrite drawing
-                        let rawText = entries.map(entry => {
-                            const subjectNames = entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '';
-                            const teacherNames = entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', ');
-                            const locationName = locations[entry.locationId]?.name || 'Nil';
-                            return `Subject: ${subjectNames}\nTeacher: ${teacherNames}\nLocation: ${locationName}`;
-                        }).join('\n\n');
-                        
-                        const cellDrawingData = entries.map(entry => ({
-                            subject: entry.subjectIds?.map(sid => subjects[sid]?.name).filter(Boolean).join(', ') || '',
-                            teacher: entry.subjectIds?.flatMap(sid => subjects[sid]?.teacherIds || []).map(tid => teachers[tid]?.name).filter(Boolean).join(', '),
-                            location: locations[entry.locationId]?.name || 'Nil'
-                        }));
-
-                        rawRow.push(rawText);
-                        drawingRow.push({ isBreak: false, entries: cellDrawingData });
-                    }
+                    const rawText = cellDrawingData.map(data => 
+                        `Subject: ${data.subject}\nTeacher: ${data.teacher}\nLocation: ${data.location}`
+                    ).join('\n\n');
+                    
+                    textRow.push(rawText);
+                    drawingRow.push({ isBreak: false, entries: cellDrawingData });
                 });
-                rawBody.push(rawRow);
+                body.push(textRow);
                 drawingData.push(drawingRow);
             });
 
@@ -595,7 +592,7 @@
 
             doc.autoTable({
                 head: head,
-                body: rawBody,
+                body: body,
                 startY: 15,
                 theme: 'grid',
                 headStyles: { 
@@ -611,16 +608,18 @@
                 },
                 willDrawCell: (data) => {
                     if (data.row.section === 'body' && data.column.index > 0) {
-                        data.cell.text = ''; // Clear text to allow custom drawing
+                        data.cell.text = ''; // Clear raw text to allow for custom drawing
                     }
                 },
                 didDrawCell: (data) => {
                     if (data.row.section !== 'body' || data.column.index === 0) return;
 
-                    const cellData = drawingData[data.row.index][data.column.index];
+                    const cellData = drawingData[data.row.index]?.[data.column.index];
                     if (!cellData) return;
 
                     const cell = data.cell;
+                    const doc = data.doc;
+
                     if (cellData.isBreak) {
                         const text = 'REHAT';
                         const textSize = doc.getTextDimensions(text);
@@ -630,52 +629,57 @@
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(0,0,0);
                         doc.text(text, textX, textY, { baseline: 'middle' });
-                    } else {
-                        let y = cell.y + 2.5;
+                    } else if (cellData.entries) {
+                        let y = cell.y + 2.5; // Initial padding
                         const x = cell.x + 2;
-                        const maxWidth = cell.width - 4;
+                        const lineSpacing = 1.5;
+                        const entrySpacing = 4;
                         
                         cellData.entries.forEach((entry, index) => {
-                            if (index > 0) y += 4; 
+                            if (index > 0) y += entrySpacing;
+                            if (y >= cell.y + cell.height) return; // Stop drawing if y exceeds cell height
 
+                            const maxWidth = cell.width - 4;
                             doc.setFontSize(7);
 
                             // --- Subject ---
-                            // Prefix
+                            const subjectValue = entry.subject || '';
+                            const subjectPrefix = "Subject: ";
                             doc.setFont('helvetica', 'normal');
                             doc.setTextColor(0, 0, 0);
-                            const subjectPrefix = "Subject: ";
                             doc.text(subjectPrefix, x, y);
                             const subjectPrefixWidth = doc.getTextWidth(subjectPrefix);
-                            // Value
+                            
                             doc.setFont('helvetica', 'bold');
                             doc.setTextColor(25, 25, 112);
-                            const subjectLines = doc.splitTextToSize(entry.subject, maxWidth - subjectPrefixWidth);
-                            doc.text(subjectLines, x + subjectPrefixWidth, y);
-                            y += (subjectLines.length * 3);
+                            const subjectAvailableWidth = Math.max(1, maxWidth - subjectPrefixWidth);
+                            doc.text(subjectValue, x + subjectPrefixWidth, y, { maxWidth: subjectAvailableWidth });
+                            const subjectDim = doc.getTextDimensions(subjectValue, { maxWidth: subjectAvailableWidth });
+                            y += subjectDim.h + lineSpacing;
+                             if (y >= cell.y + cell.height) return;
 
                             // --- Teacher ---
-                            // Prefix is part of the value string here as it's all one style
+                            const teacherValue = entry.teacher || '';
+                            const teacherText = `Teacher: ${teacherValue}`;
                             doc.setFont('helvetica', 'normal');
                             doc.setTextColor(0, 0, 0);
-                            const teacherText = `Teacher: ${entry.teacher}`;
-                            const teacherLines = doc.splitTextToSize(teacherText, maxWidth);
-                            doc.text(teacherLines, x, y);
-                            y += (teacherLines.length * 3);
+                            doc.text(teacherText, x, y, { maxWidth: maxWidth });
+                            const teacherDim = doc.getTextDimensions(teacherText, { maxWidth: maxWidth });
+                            y += teacherDim.h + lineSpacing;
+                             if (y >= cell.y + cell.height) return;
 
                             // --- Location ---
-                            // Prefix
+                            const locationValue = entry.location || '';
+                            const locationPrefix = "Location: ";
                             doc.setFont('helvetica', 'normal');
                             doc.setTextColor(0, 0, 0);
-                            const locationPrefix = "Location: ";
                             doc.text(locationPrefix, x, y);
                             const locationPrefixWidth = doc.getTextWidth(locationPrefix);
-                            // Value
+
                             doc.setFont('helvetica', 'bold');
                             doc.setTextColor(220, 38, 38);
-                            const locationLines = doc.splitTextToSize(entry.location, maxWidth - locationPrefixWidth);
-                            doc.text(locationLines, x + locationPrefixWidth, y);
-                            y += (locationLines.length * 3);
+                            const locationAvailableWidth = Math.max(1, maxWidth - locationPrefixWidth);
+                            doc.text(locationValue, x + locationPrefixWidth, y, { maxWidth: locationAvailableWidth });
                         });
                     }
                 },

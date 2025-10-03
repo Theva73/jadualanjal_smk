@@ -153,8 +153,18 @@
         const rostersDisplay = document.getElementById('relief-rosters-display');
         
         const teacherSchedules = processSchedules();
-        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object.
-        const allTeachers = Object.keys(teacherDetails).sort();
+        
+        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object keys.
+        const allTeachers = Object.keys(teacherDetails);
+
+        // **FIX:** Sort the teacher list based on their full display names.
+        allTeachers.sort((a, b) => {
+            const nameA = (teacherDetails[a]?.fullName || a).toUpperCase();
+            const nameB = (teacherDetails[b]?.fullName || b).toUpperCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            return 0;
+        });
 
         allTeachers.forEach(teacher => {
             const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
@@ -196,7 +206,11 @@
             const visibleReliefLabels = allReliefLabels.filter(label => label.style.display !== 'none');
 
             if (absentTeachers.length === 0) {
-                visibleReliefLabels.sort((a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent));
+                visibleReliefLabels.sort((a, b) => {
+                    const nameA = a.querySelector('.teacher-full-name').textContent;
+                    const nameB = b.querySelector('.teacher-full-name').textContent;
+                    return nameA.localeCompare(nameB);
+                });
                 visibleReliefLabels.forEach(label => replacementTeacherContainer.appendChild(label));
                 return;
             }
@@ -328,8 +342,14 @@
         const findBtn = document.getElementById('find-common-slots-btn');
         const resultsContainer = document.getElementById('common-slots-results');
         const teacherSchedules = processSchedules();
-        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object.
-        const allTeachers = Object.keys(teacherDetails).sort();
+        
+        const allTeachers = Object.keys(teacherDetails).sort((a, b) => {
+            const nameA = (teacherDetails[a]?.fullName || a).toUpperCase();
+            const nameB = (teacherDetails[b]?.fullName || b).toUpperCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            return 0;
+        });
         const masterTimeSlots = getMasterTimeSlots();
 
         allTeachers.forEach(teacher => {
@@ -422,8 +442,14 @@
         const scheduleDisplay = document.getElementById('teacher-schedule-display');
         const masterTimeSlots = getMasterTimeSlots();
         const teacherSchedules = processSchedules();
-        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object.
-        const sortedTeachers = Object.keys(teacherDetails).sort();
+        
+        const sortedTeachers = Object.keys(teacherDetails).sort((a, b) => {
+            const nameA = (teacherDetails[a]?.fullName || a).toUpperCase();
+            const nameB = (teacherDetails[b]?.fullName || b).toUpperCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            return 0;
+        });
 
         sortedTeachers.forEach(teacher => {
             teacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`;

@@ -27,7 +27,7 @@
         .teacher-select-container { height: 200px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; }
         .teacher-select-label { display: flex; align-items: center; padding: 0.5rem; cursor: pointer; border-radius: 0.25rem; }
         .teacher-select-label:hover { background-color: #f3f4f6; }
-        .teacher-select-label input { margin-left: auto; transform: scale(1.2); }
+        .teacher-select-label input { transform: scale(1.2); }
         .teacher-select-label.checked { background-color: #e0e7ff; }
         .teacher-full-name { font-weight: 600; color: #111827; }
         .subject-pill-container { display: flex; flex-wrap: wrap; margin-top: 4px; }
@@ -167,22 +167,74 @@
         const teacherSchedules = processSchedules();
         const allTeachers = Object.keys(teacherDetails).sort((a, b) => (teacherDetails[a]?.fullName || a).localeCompare(teacherDetails[b]?.fullName || b));
 
-        // Populate Add Absent Teacher Dropdown
         allTeachers.forEach(teacher => {
             absentTeacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`;
         });
 
-        // Populate Replacement Teacher List
         allTeachers.forEach(teacher => {
             const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
             const subjectPills = details.subjects.map(s => {
                 const colors = getSubjectColor(s);
                 return `<span class="subject-pill ${colors.bg} ${colors.text}">${s}</span>`;
             }).join('');
-            replacementTeacherContainer.innerHTML += `<label class="teacher-select-label"><input type="checkbox" value="${teacher}" class="mr-3"><div class="w-full"><div>${details.fullName}</div><div class="subject-pill-container">${subjectPills}</div></div></label>`;
+            const teacherHTML = `
+                <label class="teacher-select-label">
+                    <input type="checkbox" value="${teacher}" class="mr-3">
+                    <div class="w-full">
+                        <div class="teacher-full-name">${details.fullName}</div>
+                        <div class="subject-pill-container">${subjectPills}</div>
+                    </div>
+                </label>`;
+            replacementTeacherContainer.innerHTML += teacherHTML;
         });
         
-        // Add absent teacher to the list
+        function updateReplacementListPriority() {
+            const absentTeachers = Array.from(absentTeachersList.querySelectorAll('[data-teacher]')).map(el => el.dataset.teacher);
+            const absentSubjects = new Set();
+            absentTeachers.forEach(teacherKey => {
+                const details = teacherDetails[teacherKey];
+                if (details && details.subjects) {
+                    details.subjects.forEach(subject => {
+                        const baseSubject = (subject || '').split(' ')[0].toUpperCase();
+                        if (baseSubject) absentSubjects.add(baseSubject);
+                    });
+                }
+            });
+
+            const allReliefLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
+
+            if (absentSubjects.size === 0) {
+                allReliefLabels.sort((a, b) => {
+                    const nameA = a.querySelector('.teacher-full-name').textContent;
+                    const nameB = b.querySelector('.teacher-full-name').textContent;
+                    return nameA.localeCompare(nameB);
+                });
+                allReliefLabels.forEach(label => replacementTeacherContainer.appendChild(label));
+                return;
+            }
+
+            const subjectMatches = [];
+            const others = [];
+            allReliefLabels.forEach(label => {
+                const reliefTeacherKey = label.querySelector('input').value;
+                const reliefTeacherDetails = teacherDetails[reliefTeacherKey];
+                let hasMatch = false;
+                if (reliefTeacherDetails && reliefTeacherDetails.subjects) {
+                    hasMatch = reliefTeacherDetails.subjects.some(subject => {
+                        const baseSubject = (subject || '').split(' ')[0].toUpperCase();
+                        return baseSubject && absentSubjects.has(baseSubject);
+                    });
+                }
+                (hasMatch ? subjectMatches : others).push(label);
+            });
+
+            const sortLabels = (a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent);
+            subjectMatches.sort(sortLabels);
+            others.sort(sortLabels);
+            
+            [...subjectMatches, ...others].forEach(label => replacementTeacherContainer.appendChild(label));
+        }
+
         addAbsentBtn.addEventListener('click', () => {
             const selectedTeacher = absentTeacherSelect.value;
             if (!selectedTeacher || document.querySelector(`#absent-teachers-list [data-teacher="${selectedTeacher}"]`)) return;
@@ -193,36 +245,33 @@
             const newEntry = document.createElement('div');
             newEntry.dataset.teacher = selectedTeacher;
             newEntry.className = 'flex items-center gap-2 p-2 bg-indigo-50 rounded-md';
-            newEntry.innerHTML = `
-                <div class="flex-grow font-semibold text-sm text-gray-800">${teacherFullName}</div>
-                <select class="reason-select w-24 p-1 text-xs border border-gray-300 rounded-md">${reasonOptions}</select>
-                <button class="remove-absent-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
-            `;
+            newEntry.innerHTML = `<div class="flex-grow font-semibold text-sm text-gray-800">${teacherFullName}</div><select class="reason-select w-24 p-1 text-xs border border-gray-300 rounded-md">${reasonOptions}</select><button class="remove-absent-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>`;
             absentTeachersList.appendChild(newEntry);
 
-            // Hide from dropdown and disable replacement checkbox
             absentTeacherSelect.querySelector(`option[value="${selectedTeacher}"]`).style.display = 'none';
             absentTeacherSelect.value = '';
             const replacementCheckbox = replacementTeacherContainer.querySelector(`input[value="${selectedTeacher}"]`);
             if(replacementCheckbox) {
                 replacementCheckbox.closest('label').style.display = 'none';
-                replacementCheckbox.checked = false;
-                replacementCheckbox.closest('label').classList.remove('checked');
+                if (replacementCheckbox.checked) {
+                    replacementCheckbox.checked = false;
+                    replacementCheckbox.closest('label').classList.remove('checked');
+                }
             }
+            updateReplacementListPriority();
         });
 
-        // Remove absent teacher from the list
         absentTeachersList.addEventListener('click', e => {
             if (e.target.classList.contains('remove-absent-btn')) {
                 const entry = e.target.closest('[data-teacher]');
                 const teacher = entry.dataset.teacher;
 
-                // Unhide from dropdown and re-enable replacement checkbox
                 absentTeacherSelect.querySelector(`option[value="${teacher}"]`).style.display = 'block';
                 const replacementCheckbox = replacementTeacherContainer.querySelector(`input[value="${teacher}"]`);
                 if(replacementCheckbox) replacementCheckbox.closest('label').style.display = 'flex';
                 
                 entry.remove();
+                updateReplacementListPriority();
             }
         });
 
@@ -235,26 +284,15 @@
             });
         });
 
-        // Set default day based on time
         const now = new Date();
         const hour = now.getHours();
         const dayIndex = now.getDay();
-        let targetDayIndex;
-        
-        // After midnight (e.g., 00:00-03:59), you are arranging for "Today".
-        // Any other time of the day, you are preparing for "Tomorrow".
-        if (hour >= 0 && hour < 4) {
-            targetDayIndex = dayIndex;
-        } else {
-            targetDayIndex = dayIndex + 1;
-        }
-
-        if (targetDayIndex === 7) targetDayIndex = 1; // If it's Saturday, plan for Monday
-        if ((dayIndex === 5 && hour >= 4) || dayIndex === 6) targetDayIndex = 1; // If it's Fri afternoon or Sat, plan for Mon
-        if (dayIndex === 0) targetDayIndex = 1; // If it's Sunday, plan for Monday
+        let targetDayIndex = (hour < 4) ? dayIndex : dayIndex + 1;
+        if (targetDayIndex === 7 || dayIndex === 6) targetDayIndex = 1;
+        if ((dayIndex === 5 && hour >= 4)) targetDayIndex = 1;
+        if (dayIndex === 0) targetDayIndex = 1; 
         
         const defaultDayName = jsDayToMalay[targetDayIndex];
-
         days.forEach(day => {
             const selected = day === defaultDayName ? 'selected' : '';
             reliefDaySelect.innerHTML += `<option value="${day}" ${selected}>${day}</option>`;
@@ -276,26 +314,18 @@
             
             const reportData = [];
             document.querySelectorAll('.relief-assignment-select').forEach(select => {
-                if (select.value) { // A substitute was assigned
+                if (select.value) {
                     const substituteName = teacherDetails[select.value]?.fullName || select.value;
                     const periodDetails = JSON.parse(select.dataset.periodDetails);
                     const absentTeacher = periodDetails.originalTeacher;
                     const absentName = teacherDetails[absentTeacher]?.fullName || absentTeacher;
                     const reason = absentTeacherReasons[absentTeacher] || 'N/A';
-
-                    reportData.push({
-                        absentName: absentName,
-                        reason: reason,
-                        subject: periodDetails.subject,
-                        time: periodDetails.time,
-                        class: periodDetails.class,
-                        substituteName: substituteName
-                    });
+                    reportData.push({ absentName, reason, subject: periodDetails.subject, time: periodDetails.time, class: periodDetails.class, substituteName });
                 }
             });
             renderPrintableReport(reportData, reliefDaySelect.value);
         });
-
+        
         function renderReliefPlan(absentTeachers, replacementPool, selectedDay, teacherSchedules) {
             rosterGenerationSection.style.display = 'none';
             if (absentTeachers.length === 0 || replacementPool.length === 0) {
@@ -318,9 +348,8 @@
             const sortedSlots = Array.from(slotsToCover.values()).sort((a, b) => a.period.localeCompare(b.period));
             sortedSlots.forEach(period => {
                 const availableReplacements = replacementPool.filter(reliefTeacher => !absentTeachers.includes(reliefTeacher) && !findCoveringPeriod(period.period, teacherSchedules[reliefTeacher]?.[selectedDay]));
-                // Add original teacher to data for report generation
                 const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, originalTeacher: period.originalTeachers[0] });
-                const subjectMatches = availableReplacements.filter(t => (teacherDetails[t]?.subjects || []).some(s => period.subject.includes(s)));
+                const subjectMatches = availableReplacements.filter(t => (teacherDetails[t]?.subjects || []).some(s => period.subject.includes(s.split(' ')[0])));
                 const otherAvailable = availableReplacements.filter(t => !subjectMatches.includes(t));
                 let optionsHTML = `<option value="">-- Assign a teacher --</option>`;
                 if (subjectMatches.length > 0) {
@@ -341,50 +370,16 @@
         }
 
         function renderPrintableReport(reportData, day) {
-             let reportHTML = `
-                <div id="printable-area">
-                    <h2 class="text-xl font-bold text-center mb-1">SENARAI GURU GANTI</h2>
-                    <h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3>
-                    <table class="w-full text-left text-sm border-collapse border border-gray-400">
-                        <thead class="bg-gray-200">
-                            <tr class="font-semibold text-gray-700">
-                                <th class="p-2 border border-gray-300">NAMA GURU TIDAK HADIR</th>
-                                <th class="p-2 border border-gray-300">SEBAB</th>
-                                <th class="p-2 border border-gray-300">SUBJEK</th>
-                                <th class="p-2 border border-gray-300">MASA</th>
-                                <th class="p-2 border border-gray-300">KELAS</th>
-                                <th class="p-2 border border-gray-300">NAMA GURU GANTI</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
+             let reportHTML = `<div id="printable-area"><h2 class="text-xl font-bold text-center mb-1">SENARAI GURU GANTI</h2><h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3><table class="w-full text-left text-sm border-collapse border border-gray-400"><thead class="bg-gray-200"><tr class="font-semibold text-gray-700"><th class="p-2 border border-gray-300">NAMA GURU TIDAK HADIR</th><th class="p-2 border border-gray-300">SEBAB</th><th class="p-2 border border-gray-300">SUBJEK</th><th class="p-2 border border-gray-300">MASA</th><th class="p-2 border border-gray-300">KELAS</th><th class="p-2 border border-gray-300">NAMA GURU GANTI</th></tr></thead><tbody>`;
             reportData.sort((a, b) => a.time.localeCompare(b.time));
-
             reportData.forEach(item => {
-                reportHTML += `
-                    <tr class="border-t">
-                        <td class="p-2 border border-gray-300">${item.absentName}</td>
-                        <td class="p-2 border border-gray-300">${item.reason}</td>
-                        <td class="p-2 border border-gray-300">${item.subject}</td>
-                        <td class="p-2 border border-gray-300">${item.time}</td>
-                        <td class="p-2 border border-gray-300">${item.class}</td>
-                        <td class="p-2 border border-gray-300">${item.substituteName}</td>
-                    </tr>
-                `;
+                reportHTML += `<tr class="border-t"><td class="p-2 border border-gray-300">${item.absentName}</td><td class="p-2 border border-gray-300">${item.reason}</td><td class="p-2 border border-gray-300">${item.subject}</td><td class="p-2 border border-gray-300">${item.time}</td><td class="p-2 border border-gray-300">${item.class}</td><td class="p-2 border border-gray-300">${item.substituteName}</td></tr>`;
             });
-
-            reportHTML += `
-                        </tbody>
-                    </table>
-                </div>
-                <div class="text-center mt-6 no-print">
-                    <button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button>
-                </div>
-            `;
-            
+            reportHTML += `</tbody></table></div><div class="text-center mt-6 no-print"><button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button></div>`;
             rostersDisplay.innerHTML = reportHTML;
         }
+
+        updateReplacementListPriority(); // Initial sort
     }
     
     function setupGroupAvailabilityViewLogic(currentDayName) {

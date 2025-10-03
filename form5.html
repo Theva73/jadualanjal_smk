@@ -100,7 +100,87 @@
     let colorIndex = 0;
     function getSubjectColor(subject) { const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0]; if (!subjectColorMap[normalizedSubject]) { subjectColorMap[normalizedSubject] = colorPalette[colorIndex % colorPalette.length]; colorIndex++; } return subjectColorMap[normalizedSubject]; }
     
-    function processSchedules() { const schedules = {}; allSchedules.forEach(classSchedule => { days.forEach(day => { if (classSchedule.scheduleData[day]) { classSchedule.scheduleData[day].forEach(entry => { if (entry.teacher) { const teachers = entry.teacher.split(/\s*\/\s*/); teachers.forEach(t => { const teacherName = normalizeTeacherName(t); if (teacherName && teacherDetails[teacherName]) { if (!schedules[teacherName]) { schedules[teacherName] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] }; } schedules[teacherName][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className }); } }); } }); } }); }); return schedules; }
+    function getTeacherForms() {
+        const teacherForms = {};
+        const getFormFromClassName = (className) => {
+            const firstChar = className.charAt(0);
+            if (['1', '2', '3', '4', '5'].includes(firstChar)) return parseInt(firstChar);
+            return null;
+        };
+
+        const processFile = (scheduleFile, formOverride = null) => {
+            if (typeof scheduleFile !== 'undefined' && Array.isArray(scheduleFile)) {
+                scheduleFile.forEach(classSchedule => {
+                    const formNumber = formOverride || getFormFromClassName(classSchedule.className);
+                    if (formNumber) {
+                        days.forEach(day => {
+                            if (classSchedule.scheduleData[day]) {
+                                classSchedule.scheduleData[day].forEach(entry => {
+                                    if (entry.teacher) {
+                                        entry.teacher.split(/\s*\/\s*/).forEach(t => {
+                                            const teacherName = normalizeTeacherName(t);
+                                            if (teacherName && teacherDetails[teacherName]) {
+                                                if (!teacherForms[teacherName]) teacherForms[teacherName] = new Set();
+                                                teacherForms[teacherName].add(formNumber);
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        };
+
+        processFile(form5Schedules, 5);
+        processFile(form4to1Schedules);
+
+        const teacherDisplayForms = {};
+        for (const teacher in teacherForms) {
+            if (teacherForms[teacher].size > 0) {
+                const maxForm = Math.max(...Array.from(teacherForms[teacher]));
+                teacherDisplayForms[teacher] = `(Ting ${maxForm})`;
+            }
+        }
+        return teacherDisplayForms;
+    }
+
+    function processSchedules() {
+        const schedules = {};
+        const getFormFromClassName = (className) => {
+            const firstChar = className.charAt(0);
+            if (['1', '2', '3', '4', '5'].includes(firstChar)) return `Form ${firstChar}`;
+            return 'Peralihan';
+        };
+        
+        const processScheduleFile = (scheduleFile, formOverride = null) => {
+            if (typeof scheduleFile !== 'undefined' && Array.isArray(scheduleFile)) {
+                scheduleFile.forEach(classSchedule => {
+                    const form = formOverride || getFormFromClassName(classSchedule.className);
+                    days.forEach(day => {
+                        if (classSchedule.scheduleData[day]) {
+                            classSchedule.scheduleData[day].forEach(entry => {
+                                if (entry.teacher) {
+                                    entry.teacher.split(/\s*\/\s*/).forEach(t => {
+                                        const teacherName = normalizeTeacherName(t);
+                                        if (teacherName && teacherDetails[teacherName]) {
+                                            if (!schedules[teacherName]) schedules[teacherName] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] };
+                                            schedules[teacherName][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className, form: form });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+            }
+        };
+
+        processScheduleFile(form5Schedules, 'Form 5');
+        processScheduleFile(form4to1Schedules);
+        return schedules;
+    }
     function findCoveringPeriod(slot, busyPeriods) { if (!busyPeriods) return null; const [slotStart, slotEnd] = slot.split('-'); for (const busyPeriod of busyPeriods) { const [busyStart, busyEnd] = busyPeriod.period.split('-'); if (slotStart >= busyStart && slotEnd <= busyEnd) { return busyPeriod; } } return null; }
 
     // --- MAIN SCRIPT EXECUTION ---
@@ -165,14 +245,18 @@
         const rostersDisplay = document.getElementById('relief-rosters-display');
         
         const teacherSchedules = processSchedules();
+        const teacherDisplayForms = getTeacherForms();
         const allTeachers = Object.keys(teacherDetails).sort((a, b) => (teacherDetails[a]?.fullName || a).localeCompare(teacherDetails[b]?.fullName || b));
 
         allTeachers.forEach(teacher => {
-            absentTeacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`;
+            const displayForm = teacherDisplayForms[teacher] || '';
+            const fullName = teacherDetails[teacher]?.fullName || teacher;
+            absentTeacherSelect.innerHTML += `<option value="${teacher}">${fullName} ${displayForm}</option>`;
         });
 
         allTeachers.forEach(teacher => {
             const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
+            const displayForm = teacherDisplayForms[teacher] || '';
             const subjectPills = details.subjects.map(s => {
                 const colors = getSubjectColor(s);
                 return `<span class="subject-pill ${colors.bg} ${colors.text}">${s}</span>`;
@@ -181,7 +265,7 @@
                 <label class="teacher-select-label">
                     <input type="checkbox" value="${teacher}" class="mr-3">
                     <div class="w-full">
-                        <div class="teacher-full-name">${details.fullName}</div>
+                        <div class="teacher-full-name">${details.fullName} <span class="text-gray-500 font-normal text-sm">${displayForm}</span></div>
                         <div class="subject-pill-container">${subjectPills}</div>
                     </div>
                 </label>`;
@@ -320,7 +404,7 @@
                     const absentTeacher = periodDetails.originalTeacher;
                     const absentName = teacherDetails[absentTeacher]?.fullName || absentTeacher;
                     const reason = absentTeacherReasons[absentTeacher] || 'N/A';
-                    reportData.push({ absentName, reason, subject: periodDetails.subject, time: periodDetails.time, class: periodDetails.class, substituteName });
+                    reportData.push({ absentName, reason, subject: periodDetails.subject, time: periodDetails.time, class: periodDetails.class, form: periodDetails.form, substituteName });
                 }
             });
             renderPrintableReport(reportData, reliefDaySelect.value);
@@ -348,7 +432,7 @@
             const sortedSlots = Array.from(slotsToCover.values()).sort((a, b) => a.period.localeCompare(b.period));
             sortedSlots.forEach(period => {
                 const availableReplacements = replacementPool.filter(reliefTeacher => !absentTeachers.includes(reliefTeacher) && !findCoveringPeriod(period.period, teacherSchedules[reliefTeacher]?.[selectedDay]));
-                const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, originalTeacher: period.originalTeachers[0] });
+                const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, form: period.form, originalTeacher: period.originalTeachers[0] });
                 const subjectMatches = availableReplacements.filter(t => (teacherDetails[t]?.subjects || []).some(s => period.subject.includes(s.split(' ')[0])));
                 const otherAvailable = availableReplacements.filter(t => !subjectMatches.includes(t));
                 let optionsHTML = `<option value="">-- Assign a teacher --</option>`;
@@ -370,10 +454,10 @@
         }
 
         function renderPrintableReport(reportData, day) {
-             let reportHTML = `<div id="printable-area"><h2 class="text-xl font-bold text-center mb-1">SENARAI GURU GANTI</h2><h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3><table class="w-full text-left text-sm border-collapse border border-gray-400"><thead class="bg-gray-200"><tr class="font-semibold text-gray-700"><th class="p-2 border border-gray-300">NAMA GURU TIDAK HADIR</th><th class="p-2 border border-gray-300">SEBAB</th><th class="p-2 border border-gray-300">SUBJEK</th><th class="p-2 border border-gray-300">MASA</th><th class="p-2 border border-gray-300">KELAS</th><th class="p-2 border border-gray-300">NAMA GURU GANTI</th></tr></thead><tbody>`;
+             let reportHTML = `<div id="printable-area"><h2 class="text-xl font-bold text-center mb-1">SENARAI GURU GANTI</h2><h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3><table class="w-full text-left text-sm border-collapse border border-gray-400"><thead class="bg-gray-200"><tr class="font-semibold text-gray-700"><th class="p-2 border border-gray-300">NAMA GURU TIDAK HADIR</th><th class="p-2 border border-gray-300">SEBAB</th><th class="p-2 border border-gray-300">SUBJEK</th><th class="p-2 border border-gray-300">MASA</th><th class="p-2 border border-gray-300">KELAS</th><th class="p-2 border border-gray-300">TINGKATAN</th><th class="p-2 border border-gray-300">NAMA GURU GANTI</th></tr></thead><tbody>`;
             reportData.sort((a, b) => a.time.localeCompare(b.time));
             reportData.forEach(item => {
-                reportHTML += `<tr class="border-t"><td class="p-2 border border-gray-300">${item.absentName}</td><td class="p-2 border border-gray-300">${item.reason}</td><td class="p-2 border border-gray-300">${item.subject}</td><td class="p-2 border border-gray-300">${item.time}</td><td class="p-2 border border-gray-300">${item.class}</td><td class="p-2 border border-gray-300">${item.substituteName}</td></tr>`;
+                reportHTML += `<tr class="border-t"><td class="p-2 border border-gray-300">${item.absentName}</td><td class="p-2 border border-gray-300">${item.reason}</td><td class="p-2 border border-gray-300">${item.subject}</td><td class="p-2 border border-gray-300">${item.time}</td><td class="p-2 border border-gray-300">${item.class}</td><td class="p-2 border border-gray-300">${item.form}</td><td class="p-2 border border-gray-300">${item.substituteName}</td></tr>`;
             });
             reportHTML += `</tbody></table></div><div class="text-center mt-6 no-print"><button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button></div>`;
             rostersDisplay.innerHTML = reportHTML;

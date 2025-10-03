@@ -111,7 +111,7 @@ const teacherData = {
     },
     "MASRUL": {
         fullName: "MASRULHUDA",
-        subjects: ["ASK", "M.KOM", "BI"]
+        subjects: ["ASK", "BI"]
     },
     "MASJUKI": {
         fullName: "MASJUKI",
@@ -183,7 +183,7 @@ const teacherData = {
     },
     "RUHAZANA": {
         fullName: "RUHAZANA",
-        subjects: ["TAW", "BM"]
+        subjects: ["TAW", "BM", "PS", "MM"]
     },
     "SALMA": {
         fullName: "SALMA",

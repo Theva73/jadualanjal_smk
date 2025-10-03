@@ -44,18 +44,25 @@
         .teacher { font-size: 0.8rem; color: #4b5563; }
         .location { font-size: 0.8rem; font-style: italic; color: #b91c1c; }
         .writing-mode-vertical-rl { writing-mode: vertical-rl; text-orientation: mixed; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { position: absolute; left: 20px; top: 20px; right: 20px; width: auto; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-2 sm:p-4 md:p-6">
 
     <div class="max-w-7xl mx-auto bg-white p-4 rounded-lg shadow-lg">
-        <header class="mb-4 pb-3 border-b">
+        <header class="mb-4 pb-3 border-b no-print">
             <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800">Unified Schedule Viewer</h1>
             <p id="current-day-display" class="text-center text-indigo-600 font-semibold mt-1"></p>
             <p class="text-center text-gray-500 text-sm mt-1">SMK Seri Pulai Perdana</p>
         </header>
 
-        <div class="flex flex-wrap justify-center border-b mb-4">
+        <div class="flex flex-wrap justify-center border-b mb-4 no-print">
             <button id="view-relief-btn" class="view-toggle-button active font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Relief Assignment</button>
             <button id="view-slot-btn" class="view-toggle-button font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Group Availability</button>
             <button id="view-teacher-btn" class="view-toggle-button font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Teacher View</button>
@@ -133,7 +140,7 @@
     
     // --- HTML TEMPLATES ---
     function getReliefViewHTML() { 
-        return `<div class="max-w-4xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Relief Assignment Tool</h2><div class="p-3 bg-gray-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-gray-700 text-left">1. Select Absent Teacher(s):</label><button id="clear-absent-btn" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2">Clear</button></div><div id="absent-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-gray-700 text-left">2. Select Available Relief Staff:</label><button id="clear-relief-btn" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2">Clear</button></div><div id="replacement-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div class="flex flex-col justify-between"><div><label for="relief-day-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">3. Select Day:</label><select id="relief-day-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"></select></div><button id="find-relief-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm font-semibold">Generate Relief Plan</button></div></div></div></div><div id="relief-results" class="mt-6"></div><div id="roster-generation-section" class="mt-6 text-center" style="display: none;"><button id="generate-rosters-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Generate Relief Rosters</button></div><div id="relief-rosters-display" class="mt-6"></div>`; 
+        return `<div class="max-w-4xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Relief Assignment Tool</h2><div class="p-3 bg-gray-50 rounded-lg no-print"><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="block text-sm font-medium text-gray-700 text-left mb-2">1. Add Absent Teacher(s):</label><div class="flex gap-2 mb-2"><select id="absent-teacher-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">-- Choose a teacher --</option></select><button id="add-absent-btn" class="bg-gray-200 px-3 rounded-md hover:bg-gray-300 text-sm font-semibold">Add</button></div><div id="absent-teachers-list" class="space-y-2 pr-2" style="max-height: 150px; overflow-y: auto;"></div></div><div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-gray-700 text-left">2. Select Available Relief Staff:</label><button id="clear-relief-btn" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2">Clear All</button></div><div id="replacement-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div class="flex flex-col justify-between"><div><label for="relief-day-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">3. Select Day:</label><select id="relief-day-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"></select></div><button id="find-relief-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm font-semibold">Generate Relief Plan</button></div></div></div></div><div id="relief-results" class="mt-6 no-print"></div><div id="roster-generation-section" class="mt-6 text-center no-print" style="display: none;"><button id="generate-rosters-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Generate Relief Report</button></div><div id="relief-rosters-display" class="mt-6"></div>`;
     }
     function getGroupAvailabilityViewHTML() { return `<div class="max-w-3xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Find Common Free Time</h2><div class="p-3 bg-gray-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="teacher-multi-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">1. Select Teachers:</label><div id="teacher-multi-select" class="teacher-select-container bg-white text-left"></div></div><div><label for="day-select-group" class="block text-sm font-medium text-gray-700 mb-2 text-left">2. Select Day:</label><select id="day-select-group" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-base mb-3"></select></div></div><button id="find-common-slots-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm text-sm font-semibold">Find Availability</button></div></div><div id="common-slots-results" class="mt-4"></div>`; }
     function getTeacherViewHTML() { return `<div class="mb-4 max-w-lg mx-auto"><label for="teacher-select" class="block text-base font-medium text-gray-700 mb-2 text-center">Select a Teacher:</label><select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base"><option value="">-- Please choose a teacher --</option></select></div><div id="teacher-schedule-display" class="overflow-x-auto"></div>`; }
@@ -141,9 +148,14 @@
 
     // --- LOGIC FUNCTIONS FOR EACH VIEW ---
     function setupReliefViewLogic(currentDayName) {
-        const absentTeacherContainer = document.getElementById('absent-teacher-multiselect');
+        const reasons = ["MC", "CRK", "BANGKEL", "MESYUARAT", "TAKLIMAT", "CB", "UBBI", "UBBM", "EXAM", "MSSB", "APPOINTMENT", "KEM", "LAIN LAIN"];
+        const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
+        
+        const absentTeacherSelect = document.getElementById('absent-teacher-select');
+        const addAbsentBtn = document.getElementById('add-absent-btn');
+        const absentTeachersList = document.getElementById('absent-teachers-list');
+        
         const replacementTeacherContainer = document.getElementById('replacement-teacher-multiselect');
-        const clearAbsentBtn = document.getElementById('clear-absent-btn');
         const clearReliefBtn = document.getElementById('clear-relief-btn');
         const reliefDaySelect = document.getElementById('relief-day-select');
         const findBtn = document.getElementById('find-relief-btn');
@@ -153,104 +165,69 @@
         const rostersDisplay = document.getElementById('relief-rosters-display');
         
         const teacherSchedules = processSchedules();
-        
-        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object keys.
-        const allTeachers = Object.keys(teacherDetails);
+        const allTeachers = Object.keys(teacherDetails).sort((a, b) => (teacherDetails[a]?.fullName || a).localeCompare(teacherDetails[b]?.fullName || b));
 
-        // **FIX:** Sort the teacher list based on their full display names.
-        allTeachers.sort((a, b) => {
-            const nameA = (teacherDetails[a]?.fullName || a).toUpperCase();
-            const nameB = (teacherDetails[b]?.fullName || b).toUpperCase();
-            if (nameA < nameB) return -1;
-            if (nameA > nameB) return 1;
-            return 0;
+        // Populate Add Absent Teacher Dropdown
+        allTeachers.forEach(teacher => {
+            absentTeacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`;
         });
 
+        // Populate Replacement Teacher List
         allTeachers.forEach(teacher => {
             const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
             const subjectPills = details.subjects.map(s => {
                 const colors = getSubjectColor(s);
                 return `<span class="subject-pill ${colors.bg} ${colors.text}">${s}</span>`;
             }).join('');
-            
-            const teacherHTML = `
-                <label class="teacher-select-label">
-                    <div>
-                        <div class="teacher-full-name">${details.fullName}</div>
-                        <div class="subject-pill-container">${subjectPills}</div>
-                    </div>
-                    <input type="checkbox" value="${teacher}" class="ml-auto">
-                </label>`;
-            absentTeacherContainer.innerHTML += teacherHTML;
-            replacementTeacherContainer.innerHTML += teacherHTML;
+            replacementTeacherContainer.innerHTML += `<label class="teacher-select-label"><input type="checkbox" value="${teacher}" class="mr-3"><div class="w-full"><div>${details.fullName}</div><div class="subject-pill-container">${subjectPills}</div></div></label>`;
         });
+        
+        // Add absent teacher to the list
+        addAbsentBtn.addEventListener('click', () => {
+            const selectedTeacher = absentTeacherSelect.value;
+            if (!selectedTeacher || document.querySelector(`#absent-teachers-list [data-teacher="${selectedTeacher}"]`)) return;
 
-        function updateReplacementList() {
-            const absentTeachers = Array.from(absentTeacherContainer.querySelectorAll('input:checked')).map(input => input.value);
-            const allReliefLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
+            const reasonOptions = reasons.map(r => `<option value="${r}">${r}</option>`).join('');
+            const teacherFullName = teacherDetails[selectedTeacher]?.fullName || selectedTeacher;
 
-            allReliefLabels.forEach(label => {
-                const reliefTeacherName = label.querySelector('input').value;
-                if (absentTeachers.includes(reliefTeacherName)) {
-                    label.style.display = 'none';
-                    const checkbox = label.querySelector('input');
-                    if (checkbox.checked) {
-                        checkbox.checked = false;
-                        label.classList.remove('checked');
-                    }
-                } else {
-                    label.style.display = 'flex';
-                }
-            });
+            const newEntry = document.createElement('div');
+            newEntry.dataset.teacher = selectedTeacher;
+            newEntry.className = 'flex items-center gap-2 p-2 bg-indigo-50 rounded-md';
+            newEntry.innerHTML = `
+                <div class="flex-grow font-semibold text-sm text-gray-800">${teacherFullName}</div>
+                <select class="reason-select w-24 p-1 text-xs border border-gray-300 rounded-md">${reasonOptions}</select>
+                <button class="remove-absent-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+            `;
+            absentTeachersList.appendChild(newEntry);
 
-            const visibleReliefLabels = allReliefLabels.filter(label => label.style.display !== 'none');
-
-            if (absentTeachers.length === 0) {
-                visibleReliefLabels.sort((a, b) => {
-                    const nameA = a.querySelector('.teacher-full-name').textContent;
-                    const nameB = b.querySelector('.teacher-full-name').textContent;
-                    return nameA.localeCompare(nameB);
-                });
-                visibleReliefLabels.forEach(label => replacementTeacherContainer.appendChild(label));
-                return;
-            }
-
-            const absentSubjects = new Set();
-            absentTeachers.forEach(teacher => { (teacherDetails[teacher]?.subjects || []).forEach(subject => absentSubjects.add((subject || '').split(' ')[0])); });
-
-            const subjectMatches = [];
-            const others = [];
-            visibleReliefLabels.forEach(label => {
-                const teacherName = label.querySelector('input').value;
-                const hasMatch = (teacherDetails[teacherName]?.subjects || []).some(subject => absentSubjects.has((subject || '').split(' ')[0]));
-                (hasMatch ? subjectMatches : others).push(label);
-            });
-            
-            const sortLabels = (a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent);
-            subjectMatches.sort(sortLabels);
-            others.sort(sortLabels);
-
-            [...subjectMatches, ...others].forEach(label => replacementTeacherContainer.appendChild(label));
-        }
-
-        updateReplacementList();
-
-        absentTeacherContainer.addEventListener('change', (e) => {
-            if(e.target.tagName === 'INPUT') {
-                e.target.closest('label').classList.toggle('checked', e.target.checked);
-                updateReplacementList();
+            // Hide from dropdown and disable replacement checkbox
+            absentTeacherSelect.querySelector(`option[value="${selectedTeacher}"]`).style.display = 'none';
+            absentTeacherSelect.value = '';
+            const replacementCheckbox = replacementTeacherContainer.querySelector(`input[value="${selectedTeacher}"]`);
+            if(replacementCheckbox) {
+                replacementCheckbox.closest('label').style.display = 'none';
+                replacementCheckbox.checked = false;
+                replacementCheckbox.closest('label').classList.remove('checked');
             }
         });
+
+        // Remove absent teacher from the list
+        absentTeachersList.addEventListener('click', e => {
+            if (e.target.classList.contains('remove-absent-btn')) {
+                const entry = e.target.closest('[data-teacher]');
+                const teacher = entry.dataset.teacher;
+
+                // Unhide from dropdown and re-enable replacement checkbox
+                absentTeacherSelect.querySelector(`option[value="${teacher}"]`).style.display = 'block';
+                const replacementCheckbox = replacementTeacherContainer.querySelector(`input[value="${teacher}"]`);
+                if(replacementCheckbox) replacementCheckbox.closest('label').style.display = 'flex';
+                
+                entry.remove();
+            }
+        });
+
         replacementTeacherContainer.addEventListener('change', (e) => { if(e.target.tagName === 'INPUT') e.target.closest('label').classList.toggle('checked', e.target.checked); });
         
-        clearAbsentBtn.addEventListener('click', () => {
-            absentTeacherContainer.querySelectorAll('input:checked').forEach(input => {
-                input.checked = false;
-                input.closest('label').classList.remove('checked');
-            });
-            updateReplacementList();
-        });
-
         clearReliefBtn.addEventListener('click', () => {
             replacementTeacherContainer.querySelectorAll('input:checked').forEach(input => {
                 input.checked = false;
@@ -258,35 +235,71 @@
             });
         });
 
+        // Set default day based on time
+        const now = new Date();
+        const hour = now.getHours();
+        const dayIndex = now.getDay();
+        let targetDayIndex;
+        
+        // After midnight (e.g., 00:00-03:59), you are arranging for "Today".
+        // Any other time of the day, you are preparing for "Tomorrow".
+        if (hour >= 0 && hour < 4) {
+            targetDayIndex = dayIndex;
+        } else {
+            targetDayIndex = dayIndex + 1;
+        }
+
+        if (targetDayIndex === 7) targetDayIndex = 1; // If it's Saturday, plan for Monday
+        if ((dayIndex === 5 && hour >= 4) || dayIndex === 6) targetDayIndex = 1; // If it's Fri afternoon or Sat, plan for Mon
+        if (dayIndex === 0) targetDayIndex = 1; // If it's Sunday, plan for Monday
+        
+        const defaultDayName = jsDayToMalay[targetDayIndex];
+
         days.forEach(day => {
-            const selected = day === currentDayName ? 'selected' : '';
+            const selected = day === defaultDayName ? 'selected' : '';
             reliefDaySelect.innerHTML += `<option value="${day}" ${selected}>${day}</option>`;
         });
 
         findBtn.addEventListener('click', () => {
             rostersDisplay.innerHTML = '';
-            const absentTeachers = Array.from(absentTeacherContainer.querySelectorAll('input:checked')).map(input => input.value);
+            const absentTeachers = Array.from(absentTeachersList.querySelectorAll('[data-teacher]')).map(el => el.dataset.teacher);
             const replacementPool = Array.from(replacementTeacherContainer.querySelectorAll('input:checked')).map(input => input.value);
             const selectedDay = reliefDaySelect.value;
             renderReliefPlan(absentTeachers, replacementPool, selectedDay, teacherSchedules);
         });
 
         generateRostersBtn.addEventListener('click', () => {
-            const assignments = {};
+            const absentTeacherReasons = {};
+            absentTeachersList.querySelectorAll('[data-teacher]').forEach(el => {
+                absentTeacherReasons[el.dataset.teacher] = el.querySelector('.reason-select').value;
+            });
+            
+            const reportData = [];
             document.querySelectorAll('.relief-assignment-select').forEach(select => {
-                if (select.value) {
+                if (select.value) { // A substitute was assigned
+                    const substituteName = teacherDetails[select.value]?.fullName || select.value;
                     const periodDetails = JSON.parse(select.dataset.periodDetails);
-                    if (!assignments[select.value]) { assignments[select.value] = []; }
-                    assignments[select.value].push(periodDetails);
+                    const absentTeacher = periodDetails.originalTeacher;
+                    const absentName = teacherDetails[absentTeacher]?.fullName || absentTeacher;
+                    const reason = absentTeacherReasons[absentTeacher] || 'N/A';
+
+                    reportData.push({
+                        absentName: absentName,
+                        reason: reason,
+                        subject: periodDetails.subject,
+                        time: periodDetails.time,
+                        class: periodDetails.class,
+                        substituteName: substituteName
+                    });
                 }
             });
-            renderFinalRosters(assignments, reliefDaySelect.value);
+            renderPrintableReport(reportData, reliefDaySelect.value);
         });
 
         function renderReliefPlan(absentTeachers, replacementPool, selectedDay, teacherSchedules) {
             rosterGenerationSection.style.display = 'none';
             if (absentTeachers.length === 0 || replacementPool.length === 0) {
-                resultsContainer.innerHTML = `<div class="text-center p-4 bg-yellow-100 border border-yellow-300 rounded-md"><h3 class="font-semibold text-lg text-yellow-800">Please select at least one absent teacher and one available relief teacher.</h3></div>`;
+                resultsContainer.innerHTML = `<div class="text-center p-4 bg-yellow-100 border border-yellow-300 rounded-md"><h3 class="font-semibold text-lg text-yellow-800">Please add an absent teacher and select at least one relief teacher.</h3></div>`;
                 return;
             }
             const slotsToCover = new Map();
@@ -305,7 +318,8 @@
             const sortedSlots = Array.from(slotsToCover.values()).sort((a, b) => a.period.localeCompare(b.period));
             sortedSlots.forEach(period => {
                 const availableReplacements = replacementPool.filter(reliefTeacher => !absentTeachers.includes(reliefTeacher) && !findCoveringPeriod(period.period, teacherSchedules[reliefTeacher]?.[selectedDay]));
-                const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className});
+                // Add original teacher to data for report generation
+                const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, originalTeacher: period.originalTeachers[0] });
                 const subjectMatches = availableReplacements.filter(t => (teacherDetails[t]?.subjects || []).some(s => period.subject.includes(s)));
                 const otherAvailable = availableReplacements.filter(t => !subjectMatches.includes(t));
                 let optionsHTML = `<option value="">-- Assign a teacher --</option>`;
@@ -326,13 +340,50 @@
             rosterGenerationSection.style.display = 'block';
         }
 
-        function renderFinalRosters(assignments, day) {
-             let rostersHTML = `<h2 class="text-xl font-bold text-center mb-4">Generated Relief Duty Rosters for ${day}</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
-             for(const teacher in assignments) {
-                 rostersHTML += `<div class="border border-gray-300 rounded-lg p-4 bg-white shadow-md"><h3 class="text-lg font-bold text-indigo-700 border-b pb-2 mb-3">${teacherDetails[teacher]?.fullName || teacher}</h3><table class="w-full text-left text-sm"><thead><tr class="font-semibold text-gray-600"><th>Time</th><th>Subject</th><th>Class</th></tr></thead><tbody>${assignments[teacher].sort((a,b)=>a.time.localeCompare(b.time)).map(duty=>`<tr class="border-t"><td class="py-2 pr-2">${duty.time}</td><td class="py-2 pr-2">${duty.subject}</td><td class="py-2 pr-2">${duty.class}</td></tr>`).join('')}</tbody></table></div>`;
-             }
-             rostersHTML += `</div>`;
-             rostersDisplay.innerHTML = rostersHTML;
+        function renderPrintableReport(reportData, day) {
+             let reportHTML = `
+                <div id="printable-area">
+                    <h2 class="text-xl font-bold text-center mb-1">SENARAI GURU GANTI</h2>
+                    <h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3>
+                    <table class="w-full text-left text-sm border-collapse border border-gray-400">
+                        <thead class="bg-gray-200">
+                            <tr class="font-semibold text-gray-700">
+                                <th class="p-2 border border-gray-300">NAMA GURU TIDAK HADIR</th>
+                                <th class="p-2 border border-gray-300">SEBAB</th>
+                                <th class="p-2 border border-gray-300">SUBJEK</th>
+                                <th class="p-2 border border-gray-300">MASA</th>
+                                <th class="p-2 border border-gray-300">KELAS</th>
+                                <th class="p-2 border border-gray-300">NAMA GURU GANTI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            reportData.sort((a, b) => a.time.localeCompare(b.time));
+
+            reportData.forEach(item => {
+                reportHTML += `
+                    <tr class="border-t">
+                        <td class="p-2 border border-gray-300">${item.absentName}</td>
+                        <td class="p-2 border border-gray-300">${item.reason}</td>
+                        <td class="p-2 border border-gray-300">${item.subject}</td>
+                        <td class="p-2 border border-gray-300">${item.time}</td>
+                        <td class="p-2 border border-gray-300">${item.class}</td>
+                        <td class="p-2 border border-gray-300">${item.substituteName}</td>
+                    </tr>
+                `;
+            });
+
+            reportHTML += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-6 no-print">
+                    <button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button>
+                </div>
+            `;
+            
+            rostersDisplay.innerHTML = reportHTML;
         }
     }
     
@@ -554,5 +605,4 @@
 
 </body>
 </html>
-
 

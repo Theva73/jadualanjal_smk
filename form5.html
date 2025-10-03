@@ -86,14 +86,14 @@
 
     // --- SHARED HELPER FUNCTIONS ---
     function getMasterTimeSlots() { const allSlots = new Set(); allSchedules.forEach(c => c.timeSlots.forEach(slot => { if (slot !== "2:00-3:00") allSlots.add(slot); })); return Array.from(allSlots).sort((a, b) => a.localeCompare(b)); }
-    function normalizeTeacherName(name) { if (!name) return ''; return name.replace(/(PN\.?|CIK|EN\.?|UST\.?|MISS|MR\.?|USTZH\.?)/gi, '').trim().toUpperCase(); }
+    function normalizeTeacherName(name) { if (!name) return ''; return name.replace(/(PN\.?|CIK|EN\.?|UST\.?|MISS|MR\.?|USTZH\.?|TAM)/gi, '').trim().toUpperCase(); }
     
     const subjectColorMap = {};
     const colorPalette = [ { bg: 'bg-blue-100', text: 'text-blue-800' }, { bg: 'bg-green-100', text: 'text-green-800' }, { bg: 'bg-yellow-100', text: 'text-yellow-800' }, { bg: 'bg-purple-100', text: 'text-purple-800' }, { bg: 'bg-pink-100', text: 'text-pink-800' }, { bg: 'bg-indigo-100', text: 'text-indigo-800' }, { bg: 'bg-red-100', text: 'text-red-800' }, { bg: 'bg-gray-200', text: 'text-gray-800' } ];
     let colorIndex = 0;
     function getSubjectColor(subject) { const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0]; if (!subjectColorMap[normalizedSubject]) { subjectColorMap[normalizedSubject] = colorPalette[colorIndex % colorPalette.length]; colorIndex++; } return subjectColorMap[normalizedSubject]; }
     
-    function processSchedules() { const schedules = {}; allSchedules.forEach(classSchedule => { days.forEach(day => { if (classSchedule.scheduleData[day]) { classSchedule.scheduleData[day].forEach(entry => { if (entry.teacher) { const teachers = entry.teacher.split(/\s*\/\s*/); teachers.forEach(t => { const teacherName = normalizeTeacherName(t); if (teacherName) { if (!schedules[teacherName]) { schedules[teacherName] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] }; } schedules[teacherName][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className }); } }); } }); } }); }); return schedules; }
+    function processSchedules() { const schedules = {}; allSchedules.forEach(classSchedule => { days.forEach(day => { if (classSchedule.scheduleData[day]) { classSchedule.scheduleData[day].forEach(entry => { if (entry.teacher) { const teachers = entry.teacher.split(/\s*\/\s*/); teachers.forEach(t => { const teacherName = normalizeTeacherName(t); if (teacherName && teacherDetails[teacherName]) { if (!schedules[teacherName]) { schedules[teacherName] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] }; } schedules[teacherName][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className }); } }); } }); } }); }); return schedules; }
     function findCoveringPeriod(slot, busyPeriods) { if (!busyPeriods) return null; const [slotStart, slotEnd] = slot.split('-'); for (const busyPeriod of busyPeriods) { const [busyStart, busyEnd] = busyPeriod.period.split('-'); if (slotStart >= busyStart && slotEnd <= busyEnd) { return busyPeriod; } } return null; }
 
     // --- MAIN SCRIPT EXECUTION ---
@@ -153,7 +153,8 @@
         const rostersDisplay = document.getElementById('relief-rosters-display');
         
         const teacherSchedules = processSchedules();
-        const allTeachers = Object.keys(teacherSchedules).sort();
+        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object.
+        const allTeachers = Object.keys(teacherDetails).sort();
 
         allTeachers.forEach(teacher => {
             const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
@@ -304,7 +305,7 @@
                     otherAvailable.forEach(t => { optionsHTML += `<option value="${t}">${teacherDetails[t]?.fullName || t}</option>`});
                     optionsHTML += `</optgroup>`;
                 }
-                resultsHTML += `<div class="p-4 border rounded-lg shadow-sm bg-blue-50 border-blue-200"><div class="flex flex-col sm:flex-row justify-between sm:items-center border-b pb-2 mb-3 border-blue-200"><h4 class="font-bold text-lg text-blue-800">${period.period}</h4><p class="text-md text-blue-700 font-semibold">${period.subject} - Class ${period.className}</p></div><p class="text-sm text-gray-600 mb-3">Originally taught by: <span class="font-semibold">${period.originalTeachers.join(', ')}</span></p><div class="flex items-center gap-4"><label class="font-semibold text-sm text-gray-700">Assign to:</label><select class="relief-assignment-select block w-full p-2 border border-gray-300 rounded-md shadow-sm" data-period-details='${periodDetails}'>${optionsHTML}</select></div></div>`;
+                resultsHTML += `<div class="p-4 border rounded-lg shadow-sm bg-blue-50 border-blue-200"><div class="flex flex-col sm:flex-row justify-between sm:items-center border-b pb-2 mb-3 border-blue-200"><h4 class="font-bold text-lg text-blue-800">${period.period}</h4><p class="text-md text-blue-700 font-semibold">${period.subject} - Class ${period.className}</p></div><p class="text-sm text-gray-600 mb-3">Originally taught by: <span class="font-semibold">${period.originalTeachers.map(t => teacherDetails[t]?.fullName || t).join(', ')}</span></p><div class="flex items-center gap-4"><label class="font-semibold text-sm text-gray-700">Assign to:</label><select class="relief-assignment-select block w-full p-2 border border-gray-300 rounded-md shadow-sm" data-period-details='${periodDetails}'>${optionsHTML}</select></div></div>`;
             });
             resultsHTML += `</div>`;
             resultsContainer.innerHTML = resultsHTML;
@@ -327,7 +328,8 @@
         const findBtn = document.getElementById('find-common-slots-btn');
         const resultsContainer = document.getElementById('common-slots-results');
         const teacherSchedules = processSchedules();
-        const allTeachers = Object.keys(teacherSchedules).sort();
+        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object.
+        const allTeachers = Object.keys(teacherDetails).sort();
         const masterTimeSlots = getMasterTimeSlots();
 
         allTeachers.forEach(teacher => {
@@ -420,7 +422,8 @@
         const scheduleDisplay = document.getElementById('teacher-schedule-display');
         const masterTimeSlots = getMasterTimeSlots();
         const teacherSchedules = processSchedules();
-        const sortedTeachers = Object.keys(teacherSchedules).sort();
+        // **FIX:** Build the teacher list ONLY from the clean teacherDetails object.
+        const sortedTeachers = Object.keys(teacherDetails).sort();
 
         sortedTeachers.forEach(teacher => {
             teacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`;
@@ -433,7 +436,7 @@
 
         function renderTeacherSchedule(teacherName, teacherSchedules, masterTimeSlots, currentDayName) {
             const teacherData = teacherSchedules[teacherName];
-            if (!teacherData) return '';
+            if (!teacherData) return '<p class="text-center text-gray-500 mt-4">This teacher has no scheduled classes.</p>';
             let tableHTML = `<table class="min-w-full border-collapse border border-gray-300 mt-4"><thead><tr class="bg-gray-200 text-sm text-gray-700"><th class="border border-gray-300 p-2 w-1/12">HARI</th>${masterTimeSlots.map(slot => `<th class="border border-gray-300 p-1 md:p-2 header-slot text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody>`;
             days.forEach(day => {
                 const highlightClass = day === currentDayName ? 'current-day-highlight' : '';

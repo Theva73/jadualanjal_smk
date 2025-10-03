@@ -1,242 +1,63 @@
-// This file contains details for each teacher, including their full name and subjects.
-// The abbreviation (e.g., "AQILAH") must exactly match the normalized name from the schedule.
 const teacherData = {
-    "AHMAD": {
-        fullName: "RAZIKKI",
-        subjects: ["PJ", "SJ"]
-    },
-    "AQILAH": {
-        fullName: "NURUL",
-        subjects: ["BM", "PNG"]
-    },
-    "ARFAH": {
-        fullName: "NORARFAH",
-        subjects: ["FIZ", "SN"]
-    },
-    "AZHAR": {
-        fullName: "AZHARUDDIN",
-        subjects: ["SJ"]
-    },
-    "AZIZ": {
-        fullName: "AZIZ",
-        subjects: ["TAM"]
-    },
-    "EFAH": {
-        fullName: "EFAH",
-        subjects: ["BM"]
-    },
-    "EIDAYU": {
-        fullName: "EDAIYU",
-        subjects: ["MM"]
-    },
-    "FAEZAH": {
-        fullName: "FAEZAH",
-        subjects: ["MMT", "MM"]
-    },
-    "FARIS": {
-        fullName: "FARIS",
-        subjects: ["KKQ", "PI"]
-    },
-    "FARIZA": {
-        fullName: "NURFARIZA",
-        subjects: []
-    },
-    "FAUZI": {
-        fullName: "Fauzi",
-        subjects: ["PJ"]
-    },
-    "GOWRY": {
-        fullName: "GOWRI",
-        subjects: ["SJ", "IS"]
-    },
-    "GURCHAN": {
-        fullName: "GURCHAN",
-        subjects: ["PA", "PJ"]
-    },
-    "HAJAR": {
-        fullName: "HAJAR",
-        subjects: ["SI", "TAW", "PI"]
-    },
-    "HANIM": {
-        fullName: "HANIM",
-        subjects: ["PNG"]
-    },
-    "HASLINA": {
-        fullName: "HASLINA",
-        subjects: ["AS"]
-    },
-    "HAZIQAH": {
-        fullName: "NURHAZIQAH",
-        subjects: ["BM"]
-    },
-    "IMELDA": {
-        fullName: "Imelda",
-        subjects: ["MM"]
-    },
-    "IQBAL": {
-        fullName: "IQBAL",
-        subjects: ["PS", "PNG"]
-    },
-    "IRDA": {
-        fullName: "IRDA",
-        subjects: ["BI"]
-    },
-    "IZZAH": {
-        fullName: "Izzah",
-        subjects: ["BA"]
-    },
-    "KALAI": {
-        fullName: "KALAIVANI",
-        subjects: ["PJ", "PNG", "SJ"]
-    },
-    "KARTINI": {
-        fullName: "KARTINI",
-        subjects: ["SJ"]
-    },
-    "LAU": {
-        fullName: "LAU SHI",
-        subjects: ["BC", "PJ"]
-    },
-    "LISAH": {
-        fullName: "MASRULISAH",
-        subjects: ["MM"]
-    },
-    "MALINA": {
-        fullName: "MALINA",
-        subjects: ["FIZ", "MM"]
-    },
-    "MASRIZAN": {
-        fullName: "MASRIZAN",
-        subjects: ["GE", "RBT"]
-    },
-    "MASRUL": {
-        fullName: "MASRULHUDA",
-        subjects: ["ASK", "BI"]
-    },
-    "MASJUKI": {
-        fullName: "MASJUKI",
-        subjects: ["KKQ", "BA", "PI"]
-    },
-    "NADIA": {
-        fullName: "NADIA",
-        subjects: ["BA", "PI"]
-    },
-    "NASUHA": {
-        fullName: "NASUHA",
-        subjects: ["BM"]
-    },
-    "NAZA": {
-        fullName: "NAZARIAH",
-        subjects: ["BM"]
-    },
-    "NAZRI": {
-        fullName: "NAZRI",
-        subjects: ["SN"]
-    },
-    "NIK": {
-        fullName: "NORMAHIZAN",
-        subjects: ["PS"]
-    },
-    "NIVETHA": {
-        fullName: "NIVETHA",
-        subjects: ["BI"]
-    },
-    "NOROSNIZA": {
-        fullName: "NOROSNIZA",
-        subjects: ["BIO", "SN"]
-    },
-    "NURA": {
-        fullName: "NURA",
-        subjects: ["BI"]
-    },
-    "NURAIN": {
-        fullName: "NURAIN",
-        subjects: ["PJ", "GE"]
-    },
-    "NURASHIDAH": {
-        fullName: "NURASHIDAH",
-        subjects: ["MMT"]
-    },
-    "QALILAH": {
-        fullName: "QHALILAH",
-        subjects: ["KIM", "SJ", "SN"]
-    },
-    "RAIHAH": {
-        fullName: "RAIHAH",
-        subjects: ["MM"]
-    },
-    "RIDZUAN": {
-        fullName: "RIDZUAN",
-        subjects: ["SJ", "PJ"]
-    },
-    "ROSLINA": {
-        fullName: "ROSLINA",
-        subjects: ["RBT", "SN"]
-    },
-    "ROSIEATI": {
-        fullName: "ROSIEATI",
-        subjects: ["SJ"]
-    },
-    "ROZALI": {
-        fullName: "ROZALI",
-        subjects: ["SN"]
-    },
-    "RUHAZANA": {
-        fullName: "RUHAZANA",
-        subjects: ["TAW", "BM", "PS", "MM"]
-    },
-    "SALMA": {
-        fullName: "SALMA",
-        subjects: ["BM", "SJ"]
-    },
-    "SARASWADI": {
-        fullName: "SARAS",
-        subjects: ["BT", "PS", "PJ"]
-    },
-    "SHAH": {
-        fullName: "Shah",
-        subjects: ["PS"]
-    },
-    "SHARUL": {
-        fullName: "SHARUL",
-        subjects: ["PA", "PJ", "RBT"]
-    },
-    "SUHAILA": {
-        fullName: "SUHAILA",
-        subjects: ["SN", "PNG", "PS"]
-    },
-    "SYAMIMI": {
-        fullName: "SYAMIMI",
-        subjects: ["KIM", "MM"]
-    },
-    "THEVA": {
-        fullName: "THEVA",
-        subjects: ["BI", "MM"]
-    },
-    "TILLAGA": {
-        fullName: "TILLAGA",
-        subjects: ["BI"]
-    },
-    "WAN HAFEZ": {
-        fullName: "HAFIZ",
-        subjects: ["PJ"]
-    },
-    "ZUHDAH": {
-        fullName: "ZUHDAH",
-        subjects: ["PI"]
-    },
-    "ZURAIHA": {
-        fullName: "ZURAIHA",
-        subjects: ["BM", "SJ", "SN"]
-    },
-    "ZURAIDAH": {
-        fullName: "ZURAIDAH",
-        subjects: ["MM", "MMT"]
-    },
-    "ZURINA": {
-        fullName: "ZURINA",
-        subjects: ["BI"]
-    }
+  "ABD AZIZ": { fullName: "EN ABD AZIZ BIN MOHAMED", subjects: ["PH", "T&T", "KOKO"] },
+  "ZURAIHA": { fullName: "ZURAIHA ISMAIL", subjects: ["PH", "BM", "SJ", "KOKO"] },
+  "FAUZI": { fullName: "FAUZI BIN MOHAMAD", subjects: ["PH", "PL", "MM", "MMT", "PJ", "KOKO"] },
+  "WAN HAFEZ": { fullName: "WAN HAFEZ BIN WAN ALI", subjects: ["PH", "PJ", "BI", "KOKO"] },
+  "ZURINA": { fullName: "ZURINA MAHMAD KHALID", subjects: ["PH", "BI", "PIB", "KOKO"] },
+  "GOWRY": { fullName: "GOWRY PARANISAMY", subjects: ["PH", "RP", "SJ", "IS", "KOKO"] },
+  "IMELDA SURIA": { fullName: "IMELDA SURIA AHMAD", subjects: ["PHP", "MM", "PJ", "PL", "KOKO"] },
+  "ROSLINA": { fullName: "ROSLINA SHARIF", subjects: ["PH", "SN", "RBT", "PB", "IM", "KOKO"] },
+  "AHMAD RAZIKKI": { fullName: "AHMAD RAZIKKI ROSLI", subjects: ["PH", "PJ", "SJ", "IM", "PL", "KOKO"] },
+  "AZHARUDIN": { fullName: "AZHARUDIN AB SAMAD", subjects: ["PH", "SJ", "PJ", "BL", "KOKO"] },
+  "EIDAYU": { fullName: "EIDAYU MOHD SHARIF", subjects: ["PH", "MM", "PL", "KOKO"] },
+  "EFAH SUHAILA": { fullName: "EFAH SUHAILA SALAMON", subjects: ["PH", "BM", "KOKO"] },
+  "GURCHAN KAUR": { fullName: "GURCHAN KAUR DHARAM SINGH", subjects: ["PH", "PJ", "PA", "KOKO"] },
+  "HANIM SURIA": { fullName: "HANIM SURIA HUSSIN", subjects: ["PH", "PNG", "KOKO"] },
+  "HASLINA": { fullName: "HASLINA BOHARI", subjects: ["PH", "AS", "PI", "KOKO"] },
+  "IQBAL HAREEZ": { fullName: "IQBAL HAREEZ OSMAN", subjects: ["PH", "PS", "PJ", "BS", "KOKO"] },
+  "IRDA SYUHADA": { fullName: "IRDA SYUHADA ISHAK", subjects: ["PH", "BI", "LE", "KOKO"] },
+  "KALAIVANI": { fullName: "KALAIVANI A/P ANANTHANAR", subjects: ["PH", "PNG", "PM", "PJ", "KOKO"] },
+  "KARTINI": { fullName: "KARTINI YA'AKUB", subjects: ["PH", "SJ", "PM", "PL", "KOKO"] },
+  "LAU SHI YIN": { fullName: "LAU SHI YIN", subjects: ["PH", "IV", "PJ", "BC", "B DIGITAL", "KOKO"] },
+  "MALINA": { fullName: "MALINA RAMLAN", subjects: ["PH", "IV", "MM", "FIZ", "BL", "KOKO"] },
+  "MASJUKI": { fullName: "MASJUKI BIN MISBAH", subjects: ["PH", "KKQ", "BA", "PI", "KOKO"] },
+  "MASRIZAN": { fullName: "MASRIZAN RAHANI", subjects: ["PH", "GE", "RB", "PB", "NILAM", "KOKO"] },
+  "MASRULHUDA": { fullName: "MASRULHUDA MUHAMMAD", subjects: ["PH", "BI", "IB", "ASK", "CT", "OPT", "LE", "KOKO"] },
+  "MASRULISAH": { fullName: "MASRULISAH ISMAIL", subjects: ["PH", "MM", "MMT", "PL", "KOKO"] },
+  "MOHD NAZRI": { fullName: "MOHD NAZRI AZIS", subjects: ["PH", "SN", "KOKO"] },
+  "MOHD RIDZUAN": { fullName: "MOHD RIDZUAN ROMLEE", subjects: ["PH", "SJ", "PJ", "PM", "PL", "KOKO"] },
+  "MOHD ROZALI": { fullName: "MOHD ROZALI ALOI", subjects: ["PH", "SN", "KOKO"] },
+  "NAZARIAH": { fullName: "NAZARIAH MOHAMED", subjects: ["PH", "BM", "KOKO"] },
+  "NIK NORMAHIZAN": { fullName: "NIK NORMAHIZAN YUSUF", subjects: ["PH", "PS", "KOKO"] },
+  "NIVETHA": { fullName: "NIVETHA A/P BALAKRISHNAN", subjects: ["PH", "BI", "E", "KOKO"] },
+  "NORARFAH": { fullName: "NORARFAH HASIM", subjects: ["PH", "SN", "FIZ", "KOKO"] },
+  "NOROSNIZA": { fullName: "NOROSNIZA OSMAN", subjects: ["PH", "SN", "BIO", "TV", "KOKO"] },
+  "NUR SYAMIMI": { fullName: "NUR SYAMIMI MOHD SHAFIE", subjects: ["PH", "MM", "IM", "KI", "KIM", "KOKO"] },
+  "NURA": { fullName: "NURA IDRIS", subjects: ["PH", "BI", "LE", "KOKO"] },
+  "NURASHIDAH": { fullName: "NURASHIDAH BINTI IBRAHIM", subjects: ["PH", "PD", "MM", "TV", "MMT", "SPIDA", "KOKO"] },
+  "NURHAZIQAH": { fullName: "NURHAZIQAH HANIM", subjects: ["PH", "BM", "KOKO"] },
+  "NURUL AQILAH": { fullName: "NURUL AQILAH HUMAIRA BOHARI", subjects: ["PH", "BM", "KOKO"] },
+  "RAIHAH": { fullName: "RAIHAH ROSLI", subjects: ["PH", "MM", "PL", "KOKO"] },
+  "ROSIEATI": { fullName: "ROSIEATI ROSLAN", subjects: ["PH", "SJ", "IS", "PB", "PL", "RBT", "KOKO"] },
+  "RUHAZANA": { fullName: "RUHAZANA CHE MUSA", subjects: ["P", "BM", "TAW", "RA", "KOKO"] },
+  "SARASWADI": { fullName: "SARASWADI A/P RAMAN", subjects: ["PH", "PS", "PJ", "BT", "PM", "KOKO"] },
+  "SHAH RIDHA": { fullName: "SHAH RIDHA ABD JALIL", subjects: ["PH", "SS", "PP", "PS", "KOKO"] },
+  "SHARUL ANUAR": { fullName: "SHARUL ANUAR MD ARIF", subjects: ["PH", "PA", "PJ", "PB", "RBT", "KOKO"] },
+  "SITI HAJAR": { fullName: "SITI HAJAR FIANA MOHAMAD ZAIN", subjects: ["PH", "B", "PI", "SI", "TAW", "K", "KOKO"] },
+  "SITI NADIA": { fullName: "SITI NADIA BINTI JUNAIDI", subjects: ["PH", "PI", "BA", "KOKO"] },
+  "SITI NASUHA": { fullName: "SITI NASUHA MUHAMMAD", subjects: ["PH", "BM", "HA", "KOKO"] },
+  "SITI NUR SALMA": { fullName: "SITI NUR SALMA BINTI RIZUAN", subjects: ["PH", "BM", "SJ", "SADM", "KOKO"] },
+  "SITI NURAIN": { fullName: "SITI NURAIN ASMAN", subjects: ["PH", "PJ", "GE", "KOKO"] },
+  "SITI QALILAH": { fullName: "SITI QALILAH RADIN", subjects: ["PH", "KIM", "SN", "N", "R", "KOKO"] },
+  "SITI ZURAIDAH": { fullName: "SITI ZURAIDAH MOHD KADIS", subjects: ["PH", "IM", "MMT", "MM", "PL", "KOKO"] },
+  "SUHAILA": { fullName: "SUHAILA ISMAIL", subjects: ["PH", "LA", "SN", "KOKO"] },
+  "THEVANDRAN": { fullName: "THEVANDRAN A/L BATHUMALAI", subjects: ["PH", "BI", "KOKO"] },
+  "TILLAGA": { fullName: "TILLAGA SITIRAY", subjects: ["PHD", "BI", "D", "AE", "KOKO"] },
+  "ZUHDAH": { fullName: "ZUHDAH SAYED", subjects: ["PH", "PI", "UBI", "KOKO"] },
+  "NURUL NABIHAH": { fullName: "NURUL NABIHAH BINTI RAHMAN", subjects: ["PH", "KOKO"] },
+  "NUR FAEZAH": { fullName: "NUR FAEZAH MOHD NORI", subjects: ["PHIM", "MM", "MMT", "PL", "KOKO"] },
+  "MUHAMMAD FARIS": { fullName: "MUHAMMAD FARIS BIN MAZLAN", subjects: ["PH", "KKQ", "PI", "AZ", "KOKO"] },
+  "WAN NURUL IZZAH": { fullName: "WAN NURUL IZZAH BT WAN MUHAMMAD 'EZANI", subjects: ["PH", "BA", "KOKO"] },
+  "ASIAH": { fullName: "ASIAH BT ALI", subjects: ["PH", "KOKO"] }
 };
-
 

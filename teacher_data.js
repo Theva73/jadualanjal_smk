@@ -17,6 +17,10 @@ const teacherData = {
         fullName: "AZHARUDDIN",
         subjects: ["SJ"]
     },
+    "AZIZ": {
+        fullName: "AZIZ",
+        subjects: ["TAM"]
+    },
     "EFAH": {
         fullName: "EFAH",
         subjects: ["BM"]
@@ -32,6 +36,10 @@ const teacherData = {
     "FARIS": {
         fullName: "FARIS",
         subjects: ["KKQ", "PI"]
+    },
+    "FARIZA": {
+        fullName: "NURFARIZA",
+        subjects: []
     },
     "FAUZI": {
         fullName: "Fauzi",
@@ -103,7 +111,7 @@ const teacherData = {
     },
     "MASRUL": {
         fullName: "MASRULHUDA",
-        subjects: ["ASK", "M.KOM 2 BI"]
+        subjects: ["ASK", "M.KOM", "BI"]
     },
     "MASJUKI": {
         fullName: "MASJUKI",
@@ -123,7 +131,7 @@ const teacherData = {
     },
     "NAZRI": {
         fullName: "NAZRI",
-        subjects: ["SN M3"]
+        subjects: ["SN"]
     },
     "NIK": {
         fullName: "NORMAHIZAN",
@@ -163,7 +171,7 @@ const teacherData = {
     },
     "ROSLINA": {
         fullName: "ROSLINA",
-        subjects: ["RBT", "SN M1"]
+        subjects: ["RBT", "SN"]
     },
     "ROSIEATI": {
         fullName: "ROSIEATI",
@@ -171,7 +179,7 @@ const teacherData = {
     },
     "ROZALI": {
         fullName: "ROZALI",
-        subjects: ["SN M1", "SN"]
+        subjects: ["SN"]
     },
     "RUHAZANA": {
         fullName: "RUHAZANA",
@@ -195,7 +203,7 @@ const teacherData = {
     },
     "SUHAILA": {
         fullName: "SUHAILA",
-        subjects: ["SN M2", "PNG M2 SN", "PS M2 SN", "SN"]
+        subjects: ["SN", "PNG", "PS"]
     },
     "SYAMIMI": {
         fullName: "SYAMIMI",
@@ -213,17 +221,13 @@ const teacherData = {
         fullName: "HAFIZ",
         subjects: ["PJ"]
     },
-    "FARIZA": {
-        fullName: "NURFARIZA",
-        subjects: []
-    },
     "ZUHDAH": {
         fullName: "ZUHDAH",
         subjects: ["PI"]
     },
     "ZURAIHA": {
         fullName: "ZURAIHA",
-        subjects: ["BM", "SJ", "SN M3"]
+        subjects: ["BM", "SJ", "SN"]
     },
     "ZURAIDAH": {
         fullName: "ZURAIDAH",
@@ -234,3 +238,5 @@ const teacherData = {
         subjects: ["BI"]
     }
 };
+
+

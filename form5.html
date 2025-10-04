@@ -584,12 +584,12 @@
         }
 
         function renderPrintableReport(reportData, day) {
-             let reportHTML = `<div id="printable-area"><h2 class="text-xl font-bold text-center mb-1">SENARAI GURU GANTI</h2><h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3><table class="w-full text-left text-sm border-collapse border border-gray-400"><thead class="bg-gray-200"><tr class="font-semibold text-gray-700"><th class="p-2 border border-gray-300">NAMA GURU TIDAK HADIR</th><th class="p-2 border border-gray-300">SEBAB</th><th class="p-2 border border-gray-300">SUBJEK</th><th class="p-2 border border-gray-300">MASA</th><th class="p-2 border border-gray-300">KELAS</th><th class="p-2 border border-gray-300">TINGKATAN</th><th class="p-2 border border-gray-300">NAMA GURU GANTI</th></tr></thead><tbody>`;
+             let reportHTML = `<div id="printable-area" class="bg-gray-50 border border-gray-200 rounded-lg p-4"><h2 class="text-xl font-bold text-center mb-1 pt-4">SENARAI GURU GANTI</h2><h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-b border-gray-300"><tr class="font-semibold text-gray-600"><th class="p-2">NAMA GURU TIDAK HADIR</th><th class="p-2">SEBAB</th><th class="p-2">SUBJEK</th><th class="p-2">MASA</th><th class="p-2">KELAS</th><th class="p-2">TINGKATAN</th><th class="p-2">NAMA GURU GANTI</th></tr></thead><tbody>`;
             reportData.sort((a, b) => a.time.localeCompare(b.time));
             reportData.forEach(item => {
-                reportHTML += `<tr class="border-t"><td class="p-2 border border-gray-300">${item.absentName}</td><td class="p-2 border border-gray-300">${item.reason}</td><td class="p-2 border border-gray-300">${item.subject}</td><td class="p-2 border border-gray-300">${item.time}</td><td class="p-2 border border-gray-300">${item.class}</td><td class="p-2 border border-gray-300">${item.form}</td><td class="p-2 border border-gray-300">${item.substituteName}</td></tr>`;
+                reportHTML += `<tr class="border-b border-gray-200 last:border-b-0"><td class="p-2">${item.absentName}</td><td class="p-2">${item.reason}</td><td class="p-2">${item.subject}</td><td class="p-2">${item.time}</td><td class="p-2">${item.class}</td><td class="p-2">${item.form}</td><td class="p-2">${item.substituteName}</td></tr>`;
             });
-            reportHTML += `</tbody></table></div><div class="text-center mt-6 no-print"><button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button></div>`;
+            reportHTML += `</tbody></table></div></div><div class="text-center mt-6 no-print"><button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button></div>`;
             rostersDisplay.innerHTML = reportHTML;
         }
 
@@ -814,4 +814,5 @@
 
 </body>
 </html>
+
 

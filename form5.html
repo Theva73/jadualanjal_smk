@@ -550,7 +550,21 @@
                 return;
             }
             let resultsHTML = `<div class="space-y-4">`;
-            const sortedSlots = Array.from(slotsToCover.values()).sort((a, b) => a.period.localeCompare(b.period));
+            
+            const timeToSortable = (timeStr) => {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                if (hours < 7) { // Treat hours 1-6 as PM
+                    return (hours + 12) * 100 + minutes;
+                }
+                return hours * 100 + minutes;
+            };
+
+            const sortedSlots = Array.from(slotsToCover.values()).sort((a, b) => {
+                const startTimeA = a.period.split('-')[0];
+                const startTimeB = b.period.split('-')[0];
+                return timeToSortable(startTimeA) - timeToSortable(startTimeB);
+            });
+
             sortedSlots.forEach(period => {
                 const availableReplacements = replacementPool.filter(reliefTeacher => !absentTeachers.includes(reliefTeacher) && !findCoveringPeriod(period.period, teacherSchedules[reliefTeacher]?.[selectedDay]));
                 const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, form: period.form, originalTeacher: period.originalTeachers[0] });

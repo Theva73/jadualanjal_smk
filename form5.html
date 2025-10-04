@@ -385,9 +385,16 @@
                 const reliefTeacherDetails = teacherDetails[reliefTeacherKey];
                 let hasMatch = false;
                 if (reliefTeacherDetails && reliefTeacherDetails.subjects) {
-                    hasMatch = reliefTeacherDetails.subjects.some(subject => {
-                        const baseSubject = (subject || '').split(' ')[0].toUpperCase();
-                        return baseSubject && absentSubjects.has(baseSubject);
+                    hasMatch = reliefTeacherDetails.subjects.some(reliefSub => {
+                        const reliefBaseSub = (reliefSub || '').split(' ')[0].toUpperCase();
+                        if (!reliefBaseSub) return false;
+                        
+                        for (const absentBaseSub of absentSubjects) {
+                            if (absentBaseSub.includes(reliefBaseSub) || reliefBaseSub.includes(absentBaseSub)) {
+                                return true; // Match found!
+                            }
+                        }
+                        return false;
                     });
                 }
                 (hasMatch ? subjectMatches : others).push(label);
@@ -514,7 +521,16 @@
             sortedSlots.forEach(period => {
                 const availableReplacements = replacementPool.filter(reliefTeacher => !absentTeachers.includes(reliefTeacher) && !findCoveringPeriod(period.period, teacherSchedules[reliefTeacher]?.[selectedDay]));
                 const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, form: period.form, originalTeacher: period.originalTeachers[0] });
-                const subjectMatches = availableReplacements.filter(t => (teacherDetails[t]?.subjects || []).some(s => period.subject.includes(s.split(' ')[0])));
+                
+                const periodSubjectUpper = period.subject.toUpperCase();
+                const subjectMatches = availableReplacements.filter(t => {
+                    return (teacherDetails[t]?.subjects || []).some(s => {
+                        const reliefBaseSub = (s || '').split(' ')[0].toUpperCase();
+                        if (!reliefBaseSub) return false;
+                        return periodSubjectUpper.includes(reliefBaseSub) || reliefBaseSub.includes(periodSubjectUpper);
+                    });
+                });
+
                 const otherAvailable = availableReplacements.filter(t => !subjectMatches.includes(t));
                 let optionsHTML = `<option value="">-- Assign a teacher --</option>`;
                 if (subjectMatches.length > 0) {

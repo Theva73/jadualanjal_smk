@@ -355,57 +355,90 @@
         
         function updateReplacementListPriority() {
             const absentTeachers = Array.from(absentTeachersList.querySelectorAll('[data-teacher]')).map(el => el.dataset.teacher);
-            const absentSubjects = new Set();
-            absentTeachers.forEach(teacherKey => {
-                const details = teacherDetails[teacherKey];
-                if (details && details.subjects) {
-                    details.subjects.forEach(subject => {
-                        const baseSubject = (subject || '').split(' ')[0].toUpperCase();
-                        if (baseSubject) absentSubjects.add(baseSubject);
-                    });
-                }
-            });
-
             const allReliefLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
 
-            if (absentSubjects.size === 0) {
-                allReliefLabels.sort((a, b) => {
-                    const nameA = a.querySelector('.teacher-full-name').textContent;
-                    const nameB = b.querySelector('.teacher-full-name').textContent;
-                    return nameA.localeCompare(nameB);
-                });
+            // If no absent teachers, sort alphabetically and return.
+            if (absentTeachers.length === 0) {
+                allReliefLabels.sort((a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent));
                 allReliefLabels.forEach(label => replacementTeacherContainer.appendChild(label));
                 return;
             }
 
-            const subjectMatches = [];
-            const others = [];
+            const mainSubjects = new Set();
+            const otherSubjects = new Set();
+
+            absentTeachers.forEach(teacherKey => {
+                const details = teacherDetails[teacherKey];
+                if (details && details.subjects && details.subjects.length > 0) {
+                    // Assume the first subject in the array is the main/core subject.
+                    const mainSub = (details.subjects[0] || '').split(' ')[0].toUpperCase();
+                    // Exclude common non-academic subjects like KOKO from being a "main" subject for matching.
+                    if (mainSub && mainSub !== 'KOKO') { 
+                       mainSubjects.add(mainSub);
+                    }
+
+                    // The rest are other subjects.
+                    for (let i = 1; i < details.subjects.length; i++) {
+                        const otherSub = (details.subjects[i] || '').split(' ')[0].toUpperCase();
+                        if (otherSub && otherSub !== 'KOKO') {
+                            otherSubjects.add(otherSub);
+                        }
+                    }
+                }
+            });
+            
+            const mainMatches = [];
+            const otherMatches = [];
+            const noMatches = [];
+
             allReliefLabels.forEach(label => {
                 const reliefTeacherKey = label.querySelector('input').value;
                 const reliefTeacherDetails = teacherDetails[reliefTeacherKey];
-                let hasMatch = false;
+                let hasMainMatch = false;
+                let hasOtherMatch = false;
+
                 if (reliefTeacherDetails && reliefTeacherDetails.subjects) {
-                    hasMatch = reliefTeacherDetails.subjects.some(reliefSub => {
+                    // Check for main subject match
+                    hasMainMatch = reliefTeacherDetails.subjects.some(reliefSub => {
                         const reliefBaseSub = (reliefSub || '').split(' ')[0].toUpperCase();
                         if (!reliefBaseSub) return false;
-                        
-                        for (const absentBaseSub of absentSubjects) {
-                            if (absentBaseSub.includes(reliefBaseSub) || reliefBaseSub.includes(absentBaseSub)) {
-                                return true; // Match found!
-                            }
+                        for (const mainSub of mainSubjects) {
+                            if (mainSub.includes(reliefBaseSub) || reliefBaseSub.includes(mainSub)) return true;
                         }
                         return false;
                     });
+
+                    // If no main match, check for other subject match
+                    if (!hasMainMatch) {
+                        hasOtherMatch = reliefTeacherDetails.subjects.some(reliefSub => {
+                            const reliefBaseSub = (reliefSub || '').split(' ')[0].toUpperCase();
+                            if (!reliefBaseSub) return false;
+                            for (const otherSub of otherSubjects) {
+                                if (otherSub.includes(reliefBaseSub) || reliefBaseSub.includes(otherSub)) return true;
+                            }
+                            return false;
+                        });
+                    }
                 }
-                (hasMatch ? subjectMatches : others).push(label);
+                
+                if (hasMainMatch) {
+                    mainMatches.push(label);
+                } else if (hasOtherMatch) {
+                    otherMatches.push(label);
+                } else {
+                    noMatches.push(label);
+                }
             });
 
             const sortLabels = (a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent);
-            subjectMatches.sort(sortLabels);
-            others.sort(sortLabels);
+            mainMatches.sort(sortLabels);
+            otherMatches.sort(sortLabels);
+            noMatches.sort(sortLabels);
             
-            [...subjectMatches, ...others].forEach(label => replacementTeacherContainer.appendChild(label));
+            // Re-append in prioritized order
+            [...mainMatches, ...otherMatches, ...noMatches].forEach(label => replacementTeacherContainer.appendChild(label));
         }
+
 
         addAbsentBtn.addEventListener('click', () => {
             const selectedTeacher = absentTeacherSelect.value;

@@ -115,10 +115,51 @@
     }
     function normalizeTeacherName(name) { if (!name) return ''; return name.replace(/(PN\.?|CIK|EN\.?|UST\.?|MISS|MR\.?|USTZH\.?|TAM)/gi, '').trim().toUpperCase(); }
     
+    // --- UNIFIED SUBJECT COLOR MAPPING ---
     const subjectColorMap = {};
-    const colorPalette = [ { bg: 'bg-blue-100', text: 'text-blue-800' }, { bg: 'bg-green-100', text: 'text-green-800' }, { bg: 'bg-yellow-100', text: 'text-yellow-800' }, { bg: 'bg-purple-100', text: 'text-purple-800' }, { bg: 'bg-pink-100', text: 'text-pink-800' }, { bg: 'bg-indigo-100', text: 'text-indigo-800' }, { bg: 'bg-red-100', text: 'text-red-800' }, { bg: 'bg-gray-200', text: 'text-gray-800' } ];
-    let colorIndex = 0;
-    function getSubjectColor(subject) { const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0]; if (!subjectColorMap[normalizedSubject]) { subjectColorMap[normalizedSubject] = colorPalette[colorIndex % colorPalette.length]; colorIndex++; } return subjectColorMap[normalizedSubject]; }
+    const colorPalette = [
+        { bg: 'bg-blue-100', text: 'text-blue-800' }, 
+        { bg: 'bg-green-100', text: 'text-green-800' }, 
+        { bg: 'bg-yellow-100', text: 'text-yellow-800' }, 
+        { bg: 'bg-purple-100', text: 'text-purple-800' }, 
+        { bg: 'bg-pink-100', text: 'text-pink-800' }, 
+        { bg: 'bg-indigo-100', text: 'text-indigo-800' }, 
+        { bg: 'bg-red-100', text: 'text-red-800' }, 
+        { bg: 'bg-teal-100', text: 'text-teal-800' },
+        { bg: 'bg-orange-100', text: 'text-orange-800' },
+        { bg: 'bg-cyan-100', text: 'text-cyan-800' },
+        { bg: 'bg-lime-100', text: 'text-lime-800' },
+        { bg: 'bg-gray-200', text: 'text-gray-800' }
+    ];
+
+    function initializeSubjectColors() {
+        const allSubjects = new Set();
+        // Collect all unique subjects from the teacher data
+        Object.values(teacherDetails).forEach(teacher => {
+            if (teacher.subjects && Array.isArray(teacher.subjects)) {
+                teacher.subjects.forEach(subject => {
+                    // Normalize by taking the first word and making it uppercase (e.g., "Sejarah" -> "SEJARAH")
+                    const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0];
+                    allSubjects.add(normalizedSubject);
+                });
+            }
+        });
+
+        // Sort subjects alphabetically to ensure consistent color assignment every time
+        const sortedSubjects = Array.from(allSubjects).sort();
+        
+        // Assign a unique color from the palette to each sorted subject
+        sortedSubjects.forEach((subject, index) => {
+            subjectColorMap[subject] = colorPalette[index % colorPalette.length];
+        });
+    }
+
+    function getSubjectColor(subject) {
+        // Normalize the incoming subject name the same way
+        const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0];
+        // Return the globally mapped color or a default gray if the subject is not found
+        return subjectColorMap[normalizedSubject] || { bg: 'bg-gray-200', text: 'text-gray-800' };
+    }
     
     function getTeacherForms() {
         const teacherForms = {};
@@ -232,6 +273,8 @@
             document.body.innerHTML = `<div class="p-8 text-center text-red-600"><strong>Error:</strong> Schedule data could not be loaded. Please ensure data files are present.</div>`;
             return;
         }
+
+        initializeSubjectColors(); // Initialize the global color map
 
         setupViewToggler();
         setupAllViews(currentDayName);
@@ -722,4 +765,5 @@
 
 </body>
 </html>
+
 

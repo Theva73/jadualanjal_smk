@@ -223,10 +223,7 @@ const teacherData = {
         fullName: "NURFARIZA",
         subjects: []
     },
-    "AZIZ": {
-        fullName: "AZIZ",
-        subjects: [ "PH", "KOKO", "TAW"]
-    },
+    
     "ZUHDAH": {
         fullName: "ZUHDAH",
         subjects: ["PH", "PI", "UBI", "KOKO"]

@@ -1,5 +1,6 @@
 // This file contains details for each teacher, including their full name and subjects.
 // The abbreviation (e.g., "AQILAH") must exactly match the normalized name from the schedule.
+// "PH" has been removed, and "PJ" has been moved to the end of the subjects list where applicable.
 const teacherData = {
     "ABD AZIZ": {
         fullName: "ABD AZIZ",
@@ -7,7 +8,7 @@ const teacherData = {
     },
     "AHMAD": {
         fullName: "RAZIKKI",
-        subjects: ["PJ", "SJ", "IM", "KOKO"]
+        subjects: ["SJ", "IM", "KOKO", "PJ"]
     },
     "AQILAH": {
         fullName: "NURUL",
@@ -19,7 +20,7 @@ const teacherData = {
     },
     "AZHAR": {
         fullName: "AZHARUDDIN",
-        subjects: ["SJ", "PJ", "KOKO"]
+        subjects: ["SJ", "KOKO", "PJ"]
     },
     "EFAH": {
         fullName: "EFAH",
@@ -39,7 +40,7 @@ const teacherData = {
     },
     "FAUZI": {
         fullName: "Fauzi",
-        subjects: ["MM", "MMT", "PJ", "KOKO"]
+        subjects: ["MM", "MMT", "KOKO", "PJ"]
     },
     "GOWRY": {
         fullName: "GOWRI",
@@ -47,7 +48,7 @@ const teacherData = {
     },
     "GURCHAN": {
         fullName: "GURCHAN",
-        subjects: ["PJ", "PA", "KOKO"]
+        subjects: ["PA", "KOKO", "PJ"]
     },
     "HAJAR": {
         fullName: "HAJAR",
@@ -67,11 +68,11 @@ const teacherData = {
     },
     "IMELDA": {
         fullName: "Imelda",
-        subjects: ["MM", "PJ", "KOKO"]
+        subjects: ["MM", "KOKO", "PJ"]
     },
     "IQBAL": {
         fullName: "IQBAL",
-        subjects: ["PS", "PJ", "BS", "KOKO"]
+        subjects: ["PS", "BS", "KOKO", "PJ"]
     },
     "IRDA": {
         fullName: "IRDA",
@@ -83,7 +84,7 @@ const teacherData = {
     },
     "KALAI": {
         fullName: "KALAIVANI",
-        subjects: ["PNG", "PM", "PJ", "KOKO"]
+        subjects: ["PNG", "PM", "KOKO", "PJ"]
     },
     "KARTINI": {
         fullName: "KARTINI",
@@ -91,7 +92,7 @@ const teacherData = {
     },
     "LAU": {
         fullName: "LAU SHI",
-        subjects: ["IV", "PJ", "BC", "B DIGITAL", "KOKO"]
+        subjects: ["IV", "BC", "B DIGITAL", "KOKO", "PJ"]
     },
     "LISAH": {
         fullName: "MASRULISAH",
@@ -147,7 +148,7 @@ const teacherData = {
     },
     "NURAIN": {
         fullName: "NURAIN",
-        subjects: ["PJ", "GE", "KOKO"]
+        subjects: ["GE", "KOKO", "PJ"]
     },
     "NURASHIDAH": {
         fullName: "NURASHIDAH",
@@ -163,7 +164,7 @@ const teacherData = {
     },
     "RIDZUAN": {
         fullName: "RIDZUAN",
-        subjects: ["SJ", "PJ", "PM", "KOKO"]
+        subjects: ["SJ", "PM", "KOKO", "PJ"]
     },
     "ROSLINA": {
         fullName: "ROSLINA",
@@ -187,7 +188,7 @@ const teacherData = {
     },
     "SARASWADI": {
         fullName: "SARAS",
-        subjects: ["PS", "PJ", "BT", "PM", "KOKO"]
+        subjects: ["PS", "BT", "PM", "KOKO", "PJ"]
     },
     "SHAH": {
         fullName: "Shah",
@@ -195,7 +196,7 @@ const teacherData = {
     },
     "SHARUL": {
         fullName: "SHARUL",
-        subjects: ["PA", "PJ", "RBT", "KOKO"]
+        subjects: ["PA", "RBT", "KOKO", "PJ"]
     },
     "SUHAILA": {
         fullName: "SUHAILA",
@@ -215,7 +216,7 @@ const teacherData = {
     },
     "WAN HAFEZ": {
         fullName: "HAFIZ",
-        subjects: ["PJ", "BI", "KOKO"]
+        subjects: ["BI", "KOKO", "PJ"]
     },
     "FARIZA": {
         fullName: "NURFARIZA",

@@ -1,223 +1,221 @@
-
-
 // This file contains details for each teacher, including their full name and subjects.
 // The abbreviation (e.g., "AQILAH") must exactly match the normalized name from the schedule.
 const teacherData = {
     "ABD AZIZ": {
         fullName: "ABD AZIZ",
-        subjects: ["PH", "TAW", "KOKO"]
+        subjects: ["TAW", "KOKO"]
     },
     "AHMAD": {
         fullName: "RAZIKKI",
-        subjects: ["PH", "PJ", "SJ", "IM", "KOKO"]
+        subjects: ["PJ", "SJ", "IM", "KOKO"]
     },
     "AQILAH": {
         fullName: "NURUL",
-        subjects: ["PH", "BM", "KOKO"]
+        subjects: ["BM", "KOKO"]
     },
     "ARFAH": {
         fullName: "NORARFAH",
-        subjects: ["PH", "SN", "FIZ", "KOKO"]
+        subjects: ["SN", "FIZ", "KOKO"]
     },
     "AZHAR": {
         fullName: "AZHARUDDIN",
-        subjects: ["PH", "SJ", "PJ", "KOKO"]
+        subjects: ["SJ", "PJ", "KOKO"]
     },
     "EFAH": {
         fullName: "EFAH",
-        subjects: ["PH", "BM", "KOKO"]
+        subjects: ["BM", "KOKO"]
     },
     "EIDAYU": {
         fullName: "EDAIYU",
-        subjects: ["PH", "MM", "KOKO"]
+        subjects: ["MM", "KOKO"]
     },
     "FAEZAH": {
         fullName: "FAEZAH",
-        subjects: ["PH", "MM", "MMT", "KOKO"]
+        subjects: ["MM", "MMT", "KOKO"]
     },
     "FARIS": {
         fullName: "FARIS",
-        subjects: ["PH", "KKQ", "PI", "KOKO"]
+        subjects: ["KKQ", "PI", "KOKO"]
     },
     "FAUZI": {
         fullName: "Fauzi",
-        subjects: ["PH", "MM", "MMT", "PJ", "KOKO"]
+        subjects: ["MM", "MMT", "PJ", "KOKO"]
     },
     "GOWRY": {
         fullName: "GOWRI",
-        subjects: ["PH", "SJ", "IS", "IV", "KOKO"]
+        subjects: ["SJ", "IS", "IV", "KOKO"]
     },
     "GURCHAN": {
         fullName: "GURCHAN",
-        subjects: ["PH", "PJ", "PA", "KOKO"]
+        subjects: ["PJ", "PA", "KOKO"]
     },
     "HAJAR": {
         fullName: "HAJAR",
-        subjects: ["PH", "PI", "SI", "TAW", "TV", "KOKO"]
+        subjects: ["PI", "SI", "TAW", "TV", "KOKO"]
     },
     "HANIM": {
         fullName: "HANIM",
-        subjects: ["PH", "PNG", "KOKO"]
+        subjects: ["PNG", "KOKO"]
     },
     "HASLINA": {
         fullName: "HASLINA",
-        subjects: ["PH", "AS", "PI", "KOKO"]
+        subjects: ["AS", "PI", "KOKO"]
     },
     "HAZIQAH": {
         fullName: "NURHAZIQAH",
-        subjects: ["PH", "BM", "KOKO"]
+        subjects: ["BM", "KOKO"]
     },
     "IMELDA": {
         fullName: "Imelda",
-        subjects: ["PH", "MM", "PJ", "KOKO"]
+        subjects: ["MM", "PJ", "KOKO"]
     },
     "IQBAL": {
         fullName: "IQBAL",
-        subjects: ["PH", "PS", "PJ", "BS", "KOKO"]
+        subjects: ["PS", "PJ", "BS", "KOKO"]
     },
     "IRDA": {
         fullName: "IRDA",
-        subjects: ["PH", "BI", "KOKO"]
+        subjects: ["BI", "KOKO"]
     },
     "IZZAH": {
         fullName: "Izzah",
-        subjects: ["PH", "BA", "KOKO"]
+        subjects: ["BA", "KOKO"]
     },
     "KALAI": {
         fullName: "KALAIVANI",
-        subjects: ["PH", "PNG", "PM", "PJ", "KOKO"]
+        subjects: ["PNG", "PM", "PJ", "KOKO"]
     },
     "KARTINI": {
         fullName: "KARTINI",
-        subjects: ["PH", "SJ", "PM", "KOKO"]
+        subjects: ["SJ", "PM", "KOKO"]
     },
     "LAU": {
         fullName: "LAU SHI",
-        subjects: ["PH", "IV", "PJ", "BC", "B DIGITAL", "KOKO"]
+        subjects: ["IV", "PJ", "BC", "B DIGITAL", "KOKO"]
     },
     "LISAH": {
         fullName: "MASRULISAH",
-        subjects: ["PH", "MM", "MMT", "KOKO"]
+        subjects: ["MM", "MMT", "KOKO"]
     },
     "MALINA": {
         fullName: "MALINA",
-        subjects: ["PH", "IV", "MM", "FIZ", "KOKO"]
+        subjects: ["IV", "MM", "FIZ", "KOKO"]
     },
     "MASRIZAN": {
         fullName: "MASRIZAN",
-        subjects: ["PH", "GE", "RBT", "NILAM", "KOKO"]
+        subjects: ["GE", "RBT", "NILAM", "KOKO"]
     },
     "MASRUL": {
         fullName: "MASRULHUDA",
-        subjects: ["PH", "BI", "ASK", "CT", "KOKO"]
+        subjects: ["BI", "ASK", "CT", "KOKO"]
     },
     "MASJUKI": {
         fullName: "MASJUKI",
-        subjects: ["PH", "KKQ", "BA", "PI", "KOKO"]
+        subjects: ["KKQ", "BA", "PI", "KOKO"]
     },
     "NADIA": {
         fullName: "NADIA",
-        subjects: ["PH", "PI", "BA", "KOKO"]
+        subjects: ["PI", "BA", "KOKO"]
     },
     "NASUHA": {
         fullName: "NASUHA",
-        subjects: ["PH", "BM", "KOKO"]
+        subjects: ["BM", "KOKO"]
     },
     "NAZA": {
         fullName: "NAZARIAH",
-        subjects: ["PH", "BM", "KOKO"]
+        subjects: ["BM", "KOKO"]
     },
     "NAZRI": {
         fullName: "NAZRI",
-        subjects: ["PH", "SN", "KOKO"]
+        subjects: ["SN", "KOKO"]
     },
     "NIK": {
         fullName: "NORMAHIZAN",
-        subjects: ["PH", "PS", "KOKO"]
+        subjects: ["PS", "KOKO"]
     },
     "NIVETHA": {
         fullName: "NIVETHA",
-        subjects: ["PH", "BI", "KOKO"]
+        subjects: ["BI", "KOKO"]
     },
     "NOROSNIZA": {
         fullName: "NOROSNIZA",
-        subjects: ["PH", "SN", "BIO", "TV", "KOKO"]
+        subjects: ["SN", "BIO", "TV", "KOKO"]
     },
     "NURA": {
         fullName: "NURA",
-        subjects: ["PH", "BI", "KOKO"]
+        subjects: ["BI", "KOKO"]
     },
     "NURAIN": {
         fullName: "NURAIN",
-        subjects: ["PH", "PJ", "GE", "KOKO"]
+        subjects: ["PJ", "GE", "KOKO"]
     },
     "NURASHIDAH": {
         fullName: "NURASHIDAH",
-        subjects: ["PH", "PD", "MM", "MMT", "TV", "KOKO"]
+        subjects: ["PD", "MM", "MMT", "TV", "KOKO"]
     },
     "QALILAH": {
         fullName: "QHALILAH",
-        subjects: ["PH", "KIM", "SN", "KOKO"]
+        subjects: ["KIM", "SN", "KOKO"]
     },
     "RAIHAH": {
         fullName: "RAIHAH",
-        subjects: ["PH", "MM", "KOKO"]
+        subjects: ["MM", "KOKO"]
     },
     "RIDZUAN": {
         fullName: "RIDZUAN",
-        subjects: ["PH", "SJ", "PJ", "PM", "KOKO"]
+        subjects: ["SJ", "PJ", "PM", "KOKO"]
     },
     "ROSLINA": {
         fullName: "ROSLINA",
-        subjects: ["PH", "SN", "RBT", "IM", "KOKO"]
+        subjects: ["SN", "RBT", "IM", "KOKO"]
     },
     "ROSIEATI": {
         fullName: "ROSIEATI",
-        subjects: ["PH", "SJ", "IS", "RBT", "KOKO"]
+        subjects: ["SJ", "IS", "RBT", "KOKO"]
     },
     "ROZALI": {
         fullName: "ROZALI",
-        subjects: ["PH", "SN", "KOKO"]
+        subjects: ["SN", "KOKO"]
     },
     "RUHAZANA": {
         fullName: "RUHAZANA",
-        subjects: ["PH", "BM", "TAW", "KOKO"]
+        subjects: ["BM", "TAW", "KOKO"]
     },
     "SALMA": {
         fullName: "SALMA",
-        subjects: ["PH", "BM", "SJ", "KOKO"]
+        subjects: ["BM", "SJ", "KOKO"]
     },
     "SARASWADI": {
         fullName: "SARAS",
-        subjects: ["PH", "PS", "PJ", "BT", "PM", "KOKO"]
+        subjects: ["PS", "PJ", "BT", "PM", "KOKO"]
     },
     "SHAH": {
         fullName: "Shah",
-        subjects: ["PH", "SS", "PP", "PS", "KOKO"]
+        subjects: ["SS", "PP", "PS", "KOKO"]
     },
     "SHARUL": {
         fullName: "SHARUL",
-        subjects: ["PH", "PA", "PJ", "RBT", "KOKO"]
+        subjects: ["PA", "PJ", "RBT", "KOKO"]
     },
     "SUHAILA": {
         fullName: "SUHAILA",
-        subjects: ["PH", "SN", "KOKO"]
+        subjects: ["SN", "KOKO"]
     },
     "SYAMIMI": {
         fullName: "SYAMIMI",
-        subjects: ["PH", "MM", "KIM", "IM", "KOKO"]
+        subjects: ["MM", "KIM", "IM", "KOKO"]
     },
     "THEVA": {
         fullName: "THEVA",
-        subjects: ["PH", "BI", "KOKO"]
+        subjects: ["BI", "KOKO"]
     },
     "TILLAGA": {
         fullName: "TILLAGA",
-        subjects: ["PH", "BI", "KOKO"]
+        subjects: ["BI", "KOKO"]
     },
     "WAN HAFEZ": {
         fullName: "HAFIZ",
-        subjects: ["PH", "PJ", "BI", "KOKO"]
+        subjects: ["PJ", "BI", "KOKO"]
     },
     "FARIZA": {
         fullName: "NURFARIZA",
@@ -226,28 +224,27 @@ const teacherData = {
     
     "ZUHDAH": {
         fullName: "ZUHDAH",
-        subjects: ["PH", "PI", "UBI", "KOKO"]
+        subjects: ["PI", "UBI", "KOKO"]
     },
     "ZURAIHA": {
         fullName: "ZURAIHA",
-        subjects: ["PH", "BM", "SJ", "KOKO"]
+        subjects: ["BM", "SJ", "KOKO"]
     },
     "ZURAIDAH": {
         fullName: "ZURAIDAH",
-        subjects: ["PH", "MMT", "MM", "IM", "KOKO"]
+        subjects: ["MMT", "MM", "IM", "KOKO"]
     },
     "ZURINA": {
         fullName: "ZURINA",
-        subjects: ["PH", "BI", "PIB", "KOKO"]
+        subjects: ["BI", "PIB", "KOKO"]
     },
     "NABIHAH": {
         fullName: "NURUL NABIHAH",
-        subjects: ["PH", "KOKO"]
+        subjects: ["KOKO"]
     },
     "ASIAH": {
         fullName: "ASIAH",
-        subjects: ["PH", "KOKO"]
+        subjects: ["KOKO"]
     }
 };
-
 

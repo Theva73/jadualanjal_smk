@@ -92,7 +92,27 @@
     const days = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
 
     // --- SHARED HELPER FUNCTIONS ---
-    function getMasterTimeSlots() { const allSlots = new Set(); allSchedules.forEach(c => c.timeSlots.forEach(slot => { if (slot !== "2:00-3:00") allSlots.add(slot); })); return Array.from(allSlots).sort((a, b) => a.localeCompare(b)); }
+    function getMasterTimeSlots() {
+        const allSlots = new Set();
+        allSchedules.forEach(c => c.timeSlots.forEach(slot => {
+            if (slot !== "2:00-3:00") allSlots.add(slot);
+        }));
+
+        const timeToSortable = (timeStr) => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            // School hours start around 7 AM. Times like 1:xx, 2:xx are PM.
+            if (hours < 7) { 
+                return (hours + 12) * 100 + minutes;
+            }
+            return hours * 100 + minutes;
+        };
+
+        return Array.from(allSlots).sort((a, b) => {
+            const startTimeA = a.split('-')[0];
+            const startTimeB = b.split('-')[0];
+            return timeToSortable(startTimeA) - timeToSortable(startTimeB);
+        });
+    }
     function normalizeTeacherName(name) { if (!name) return ''; return name.replace(/(PN\.?|CIK|EN\.?|UST\.?|MISS|MR\.?|USTZH\.?|TAM)/gi, '').trim().toUpperCase(); }
     
     const subjectColorMap = {};
@@ -181,7 +201,25 @@
         processScheduleFile(form4to1Schedules);
         return schedules;
     }
-    function findCoveringPeriod(slot, busyPeriods) { if (!busyPeriods) return null; const [slotStart, slotEnd] = slot.split('-'); for (const busyPeriod of busyPeriods) { const [busyStart, busyEnd] = busyPeriod.period.split('-'); if (slotStart >= busyStart && slotEnd <= busyEnd) { return busyPeriod; } } return null; }
+    function findCoveringPeriod(slot, busyPeriods) {
+        if (!busyPeriods) return null;
+        const timeToSortable = (timeStr) => {
+            if (!timeStr) return 0;
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            if (hours < 7) {
+                return (hours + 12) * 100 + minutes;
+            }
+            return hours * 100 + minutes;
+        };
+        const [slotStart, slotEnd] = slot.split('-').map(timeToSortable);
+        for (const busyPeriod of busyPeriods) {
+            const [busyStart, busyEnd] = busyPeriod.period.split('-').map(timeToSortable);
+            if (slotStart >= busyStart && slotEnd <= busyEnd) {
+                return busyPeriod;
+            }
+        }
+        return null;
+    }
 
     // --- MAIN SCRIPT EXECUTION ---
     document.addEventListener('DOMContentLoaded', () => {

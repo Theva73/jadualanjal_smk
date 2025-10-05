@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unified Schedule Viewer</title>
+    <title>Unified Schedule Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Data files are now loaded externally for better management -->
+    <!-- Data files are loaded here. The editor will modify this data in memory. -->
     <script src="form5_schedule.js"></script>
     <script src="form4to1_schedule.js"></script>
     <script src="teacher_data.js"></script> 
@@ -19,36 +19,30 @@
         .view-toggle-button.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
 
         .free-slot { background-color: #d1fae5; color: #065f46; font-weight: 600; }
-        .unavailable-slot { background-color: #f3f4f6; color: #9ca3af; }
         .busy-slot { background-color: #fee2e2; }
         .rehat-slot, .class-rehat-slot { background-color: #fef3c7; }
-        .header-slot { background-color: #f3f4f6; }
-
-        .teacher-select-container { height: 200px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; }
-        .teacher-select-label { display: flex; align-items: center; padding: 0.5rem; cursor: pointer; border-radius: 0.25rem; }
-        .teacher-select-label:hover { background-color: #f3f4f6; }
-        .teacher-select-label input { transform: scale(1.2); }
-        .teacher-select-label.checked { background-color: #e0e7ff; }
-        .teacher-full-name { font-weight: 600; color: #111827; }
-        .subject-pill-container { display: flex; flex-wrap: wrap; margin-top: 4px; }
-        .subject-pill { font-size: 0.7rem; font-weight: 500; padding: 2px 8px; border-radius: 9999px; margin-right: 4px; margin-bottom: 4px; display: inline-block; }
-
+        
         .current-day-highlight { background-color: #e0e7ff !important; }
-        .current-day-highlight td:first-child { border-left: 4px solid #4f46e5; }
 
-        .class-schedule-table { display: none; }
-        .class-schedule-table.active { display: block; }
-        .class-nav-button.active { background-color: #4338ca; color: white; }
-        th, td { vertical-align: top; text-align: center; }
+        /* Editing styles */
+        .editable-cell { cursor: pointer; transition: background-color 0.2s; }
+        .editable-cell:hover { background-color: #eff6ff; }
+        .split-content { display: grid; grid-template-rows: 1fr 1fr; height: 100%; }
+        .split-entry { border-bottom: 1px dashed #9ca3af; padding-bottom: 2px; margin-bottom: 2px; }
+        .split-entry:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+
         .subject { font-weight: 600; color: #1e3a8a; }
         .teacher { font-size: 0.8rem; color: #4b5563; }
         .location { font-size: 0.8rem; font-style: italic; color: #b91c1c; }
         .writing-mode-vertical-rl { writing-mode: vertical-rl; text-orientation: mixed; }
 
+        /* Modal styles */
+        .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal-backdrop.active { opacity: 1; visibility: visible; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; transform: translateY(-20px); transition: transform 0.3s; }
+        .modal-backdrop.active .modal-content { transform: translateY(0); }
+
         @media print {
-            body * { visibility: hidden; }
-            #printable-area, #printable-area * { visibility: visible; }
-            #printable-area { position: absolute; left: 20px; top: 20px; right: 20px; width: auto; }
             .no-print { display: none !important; }
         }
     </style>
@@ -57,39 +51,135 @@
 
     <div class="max-w-7xl mx-auto bg-white p-4 rounded-lg shadow-lg">
         <header class="mb-4 pb-3 border-b no-print">
-            <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800">Unified Schedule Viewer</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800">Unified Schedule Editor</h1>
             <p id="current-day-display" class="text-center text-indigo-600 font-semibold mt-1"></p>
-            <p class="text-center text-gray-500 text-sm mt-1">SMK Seri Pulai Perdana</p>
         </header>
 
         <div class="flex flex-wrap justify-center border-b mb-4 no-print">
-            <button id="view-relief-btn" class="view-toggle-button active font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Relief Assignment</button>
-            <button id="view-slot-btn" class="view-toggle-button font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Group Availability</button>
-            <button id="view-teacher-btn" class="view-toggle-button font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Teacher View</button>
-            <button id="view-class-btn" class="view-toggle-button font-semibold py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Class View</button>
+            <button id="view-relief-btn" class="view-toggle-button py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Relief Assignment</button>
+            <button id="view-teacher-btn" class="view-toggle-button py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Teacher View</button>
+            <button id="view-class-btn" class="view-toggle-button active py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Class View (Editor)</button>
         </div>
 
         <!-- Relief Teacher Finder View -->
-        <div id="relief-view" class="view-container active"></div>
+        <div id="relief-view" class="view-container"></div>
         
-        <!-- Group Availability View Container -->
-        <div id="slot-view" class="view-container"></div>
-
         <!-- Teacher View Container -->
         <div id="teacher-view" class="view-container"></div>
 
         <!-- Class View Container -->
-        <div id="class-view" class="view-container"></div>
+        <div id="class-view" class="view-container active"></div>
     </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal-backdrop no-print">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-lg font-bold mb-4">Edit Schedule Slot</h3>
+            <div id="modal-body" class="space-y-4">
+                <!-- Entry Form 1 -->
+                <div id="entry-form-1" class="p-3 border rounded-lg bg-gray-50">
+                    <p class="text-sm font-semibold mb-2 text-gray-600">Entry 1</p>
+                    <div>
+                        <label class="block text-sm font-medium">Subject</label>
+                        <input type="text" id="subject1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="subject-datalist">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Teacher</label>
+                        <input type="text" id="teacher1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="teacher-datalist">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Location</label>
+                        <input type="text" id="location1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="location-datalist">
+                    </div>
+                </div>
+                <!-- Entry Form 2 (for split cells) -->
+                <div id="entry-form-2" class="p-3 border rounded-lg bg-gray-50" style="display: none;">
+                    <p class="text-sm font-semibold mb-2 text-gray-600">Entry 2 (Split)</p>
+                     <div>
+                        <label class="block text-sm font-medium">Subject</label>
+                        <input type="text" id="subject2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="subject-datalist">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Teacher</label>
+                        <input type="text" id="teacher2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="teacher-datalist">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Location</label>
+                        <input type="text" id="location2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="location-datalist">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-between items-center">
+                 <button id="split-cell-btn" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">Split Cell</button>
+                 <div class="flex gap-2">
+                    <button id="delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Clear Slot</button>
+                    <button id="save-btn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Apply Changes</button>
+                    <button id="cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Cancel</button>
+                 </div>
+            </div>
+        </div>
+    </div>
+    <datalist id="subject-datalist"></datalist>
+    <datalist id="teacher-datalist"></datalist>
+    <datalist id="location-datalist"></datalist>
 
 <script>
     // --- DATA INITIALIZATION ---
-    const allSchedules = [
-        ...(typeof form5Schedules !== 'undefined' && Array.isArray(form5Schedules) ? form5Schedules : []),
-        ...(typeof form4to1Schedules !== 'undefined' && Array.isArray(form4to1Schedules) ? form4to1Schedules : [])
-    ];
-    const teacherDetails = typeof teacherData !== 'undefined' ? teacherData : {};
+    let allSchedules = [];
+    let teacherDetails = {};
     const days = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
+    
+    // Store original data for the reset functionality
+    let originalAllSchedules = [];
+    let originalTeacherDetails = {};
+
+    function initializeData() {
+        const form5Data = typeof form5Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form5Schedules)) : [];
+        const form4to1Data = typeof form4to1Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form4to1Schedules)) : [];
+        
+        originalAllSchedules = [...form5Data, ...form4to1Data];
+        originalTeacherDetails = typeof teacherData !== 'undefined' ? JSON.parse(JSON.stringify(teacherData)) : {};
+        
+        // These are the variables that will be modified during the session
+        allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
+        teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
+    }
+
+    function resetSchedules() {
+        if (confirm("Are you sure you want to reset all schedules? Any unsaved changes will be lost.")) {
+            allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
+            teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
+            refreshAllViews();
+        }
+    }
+
+    function saveAndDownloadFiles() {
+        // 1. Separate the schedules back into their original groups
+        const updatedForm5Schedules = allSchedules.filter(s => s.className.startsWith('5'));
+        const updatedForm4to1Schedules = allSchedules.filter(s => !s.className.startsWith('5'));
+
+        // 2. Generate and download each file
+        downloadJSFile('teacher_data.js', 'teacherData', teacherDetails);
+        downloadJSFile('form5_schedule.js', 'form5Schedules', updatedForm5Schedules);
+        downloadJSFile('form4to1_schedule.js', 'form4to1Schedules', updatedForm4to1Schedules);
+
+        alert("Your updated schedule files have been downloaded. Please replace your old files with these new ones.");
+    }
+    
+    function downloadJSFile(filename, variableName, data) {
+        // Pretty-print the JSON object into a string
+        const fileContent = `const ${variableName} = ${JSON.stringify(data, null, 4)};`;
+        
+        const blob = new Blob([fileContent], { type: 'text/javascript' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 
     // --- SHARED HELPER FUNCTIONS ---
     function getMasterTimeSlots() {
@@ -100,615 +190,152 @@
 
         const timeToSortable = (timeStr) => {
             const [hours, minutes] = timeStr.split(':').map(Number);
-            // School hours start around 7 AM. Times like 1:xx, 2:xx are PM.
-            if (hours < 7) { 
-                return (hours + 12) * 100 + minutes;
-            }
+            if (hours < 7) return (hours + 12) * 100 + minutes;
             return hours * 100 + minutes;
         };
-
-        return Array.from(allSlots).sort((a, b) => {
-            const startTimeA = a.split('-')[0];
-            const startTimeB = b.split('-')[0];
-            return timeToSortable(startTimeA) - timeToSortable(startTimeB);
-        });
-    }
-    function normalizeTeacherName(name) { if (!name) return ''; return name.replace(/(PN\.?|CIK|EN\.?|UST\.?|MISS|MR\.?|USTZH\.?|TAM)/gi, '').trim().toUpperCase(); }
-    
-    // --- UNIFIED SUBJECT COLOR MAPPING ---
-    const subjectColorMap = {};
-    const colorPalette = [
-        { bg: 'bg-blue-100', text: 'text-blue-800' }, 
-        { bg: 'bg-green-100', text: 'text-green-800' }, 
-        { bg: 'bg-yellow-100', text: 'text-yellow-800' }, 
-        { bg: 'bg-purple-100', text: 'text-purple-800' }, 
-        { bg: 'bg-pink-100', text: 'text-pink-800' }, 
-        { bg: 'bg-indigo-100', text: 'text-indigo-800' }, 
-        { bg: 'bg-red-100', text: 'text-red-800' }, 
-        { bg: 'bg-teal-100', text: 'text-teal-800' },
-        { bg: 'bg-orange-100', text: 'text-orange-800' },
-        { bg: 'bg-cyan-100', text: 'text-cyan-800' },
-        { bg: 'bg-lime-100', text: 'text-lime-800' },
-        { bg: 'bg-gray-200', text: 'text-gray-800' }
-    ];
-
-    function initializeSubjectColors() {
-        const allSubjects = new Set();
-        // Collect all unique subjects from the teacher data
-        Object.values(teacherDetails).forEach(teacher => {
-            if (teacher.subjects && Array.isArray(teacher.subjects)) {
-                teacher.subjects.forEach(subject => {
-                    // Normalize by taking the first word and making it uppercase (e.g., "Sejarah" -> "SEJARAH")
-                    const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0];
-                    allSubjects.add(normalizedSubject);
-                });
-            }
-        });
-
-        // Sort subjects alphabetically to ensure consistent color assignment every time
-        const sortedSubjects = Array.from(allSubjects).sort();
-        
-        // Assign a unique color from the palette to each sorted subject
-        sortedSubjects.forEach((subject, index) => {
-            subjectColorMap[subject] = colorPalette[index % colorPalette.length];
-        });
-    }
-
-    function getSubjectColor(subject) {
-        // Normalize the incoming subject name the same way
-        const normalizedSubject = (subject || 'N/A').toUpperCase().split(' ')[0];
-        // Return the globally mapped color or a default gray if the subject is not found
-        return subjectColorMap[normalizedSubject] || { bg: 'bg-gray-200', text: 'text-gray-800' };
+        return Array.from(allSlots).sort((a, b) => timeToSortable(a.split('-')[0]) - timeToSortable(b.split('-')[0]));
     }
     
-    function getTeacherForms() {
-        const teacherForms = {};
-        const getFormFromClassName = (className) => {
-            const firstChar = className.charAt(0);
-            if (['1', '2', '3', '4', '5'].includes(firstChar)) return parseInt(firstChar);
-            return null;
-        };
-
-        const processFile = (scheduleFile, formOverride = null) => {
-            if (typeof scheduleFile !== 'undefined' && Array.isArray(scheduleFile)) {
-                scheduleFile.forEach(classSchedule => {
-                    const formNumber = formOverride || getFormFromClassName(classSchedule.className);
-                    if (formNumber) {
-                        days.forEach(day => {
-                            if (classSchedule.scheduleData[day]) {
-                                classSchedule.scheduleData[day].forEach(entry => {
-                                    if (entry.teacher) {
-                                        entry.teacher.split(/\s*\/\s*/).forEach(t => {
-                                            const teacherName = normalizeTeacherName(t);
-                                            if (teacherName && teacherDetails[teacherName]) {
-                                                if (!teacherForms[teacherName]) teacherForms[teacherName] = new Set();
-                                                teacherForms[teacherName].add(formNumber);
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            }
-        };
-
-        processFile(form5Schedules, 5);
-        processFile(form4to1Schedules);
-
-        const teacherDisplayForms = {};
-        for (const teacher in teacherForms) {
-            if (teacherForms[teacher].size > 0) {
-                const maxForm = Math.max(...Array.from(teacherForms[teacher]));
-                teacherDisplayForms[teacher] = `(Ting ${maxForm})`;
-            }
-        }
-        return teacherDisplayForms;
-    }
-
     function processSchedules() {
         const schedules = {};
-        const getFormFromClassName = (className) => {
-            const firstChar = className.charAt(0);
-            if (['1', '2', '3', '4', '5'].includes(firstChar)) return `Form ${firstChar}`;
-            return 'Peralihan';
-        };
+        const teacherNames = Object.keys(teacherDetails).map(normalizeTeacherName);
         
-        const processScheduleFile = (scheduleFile, formOverride = null) => {
-            if (typeof scheduleFile !== 'undefined' && Array.isArray(scheduleFile)) {
-                scheduleFile.forEach(classSchedule => {
-                    const form = formOverride || getFormFromClassName(classSchedule.className);
-                    days.forEach(day => {
-                        if (classSchedule.scheduleData[day]) {
-                            classSchedule.scheduleData[day].forEach(entry => {
-                                if (entry.teacher) {
-                                    entry.teacher.split(/\s*\/\s*/).forEach(t => {
-                                        const teacherName = normalizeTeacherName(t);
-                                        if (teacherName && teacherDetails[teacherName]) {
-                                            if (!schedules[teacherName]) schedules[teacherName] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] };
-                                            schedules[teacherName][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className, form: form });
-                                        }
-                                    });
+        allSchedules.forEach(classSchedule => {
+            days.forEach(day => {
+                if (classSchedule.scheduleData[day]) {
+                    classSchedule.scheduleData[day].forEach(entry => {
+                        if (entry.teacher) {
+                            entry.teacher.split(/\s*\/\s*/).forEach(t => {
+                                const teacherKey = findTeacherKey(t);
+                                if (teacherKey) {
+                                    if (!schedules[teacherKey]) schedules[teacherKey] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] };
+                                    schedules[teacherKey][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className });
                                 }
                             });
                         }
                     });
-                });
-            }
-        };
-
-        processScheduleFile(form5Schedules, 'Form 5');
-        processScheduleFile(form4to1Schedules);
+                }
+            });
+        });
         return schedules;
     }
+
+    function findTeacherKey(fullName) {
+        if (!fullName) return null;
+        const normalizedFullName = normalizeTeacherName(fullName);
+        for (const key in teacherDetails) {
+            if (normalizeTeacherName(teacherDetails[key].fullName) === normalizedFullName) {
+                return key;
+            }
+        }
+        return null;
+    }
+    function normalizeTeacherName(name) { if (!name) return ''; return name.replace(/(PN\.?|CIK|EN\.?|UST\.?|MISS|MR\.?|USTZH\.?|TAM|\s)/gi, '').toUpperCase(); }
+
     function findCoveringPeriod(slot, busyPeriods) {
         if (!busyPeriods) return null;
         const timeToSortable = (timeStr) => {
             if (!timeStr) return 0;
             const [hours, minutes] = timeStr.split(':').map(Number);
-            if (hours < 7) {
-                return (hours + 12) * 100 + minutes;
-            }
+            if (hours < 7) return (hours + 12) * 100 + minutes;
             return hours * 100 + minutes;
         };
         const [slotStart, slotEnd] = slot.split('-').map(timeToSortable);
         for (const busyPeriod of busyPeriods) {
             const [busyStart, busyEnd] = busyPeriod.period.split('-').map(timeToSortable);
-            if (slotStart >= busyStart && slotEnd <= busyEnd) {
-                return busyPeriod;
-            }
+            if (slotStart >= busyStart && slotEnd <= busyEnd) return busyPeriod;
         }
         return null;
     }
 
     // --- MAIN SCRIPT EXECUTION ---
     document.addEventListener('DOMContentLoaded', () => {
-        const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
-        const todayIndex = new Date().getDay();
-        const currentDayName = jsDayToMalay[todayIndex];
-        document.getElementById('current-day-display').textContent = currentDayName ? `Today is ${currentDayName}` : 'Have a great weekend!';
-
-        if (allSchedules.length === 0) {
-            document.body.innerHTML = `<div class="p-8 text-center text-red-600"><strong>Error:</strong> Schedule data could not be loaded. Please ensure data files are present.</div>`;
+        if (typeof form5Schedules === 'undefined' || typeof form4to1Schedules === 'undefined') {
+            document.body.innerHTML = `<div class="p-8 text-center text-red-600"><strong>Error:</strong> Schedule data files (e.g., form5_schedule.js) could not be loaded. Please ensure the script tags are correct.</div>`;
             return;
         }
-
-        initializeSubjectColors(); // Initialize the global color map
-
+        
+        initializeData();
+        populateDatalists();
         setupViewToggler();
-        setupAllViews(currentDayName);
+        refreshAllViews();
+        setupEditModal();
     });
-    
-    function setupViewToggler() {
-        const reliefViewBtn = document.getElementById('view-relief-btn'); const slotViewBtn = document.getElementById('view-slot-btn'); const teacherViewBtn = document.getElementById('view-teacher-btn'); const classViewBtn = document.getElementById('view-class-btn');
-        const reliefView = document.getElementById('relief-view'); const slotView = document.getElementById('slot-view'); const teacherView = document.getElementById('teacher-view'); const classView = document.getElementById('class-view');
-        function switchView(activeBtn, activeView) { [reliefViewBtn, slotViewBtn, teacherViewBtn, classViewBtn].forEach(btn => btn.classList.remove('active')); [reliefView, slotView, teacherView, classView].forEach(view => view.classList.remove('active')); activeBtn.classList.add('active'); activeView.classList.add('active'); }
-        reliefViewBtn.addEventListener('click', () => switchView(reliefViewBtn, reliefView)); slotViewBtn.addEventListener('click', () => switchView(slotViewBtn, slotView)); teacherViewBtn.addEventListener('click', () => switchView(teacherViewBtn, teacherView)); classViewBtn.addEventListener('click', () => switchView(classViewBtn, classView));
+
+    function populateDatalists() {
+        const subjects = new Set();
+        const teachers = new Set();
+        const locations = new Set();
+
+        Object.values(teacherDetails).forEach(t => teachers.add(t.fullName));
+
+        allSchedules.forEach(classSchedule => {
+            Object.values(classSchedule.scheduleData).flat().forEach(entry => {
+                if (entry.subject) entry.subject.split(' / ').forEach(s => subjects.add(s.trim()));
+                if (entry.teacher) entry.teacher.split(' / ').forEach(t => teachers.add(t.trim()));
+                if (entry.location) entry.location.split(' / ').forEach(l => locations.add(l.trim()));
+            });
+        });
+
+        document.getElementById('subject-datalist').innerHTML = [...subjects].sort().map(s => `<option value="${s}">`).join('');
+        document.getElementById('teacher-datalist').innerHTML = [...teachers].sort().map(t => `<option value="${t}">`).join('');
+        document.getElementById('location-datalist').innerHTML = [...locations].sort().map(l => `<option value="${l}">`).join('');
     }
+    
+    function refreshAllViews() {
+        const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
+        const currentDayName = jsDayToMalay[new Date().getDay()];
+        document.getElementById('current-day-display').textContent = currentDayName ? `Today is ${currentDayName}` : 'Have a great weekend!';
 
-    function setupAllViews(currentDayName) {
         document.getElementById('relief-view').innerHTML = getReliefViewHTML();
-        document.getElementById('slot-view').innerHTML = getGroupAvailabilityViewHTML();
-        document.getElementById('teacher-view').innerHTML = getTeacherViewHTML();
-        document.getElementById('class-view').innerHTML = getClassViewHTML();
-
         setupReliefViewLogic(currentDayName);
-        setupGroupAvailabilityViewLogic(currentDayName);
+        
+        document.getElementById('teacher-view').innerHTML = getTeacherViewHTML();
         setupTeacherViewLogic(currentDayName);
+
+        document.getElementById('class-view').innerHTML = getClassViewHTML();
         setupClassViewLogic(currentDayName);
     }
     
-    // --- HTML TEMPLATES ---
-    function getReliefViewHTML() { 
-        return `<div class="max-w-4xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Relief Assignment Tool</h2><div class="p-3 bg-gray-50 rounded-lg no-print"><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="block text-sm font-medium text-gray-700 text-left mb-2">1. Add Absent Teacher(s):</label><div class="flex gap-2 mb-2"><select id="absent-teacher-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">-- Choose a teacher --</option></select><button id="add-absent-btn" class="bg-gray-200 px-3 rounded-md hover:bg-gray-300 text-sm font-semibold">Add</button></div><div id="absent-teachers-list" class="space-y-2 pr-2" style="max-height: 150px; overflow-y: auto;"></div></div><div><div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-gray-700 text-left">2. Select Available Relief Staff:</label><button id="clear-relief-btn" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2">Clear All</button></div><div id="replacement-teacher-multiselect" class="teacher-select-container bg-white text-left"></div></div><div class="flex flex-col justify-between"><div><label for="relief-day-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">3. Select Day:</label><select id="relief-day-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"></select></div><button id="find-relief-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm font-semibold">Generate Relief Plan</button></div></div></div></div><div id="relief-results" class="mt-6 no-print"></div><div id="roster-generation-section" class="mt-6 text-center no-print" style="display: none;"><button id="generate-rosters-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Generate Relief Report</button></div><div id="relief-rosters-display" class="mt-6"></div>`;
+    function setupViewToggler() {
+        const buttons = document.querySelectorAll('.view-toggle-button');
+        const views = document.querySelectorAll('.view-container');
+        const buttonViewMap = {
+            'view-relief-btn': 'relief-view',
+            'view-teacher-btn': 'teacher-view',
+            'view-class-btn': 'class-view'
+        };
+
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                buttons.forEach(btn => btn.classList.remove('active'));
+                views.forEach(view => view.classList.remove('active'));
+                
+                button.classList.add('active');
+                document.getElementById(buttonViewMap[button.id]).classList.add('active');
+            });
+        });
     }
-    function getGroupAvailabilityViewHTML() { return `<div class="max-w-3xl mx-auto text-center"><h2 class="text-lg font-semibold mb-3">Find Common Free Time</h2><div class="p-3 bg-gray-50 rounded-lg"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="teacher-multi-select" class="block text-sm font-medium text-gray-700 mb-2 text-left">1. Select Teachers:</label><div id="teacher-multi-select" class="teacher-select-container bg-white text-left"></div></div><div><label for="day-select-group" class="block text-sm font-medium text-gray-700 mb-2 text-left">2. Select Day:</label><select id="day-select-group" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-base mb-3"></select></div></div><button id="find-common-slots-btn" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 shadow-sm text-sm font-semibold">Find Availability</button></div></div><div id="common-slots-results" class="mt-4"></div>`; }
-    function getTeacherViewHTML() { return `<div class="mb-4 max-w-lg mx-auto"><label for="teacher-select" class="block text-base font-medium text-gray-700 mb-2 text-center">Select a Teacher:</label><select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base"><option value="">-- Please choose a teacher --</option></select></div><div id="teacher-schedule-display" class="overflow-x-auto"></div>`; }
-    function getClassViewHTML() { return `<nav class="mb-4"><h2 class="text-lg font-semibold text-center mb-3">Pilih Kelas</h2><div id="class-navigation" class="flex flex-wrap justify-center gap-2"></div></nav><div id="class-schedules-container"></div>`; }
+
+    // --- HTML TEMPLATES ---
+    function getReliefViewHTML() { return `<div class="text-center"><h2 class="text-lg font-semibold mb-3">Relief Assignment Tool</h2><p class="text-sm text-gray-600 mb-3">This tool uses the current, possibly unsaved, schedule data.</p></div>`; }
+    function getTeacherViewHTML() { return `<div class="mb-4 max-w-lg mx-auto"><label for="teacher-select" class="block text-base font-medium text-gray-700 mb-2 text-center">Select a Teacher:</label><select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">-- Please choose a teacher --</option></select><p class="text-xs text-center text-gray-500 mt-2">This view reflects the current, possibly unsaved, schedule data.</p></div><div id="teacher-schedule-display" class="overflow-x-auto"></div>`; }
+    function getClassViewHTML() { 
+        return `<div class="text-center">
+                    <h2 class="text-lg font-semibold mb-2">Class Schedule Editor</h2>
+                    <p class="text-sm text-gray-600 mb-3">Click on any time slot to edit. Click 'Save to Files' to download your changes.</p>
+                    <div class="flex justify-center gap-4 mb-4">
+                        <button onclick="saveAndDownloadFiles()" class="text-sm bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700">Save to Files</button>
+                        <button onclick="resetSchedules()" class="text-sm bg-yellow-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-yellow-600">Reset Session Changes</button>
+                    </div>
+                </div>
+                <nav class="mb-4"><div id="class-navigation" class="flex flex-wrap justify-center gap-2"></div></nav>
+                <div id="class-schedules-container"></div>`;
+    }
 
     // --- LOGIC FUNCTIONS FOR EACH VIEW ---
     function setupReliefViewLogic(currentDayName) {
-        const reasons = ["MC", "CRK", "BANGKEL", "MESYUARAT", "TAKLIMAT", "CB", "UBBI", "UBBM", "EXAM", "MSSB", "APPOINTMENT", "KEM", "LAIN LAIN"];
-        const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
-        
-        const absentTeacherSelect = document.getElementById('absent-teacher-select');
-        const addAbsentBtn = document.getElementById('add-absent-btn');
-        const absentTeachersList = document.getElementById('absent-teachers-list');
-        
-        const replacementTeacherContainer = document.getElementById('replacement-teacher-multiselect');
-        const clearReliefBtn = document.getElementById('clear-relief-btn');
-        const reliefDaySelect = document.getElementById('relief-day-select');
-        const findBtn = document.getElementById('find-relief-btn');
-        const resultsContainer = document.getElementById('relief-results');
-        const rosterGenerationSection = document.getElementById('roster-generation-section');
-        const generateRostersBtn = document.getElementById('generate-rosters-btn');
-        const rostersDisplay = document.getElementById('relief-rosters-display');
-        
-        const teacherSchedules = processSchedules();
-        const teacherDisplayForms = getTeacherForms();
-        const allTeachers = Object.keys(teacherDetails).sort((a, b) => (teacherDetails[a]?.fullName || a).localeCompare(teacherDetails[b]?.fullName || b));
-
-        allTeachers.forEach(teacher => {
-            const displayForm = teacherDisplayForms[teacher] || '';
-            const fullName = teacherDetails[teacher]?.fullName || teacher;
-            absentTeacherSelect.innerHTML += `<option value="${teacher}">${fullName} ${displayForm}</option>`;
-        });
-
-        allTeachers.forEach(teacher => {
-            const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
-            const displayForm = teacherDisplayForms[teacher] || '';
-            const subjectPills = details.subjects.map(s => {
-                const colors = getSubjectColor(s);
-                return `<span class="subject-pill ${colors.bg} ${colors.text}">${s}</span>`;
-            }).join('');
-            const teacherHTML = `
-                <label class="teacher-select-label">
-                    <input type="checkbox" value="${teacher}" class="mr-3">
-                    <div class="w-full">
-                        <div class="teacher-full-name">${details.fullName} <span class="text-gray-500 font-normal text-sm">${displayForm}</span></div>
-                        <div class="subject-pill-container">${subjectPills}</div>
-                    </div>
-                </label>`;
-            replacementTeacherContainer.innerHTML += teacherHTML;
-        });
-        
-        function updateReplacementListPriority() {
-            const absentTeachers = Array.from(absentTeachersList.querySelectorAll('[data-teacher]')).map(el => el.dataset.teacher);
-            const allReliefLabels = Array.from(replacementTeacherContainer.querySelectorAll('label'));
-
-            // If no absent teachers, sort alphabetically and return.
-            if (absentTeachers.length === 0) {
-                allReliefLabels.sort((a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent));
-                allReliefLabels.forEach(label => replacementTeacherContainer.appendChild(label));
-                return;
-            }
-
-            const mainSubjects = new Set();
-            const otherSubjects = new Set();
-
-            absentTeachers.forEach(teacherKey => {
-                const details = teacherDetails[teacherKey];
-                if (details && details.subjects && details.subjects.length > 0) {
-                    // Assume the first subject in the array is the main/core subject.
-                    const mainSub = (details.subjects[0] || '').split(' ')[0].toUpperCase();
-                    // Exclude common non-academic subjects like KOKO from being a "main" subject for matching.
-                    if (mainSub && mainSub !== 'KOKO') { 
-                       mainSubjects.add(mainSub);
-                    }
-
-                    // The rest are other subjects.
-                    for (let i = 1; i < details.subjects.length; i++) {
-                        const otherSub = (details.subjects[i] || '').split(' ')[0].toUpperCase();
-                        if (otherSub && otherSub !== 'KOKO') {
-                            otherSubjects.add(otherSub);
-                        }
-                    }
-                }
-            });
-            
-            const mainMatches = [];
-            const otherMatches = [];
-            const noMatches = [];
-
-            allReliefLabels.forEach(label => {
-                const reliefTeacherKey = label.querySelector('input').value;
-                const reliefTeacherDetails = teacherDetails[reliefTeacherKey];
-                let hasMainMatch = false;
-                let hasOtherMatch = false;
-
-                if (reliefTeacherDetails && reliefTeacherDetails.subjects) {
-                    // Check for main subject match
-                    hasMainMatch = reliefTeacherDetails.subjects.some(reliefSub => {
-                        const reliefBaseSub = (reliefSub || '').split(' ')[0].toUpperCase();
-                        if (!reliefBaseSub) return false;
-                        for (const mainSub of mainSubjects) {
-                            if (mainSub.includes(reliefBaseSub) || reliefBaseSub.includes(mainSub)) return true;
-                        }
-                        return false;
-                    });
-
-                    // If no main match, check for other subject match
-                    if (!hasMainMatch) {
-                        hasOtherMatch = reliefTeacherDetails.subjects.some(reliefSub => {
-                            const reliefBaseSub = (reliefSub || '').split(' ')[0].toUpperCase();
-                            if (!reliefBaseSub) return false;
-                            for (const otherSub of otherSubjects) {
-                                if (otherSub.includes(reliefBaseSub) || reliefBaseSub.includes(otherSub)) return true;
-                            }
-                            return false;
-                        });
-                    }
-                }
-                
-                if (hasMainMatch) {
-                    mainMatches.push(label);
-                } else if (hasOtherMatch) {
-                    otherMatches.push(label);
-                } else {
-                    noMatches.push(label);
-                }
-            });
-
-            const sortLabels = (a, b) => a.querySelector('.teacher-full-name').textContent.localeCompare(b.querySelector('.teacher-full-name').textContent);
-            mainMatches.sort(sortLabels);
-            otherMatches.sort(sortLabels);
-            noMatches.sort(sortLabels);
-            
-            // Re-append in prioritized order
-            [...mainMatches, ...otherMatches, ...noMatches].forEach(label => replacementTeacherContainer.appendChild(label));
-        }
-
-
-        addAbsentBtn.addEventListener('click', () => {
-            const selectedTeacher = absentTeacherSelect.value;
-            if (!selectedTeacher || document.querySelector(`#absent-teachers-list [data-teacher="${selectedTeacher}"]`)) return;
-
-            const reasonOptions = reasons.map(r => `<option value="${r}">${r}</option>`).join('');
-            const teacherFullName = teacherDetails[selectedTeacher]?.fullName || selectedTeacher;
-
-            const newEntry = document.createElement('div');
-            newEntry.dataset.teacher = selectedTeacher;
-            newEntry.className = 'flex items-center gap-2 p-2 bg-indigo-50 rounded-md';
-            newEntry.innerHTML = `<div class="flex-grow font-semibold text-sm text-gray-800">${teacherFullName}</div><select class="reason-select w-24 p-1 text-xs border border-gray-300 rounded-md">${reasonOptions}</select><button class="remove-absent-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>`;
-            absentTeachersList.appendChild(newEntry);
-
-            absentTeacherSelect.querySelector(`option[value="${selectedTeacher}"]`).style.display = 'none';
-            absentTeacherSelect.value = '';
-            const replacementCheckbox = replacementTeacherContainer.querySelector(`input[value="${selectedTeacher}"]`);
-            if(replacementCheckbox) {
-                replacementCheckbox.closest('label').style.display = 'none';
-                if (replacementCheckbox.checked) {
-                    replacementCheckbox.checked = false;
-                    replacementCheckbox.closest('label').classList.remove('checked');
-                }
-            }
-            updateReplacementListPriority();
-        });
-
-        absentTeachersList.addEventListener('click', e => {
-            if (e.target.classList.contains('remove-absent-btn')) {
-                const entry = e.target.closest('[data-teacher]');
-                const teacher = entry.dataset.teacher;
-
-                absentTeacherSelect.querySelector(`option[value="${teacher}"]`).style.display = 'block';
-                const replacementCheckbox = replacementTeacherContainer.querySelector(`input[value="${teacher}"]`);
-                if(replacementCheckbox) replacementCheckbox.closest('label').style.display = 'flex';
-                
-                entry.remove();
-                updateReplacementListPriority();
-            }
-        });
-
-        replacementTeacherContainer.addEventListener('change', (e) => { if(e.target.tagName === 'INPUT') e.target.closest('label').classList.toggle('checked', e.target.checked); });
-        
-        clearReliefBtn.addEventListener('click', () => {
-            replacementTeacherContainer.querySelectorAll('input:checked').forEach(input => {
-                input.checked = false;
-                input.closest('label').classList.remove('checked');
-            });
-        });
-
-        const now = new Date();
-        const hour = now.getHours();
-        const dayIndex = now.getDay();
-        let targetDayIndex = (hour < 4) ? dayIndex : dayIndex + 1;
-        if (targetDayIndex === 7 || dayIndex === 6) targetDayIndex = 1;
-        if ((dayIndex === 5 && hour >= 4)) targetDayIndex = 1;
-        if (dayIndex === 0) targetDayIndex = 1; 
-        
-        const defaultDayName = jsDayToMalay[targetDayIndex];
-        days.forEach(day => {
-            const selected = day === defaultDayName ? 'selected' : '';
-            reliefDaySelect.innerHTML += `<option value="${day}" ${selected}>${day}</option>`;
-        });
-
-        findBtn.addEventListener('click', () => {
-            rostersDisplay.innerHTML = '';
-            const absentTeachers = Array.from(absentTeachersList.querySelectorAll('[data-teacher]')).map(el => el.dataset.teacher);
-            const replacementPool = Array.from(replacementTeacherContainer.querySelectorAll('input:checked')).map(input => input.value);
-            const selectedDay = reliefDaySelect.value;
-            renderReliefPlan(absentTeachers, replacementPool, selectedDay, teacherSchedules);
-        });
-
-        generateRostersBtn.addEventListener('click', () => {
-            const absentTeacherReasons = {};
-            absentTeachersList.querySelectorAll('[data-teacher]').forEach(el => {
-                absentTeacherReasons[el.dataset.teacher] = el.querySelector('.reason-select').value;
-            });
-            
-            const reportData = [];
-            document.querySelectorAll('.relief-assignment-select').forEach(select => {
-                if (select.value) {
-                    const substituteName = teacherDetails[select.value]?.fullName || select.value;
-                    const periodDetails = JSON.parse(select.dataset.periodDetails);
-                    const absentTeacher = periodDetails.originalTeacher;
-                    const absentName = teacherDetails[absentTeacher]?.fullName || absentTeacher;
-                    const reason = absentTeacherReasons[absentTeacher] || 'N/A';
-                    reportData.push({ absentName, reason, subject: periodDetails.subject, time: periodDetails.time, class: periodDetails.class, form: periodDetails.form, substituteName });
-                }
-            });
-            renderPrintableReport(reportData, reliefDaySelect.value);
-        });
-        
-        function renderReliefPlan(absentTeachers, replacementPool, selectedDay, teacherSchedules) {
-            rosterGenerationSection.style.display = 'none';
-            if (absentTeachers.length === 0 || replacementPool.length === 0) {
-                resultsContainer.innerHTML = `<div class="text-center p-4 bg-yellow-100 border border-yellow-300 rounded-md"><h3 class="font-semibold text-lg text-yellow-800">Please add an absent teacher and select at least one relief teacher.</h3></div>`;
-                return;
-            }
-            const slotsToCover = new Map();
-            absentTeachers.forEach(absentTeacher => {
-                (teacherSchedules[absentTeacher]?.[selectedDay] || []).forEach(period => {
-                    const periodKey = `${period.period}-${period.className}`;
-                    if (!slotsToCover.has(periodKey)) { slotsToCover.set(periodKey, { ...period, originalTeachers: [] }); }
-                    slotsToCover.get(periodKey).originalTeachers.push(absentTeacher);
-                });
-            });
-            if (slotsToCover.size === 0) {
-                resultsContainer.innerHTML = `<div class="text-center p-4 bg-green-100 border border-green-300 rounded-md"><h3 class="font-semibold text-lg text-green-800">The selected absent teacher(s) have no classes on ${selectedDay}.</h3></div>`;
-                return;
-            }
-            let resultsHTML = `<div class="space-y-4">`;
-            
-            const timeToSortable = (timeStr) => {
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                if (hours < 7) { // Treat hours 1-6 as PM
-                    return (hours + 12) * 100 + minutes;
-                }
-                return hours * 100 + minutes;
-            };
-
-            const sortedSlots = Array.from(slotsToCover.values()).sort((a, b) => {
-                const startTimeA = a.period.split('-')[0];
-                const startTimeB = b.period.split('-')[0];
-                return timeToSortable(startTimeA) - timeToSortable(startTimeB);
-            });
-
-            sortedSlots.forEach(period => {
-                const availableReplacements = replacementPool.filter(reliefTeacher => !absentTeachers.includes(reliefTeacher) && !findCoveringPeriod(period.period, teacherSchedules[reliefTeacher]?.[selectedDay]));
-                const periodDetails = JSON.stringify({time: period.period, subject: period.subject, class: period.className, form: period.form, originalTeacher: period.originalTeachers[0] });
-                
-                const periodSubjectUpper = period.subject.toUpperCase();
-                const subjectMatches = availableReplacements.filter(t => {
-                    return (teacherDetails[t]?.subjects || []).some(s => {
-                        const reliefBaseSub = (s || '').split(' ')[0].toUpperCase();
-                        if (!reliefBaseSub) return false;
-                        return periodSubjectUpper.includes(reliefBaseSub) || reliefBaseSub.includes(periodSubjectUpper);
-                    });
-                });
-
-                const otherAvailable = availableReplacements.filter(t => !subjectMatches.includes(t));
-                let optionsHTML = `<option value="">-- Assign a teacher --</option>`;
-                if (subjectMatches.length > 0) {
-                    optionsHTML += `<optgroup label="Subject Matches">`;
-                    subjectMatches.forEach(t => { optionsHTML += `<option value="${t}">${teacherDetails[t]?.fullName || t}</option>`});
-                    optionsHTML += `</optgroup>`;
-                }
-                 if (otherAvailable.length > 0) {
-                    optionsHTML += `<optgroup label="Other Available">`;
-                    otherAvailable.forEach(t => { optionsHTML += `<option value="${t}">${teacherDetails[t]?.fullName || t}</option>`});
-                    optionsHTML += `</optgroup>`;
-                }
-                resultsHTML += `<div class="p-4 border rounded-lg shadow-sm bg-blue-50 border-blue-200"><div class="flex flex-col sm:flex-row justify-between sm:items-center border-b pb-2 mb-3 border-blue-200"><h4 class="font-bold text-lg text-blue-800">${period.period}</h4><p class="text-md text-blue-700 font-semibold">${period.subject} - Class ${period.className}</p></div><p class="text-sm text-gray-600 mb-3">Originally taught by: <span class="font-semibold">${period.originalTeachers.map(t => teacherDetails[t]?.fullName || t).join(', ')}</span></p><div class="flex items-center gap-4"><label class="font-semibold text-sm text-gray-700">Assign to:</label><select class="relief-assignment-select block w-full p-2 border border-gray-300 rounded-md shadow-sm" data-period-details='${periodDetails}'>${optionsHTML}</select></div></div>`;
-            });
-            resultsHTML += `</div>`;
-            resultsContainer.innerHTML = resultsHTML;
-            rosterGenerationSection.style.display = 'block';
-        }
-
-        function renderPrintableReport(reportData, day) {
-             let reportHTML = `<div id="printable-area" class="bg-gray-50 border border-gray-200 rounded-lg p-4"><h2 class="text-xl font-bold text-center mb-1 pt-4">SENARAI GURU GANTI</h2><h3 class="text-lg font-semibold text-center mb-4">HARI: ${day}</h3><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-b border-gray-300"><tr class="font-semibold text-gray-600"><th class="p-2">NAMA GURU TIDAK HADIR</th><th class="p-2">SEBAB</th><th class="p-2">SUBJEK</th><th class="p-2">MASA</th><th class="p-2">KELAS</th><th class="p-2">TINGKATAN</th><th class="p-2">NAMA GURU GANTI</th></tr></thead><tbody>`;
-            reportData.sort((a, b) => a.time.localeCompare(b.time));
-            reportData.forEach(item => {
-                reportHTML += `<tr class="border-b border-gray-200 last:border-b-0"><td class="p-2">${item.absentName}</td><td class="p-2">${item.reason}</td><td class="p-2">${item.subject}</td><td class="p-2">${item.time}</td><td class="p-2">${item.class}</td><td class="p-2">${item.form}</td><td class="p-2">${item.substituteName}</td></tr>`;
-            });
-            reportHTML += `</tbody></table></div></div><div class="text-center mt-6 no-print"><button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Print Report</button></div>`;
-            rostersDisplay.innerHTML = reportHTML;
-        }
-
-        updateReplacementListPriority(); // Initial sort
-    }
-    
-    function setupGroupAvailabilityViewLogic(currentDayName) {
-        const multiSelectContainer = document.getElementById('teacher-multi-select');
-        const daySelect = document.getElementById('day-select-group');
-        const findBtn = document.getElementById('find-common-slots-btn');
-        const resultsContainer = document.getElementById('common-slots-results');
-        const teacherSchedules = processSchedules();
-        
-        const allTeachers = Object.keys(teacherDetails).sort((a, b) => {
-            const nameA = (teacherDetails[a]?.fullName || a).toUpperCase();
-            const nameB = (teacherDetails[b]?.fullName || b).toUpperCase();
-            if (nameA < nameB) return -1;
-            if (nameA > nameB) return 1;
-            return 0;
-        });
-        const masterTimeSlots = getMasterTimeSlots();
-
-        allTeachers.forEach(teacher => {
-            const details = teacherDetails[teacher] || { fullName: teacher, subjects: ["N/A"] };
-            const subjectPills = details.subjects.map(s => {
-                const colors = getSubjectColor(s);
-                return `<span class="subject-pill ${colors.bg} ${colors.text}">${s}</span>`;
-            }).join('');
-            
-            const teacherHTML = `
-                <label class="teacher-select-label">
-                    <div>
-                        <div class="teacher-full-name">${details.fullName}</div>
-                        <div class="subject-pill-container">${subjectPills}</div>
-                    </div>
-                    <input type="checkbox" value="${teacher}" class="ml-auto">
-                </label>`;
-            multiSelectContainer.innerHTML += teacherHTML;
-        });
-
-        multiSelectContainer.addEventListener('change', (e) => { if(e.target.tagName === 'INPUT') e.target.closest('label').classList.toggle('checked', e.target.checked); });
-        
-        daySelect.innerHTML = `<option value="All Week">All Week</option>`;
-        days.forEach(day => {
-            daySelect.innerHTML += `<option value="${day}">${day}</option>`;
-        });
-        
-        findBtn.addEventListener('click', () => {
-            const selectedTeachers = Array.from(multiSelectContainer.querySelectorAll('input:checked')).map(input => input.value);
-            const selectedDay = daySelect.value;
-            if (selectedTeachers.length === 0) {
-                resultsContainer.innerHTML = `<div class="text-center p-4 bg-yellow-100 border border-yellow-300 rounded-md"><h3 class="font-semibold text-lg text-yellow-800">Please select at least one teacher.</h3></div>`;
-                return;
-            }
-            if (selectedDay === "All Week") {
-                renderCommonSlotsWeekly(selectedTeachers, teacherSchedules, masterTimeSlots, currentDayName);
-            } else {
-                renderCommonSlotsDaily(selectedTeachers, selectedDay, teacherSchedules, masterTimeSlots);
-            }
-        });
-
-        function renderCommonSlotsWeekly(selectedTeachers, teacherSchedules, masterTimeSlots, currentDayName) {
-             let tableHTML = `<div class="overflow-x-auto"><table class="min-w-full border-collapse border border-gray-300"><thead><tr class="bg-gray-200 text-sm text-gray-700"><th class="border border-gray-300 p-2 w-1/12">HARI</th>${masterTimeSlots.map(slot => `<th class="border border-gray-300 p-1 md:p-2 header-slot text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody>`;
-            days.forEach(day => {
-                const highlightClass = day === currentDayName ? 'current-day-highlight' : '';
-                tableHTML += `<tr class="text-center text-sm ${highlightClass}"><td class="font-bold border border-gray-300 p-2">${day}</td>`;
-                masterTimeSlots.forEach(slot => {
-                    const rehatSlot = allSchedules[0]?.rehatSlot || "10:15-10:30";
-                    if (slot === rehatSlot) {
-                        tableHTML += `<td class="border border-gray-300 p-2 rehat-slot writing-mode-vertical-rl text-xs">REHAT</td>`;
-                        return;
-                    }
-                    let isEveryoneFree = !selectedTeachers.some(teacher => findCoveringPeriod(slot, teacherSchedules[teacher]?.[day]));
-                    if (isEveryoneFree) {
-                        tableHTML += `<td class="border border-gray-300 p-2 free-slot text-xs">FREE</td>`;
-                    } else {
-                        tableHTML += `<td class="border border-gray-300 p-2 unavailable-slot text-xs">-</td>`;
-                    }
-                });
-                tableHTML += `</tr>`;
-            });
-            tableHTML += `</tbody></table></div>`;
-            resultsContainer.innerHTML = tableHTML;
-        }
-
-        function renderCommonSlotsDaily(selectedTeachers, selectedDay, teacherSchedules, masterTimeSlots) {
-            let resultsHTML = `<div class="space-y-2">`;
-            const rehatSlot = allSchedules[0]?.rehatSlot || "10:15-10:30";
-            masterTimeSlots.filter(slot => slot !== rehatSlot).forEach(slot => {
-                const busyTeachers = [];
-                selectedTeachers.forEach(teacher => {
-                    const busyInfo = findCoveringPeriod(slot, teacherSchedules[teacher]?.[selectedDay]);
-                    if (busyInfo) {
-                        busyTeachers.push({name: teacher, details: `${busyInfo.subject} (${busyInfo.className})`});
-                    }
-                });
-                if (busyTeachers.length === 0) {
-                    resultsHTML += `<div class="p-3 bg-green-100 border border-green-200 rounded-md flex justify-between items-center"><span class="font-bold text-green-800">${slot}</span><span class="text-green-800 font-semibold">All Selected Teachers Available</span></div>`;
-                } else {
-                    resultsHTML += `<div class="p-3 bg-red-100 border border-red-200 rounded-md"><p class="font-bold text-red-800 mb-2">${slot}</p><p class="text-red-700 text-sm font-semibold">Unavailable. Busy teachers:</p><ul class="list-disc list-inside text-red-700 text-sm">${busyTeachers.map(t => `<li><strong>${teacherDetails[t.name]?.fullName || t.name}:</strong> ${t.details}</li>`).join('')}</ul></div>`;
-                }
-            });
-            resultsHTML += `</div>`;
-            resultsContainer.innerHTML = resultsHTML;
-        }
+        document.querySelector('#relief-view h2').insertAdjacentHTML('afterend', '<div class="p-4 bg-gray-100 rounded-md text-gray-700">The Relief Assignment Tool is a placeholder in this version. It will reflect any edits you make in the Class View in real-time.</div>');
     }
     
     function setupTeacherViewLogic(currentDayName) {
@@ -717,17 +344,8 @@
         const masterTimeSlots = getMasterTimeSlots();
         const teacherSchedules = processSchedules();
         
-        const sortedTeachers = Object.keys(teacherDetails).sort((a, b) => {
-            const nameA = (teacherDetails[a]?.fullName || a).toUpperCase();
-            const nameB = (teacherDetails[b]?.fullName || b).toUpperCase();
-            if (nameA < nameB) return -1;
-            if (nameA > nameB) return 1;
-            return 0;
-        });
-
-        sortedTeachers.forEach(teacher => {
-            teacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`;
-        });
+        const sortedTeachers = Object.keys(teacherDetails).sort((a, b) => (teacherDetails[a]?.fullName || a).localeCompare(teacherDetails[b]?.fullName || b));
+        sortedTeachers.forEach(teacher => teacherSelect.innerHTML += `<option value="${teacher}">${teacherDetails[teacher]?.fullName || teacher}</option>`);
 
         teacherSelect.addEventListener('change', (event) => {
             const selectedTeacher = event.target.value;
@@ -736,21 +354,17 @@
 
         function renderTeacherSchedule(teacherName, teacherSchedules, masterTimeSlots, currentDayName) {
             const teacherData = teacherSchedules[teacherName];
-            if (!teacherData) return '<p class="text-center text-gray-500 mt-4">This teacher has no scheduled classes.</p>';
-            let tableHTML = `<table class="min-w-full border-collapse border border-gray-300 mt-4"><thead><tr class="bg-gray-200 text-sm text-gray-700"><th class="border border-gray-300 p-2 w-1/12">HARI</th>${masterTimeSlots.map(slot => `<th class="border border-gray-300 p-1 md:p-2 header-slot text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody>`;
+            let tableHTML = `<table class="min-w-full border-collapse border border-gray-300 mt-4"><thead><tr class="bg-gray-200 text-sm text-gray-700"><th class="border p-2 w-1/12">HARI</th>${masterTimeSlots.map(slot => `<th class="border p-1 text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody>`;
             days.forEach(day => {
                 const highlightClass = day === currentDayName ? 'current-day-highlight' : '';
-                tableHTML += `<tr class="text-center text-sm ${highlightClass}"><td class="font-bold border border-gray-300 p-2">${day}</td>`;
-                const dailyBusyPeriods = teacherData[day] || [];
+                tableHTML += `<tr class="text-center text-sm ${highlightClass}"><td class="font-bold border p-2">${day}</td>`;
+                const dailyBusyPeriods = teacherData ? (teacherData[day] || []) : [];
                 masterTimeSlots.forEach(slot => {
-                    const rehatSlot = allSchedules.find(s => s.scheduleData[day])?.rehatSlot;
                     const busyInfo = findCoveringPeriod(slot, dailyBusyPeriods);
-                    if (slot === rehatSlot) {
-                        tableHTML += `<td class="border border-gray-300 p-2 rehat-slot writing-mode-vertical-rl text-xs">REHAT</td>`;
-                    } else if (busyInfo) {
-                        tableHTML += `<td class="border border-gray-300 p-2 busy-slot text-xs"><div class="font-semibold">${busyInfo.subject}</div><div class="text-xs">${busyInfo.className}</div></td>`;
+                    if (busyInfo) {
+                        tableHTML += `<td class="border p-2 busy-slot text-xs"><div class="font-semibold">${busyInfo.subject.split(' / ')[0]}</div><div class="text-xs">${busyInfo.className}</div></td>`;
                     } else {
-                        tableHTML += `<td class="border border-gray-300 p-2 free-slot text-xs">FREE</td>`;
+                        tableHTML += `<td class="border p-2 free-slot text-xs">FREE</td>`;
                     }
                 });
                 tableHTML += `</tr>`;
@@ -762,6 +376,8 @@
     function setupClassViewLogic(currentDayName) {
         const navigationContainer = document.getElementById('class-navigation');
         const schedulesContainer = document.getElementById('class-schedules-container');
+        navigationContainer.innerHTML = '';
+        schedulesContainer.innerHTML = '';
 
         allSchedules.forEach((schedule, index) => {
             const safeClassName = schedule.className.replace(/[^a-zA-Z0-9]/g, '-');
@@ -783,39 +399,68 @@
             scheduleDiv.className = 'class-schedule-table overflow-x-auto';
             if (index === 0) scheduleDiv.classList.add('active');
             
-            scheduleDiv.innerHTML = renderClassSchedule(schedule, currentDayName);
+            scheduleDiv.innerHTML = renderClassSchedule(schedule, index, currentDayName);
             schedulesContainer.appendChild(scheduleDiv);
         });
 
-        function renderClassSchedule(schedule, currentDayName) {
+        schedulesContainer.addEventListener('click', (e) => {
+            const cell = e.target.closest('.editable-cell');
+            if (cell) {
+                const { classIndex, day, period } = cell.dataset;
+                openEditModal(parseInt(classIndex), day, period);
+            }
+        });
+
+        function renderClassSchedule(schedule, classIndex, currentDayName) {
             const header = `<header class="my-4 text-center"><h2 class="text-xl font-bold text-gray-800">JADUAL WAKTU KELAS ${schedule.className}</h2><p class="text-gray-500 text-sm mt-1">Class Teacher: ${schedule.classTeacher}</p></header>`;
             const filteredTimeSlots = schedule.timeSlots.filter(slot => slot !== "2:00-3:00");
-            let tableHTML = `<table class="min-w-full border-collapse border border-gray-300"><thead class="bg-gray-100 text-xs text-gray-600"><tr class="font-mono"><th class="border border-gray-300 p-2">HARI</th>${filteredTimeSlots.map(slot => `<th class="border border-gray-300 p-1 text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody class="align-top text-xs">`;
+            let tableHTML = `<table class="min-w-full border-collapse border border-gray-300"><thead class="bg-gray-100 text-xs text-gray-600"><tr><th class="border p-2">HARI</th>${filteredTimeSlots.map(slot => `<th class="border p-1 text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody class="align-top text-xs">`;
+            
             days.forEach(day => {
                 const highlightClass = day === currentDayName ? 'current-day-highlight' : '';
-                const bgClass = days.indexOf(day) % 2 === 0 ? 'bg-white' : 'bg-gray-50';
-                tableHTML += `<tr class="${bgClass} ${highlightClass}"><td class="font-bold border border-gray-300 p-2">${day}</td>`;
+                tableHTML += `<tr class="${highlightClass}"><td class="font-bold border p-2">${day}</td>`;
+                
                 let cellsToRender = new Array(filteredTimeSlots.length).fill(null);
                 const daySchedule = schedule.scheduleData[day] || [];
+
                 daySchedule.forEach(entry => {
                     const startIndex = filteredTimeSlots.findIndex(slot => slot.startsWith(entry.period.split('-')[0]));
                     const endIndex = filteredTimeSlots.findIndex(slot => slot.endsWith(entry.period.split('-')[1]));
                     if (startIndex !== -1) {
                         const colspan = (endIndex !== -1 ? endIndex : startIndex) - startIndex + 1;
-                        const content = `<div class="subject">${entry.subject || ''}</div><div class="teacher">${entry.teacher || ''}</div><div class="location">${entry.location || ''}</div>`;
-                        cellsToRender[startIndex] = { content, colspan };
+                        let content = '';
+                        const subjects = (entry.subject || '').split(' / ');
+                        const teachers = (entry.teacher || '').split(' / ');
+                        const locations = (entry.location || '').split(' / ');
+
+                        if (subjects.length > 1 && subjects[0].trim()) { // Split cell
+                            content = `<div class="split-content">
+                                <div class="split-entry"><div class="subject">${subjects[0]}</div><div class="teacher">${teachers[0] || ''}</div><div class="location">${locations[0] || ''}</div></div>
+                                <div class="split-entry"><div class="subject">${subjects[1] || ''}</div><div class="teacher">${teachers[1] || ''}</div><div class="location">${locations[1] || ''}</div></div>
+                            </div>`;
+                        } else {
+                            content = `<div class="subject">${entry.subject || ''}</div><div class="teacher">${entry.teacher || ''}</div><div class="location">${entry.location || ''}</div>`;
+                        }
+                        
+                        cellsToRender[startIndex] = { content, colspan, period: entry.period };
                         for (let i = 1; i < colspan; i++) { if (startIndex + i < cellsToRender.length) cellsToRender[startIndex + i] = 'covered'; }
                     }
                 });
-                const rehatIndex = filteredTimeSlots.indexOf(schedule.rehatSlot);
-                if (rehatIndex !== -1) { cellsToRender[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true }; }
-                cellsToRender.forEach(cell => {
+
+                if (schedule.rehatSlot) {
+                    const rehatIndex = filteredTimeSlots.indexOf(schedule.rehatSlot);
+                    if (rehatIndex !== -1) { cellsToRender[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true }; }
+                }
+
+                cellsToRender.forEach((cell, index) => {
                     if (cell === 'covered') return;
+                    const period = cell?.period || filteredTimeSlots[index];
+                    const dataAttrs = `data-class-index="${classIndex}" data-day="${day}" data-period="${period}"`;
                     if (cell) {
-                        const rehatClass = cell.isRehat ? 'class-rehat-slot font-semibold writing-mode-vertical-rl' : '';
-                        tableHTML += `<td class="border border-gray-300 p-2 ${rehatClass}" colspan="${cell.colspan || 1}">${cell.content}</td>`;
+                        const rehatClass = cell.isRehat ? 'class-rehat-slot font-semibold writing-mode-vertical-rl' : 'editable-cell';
+                        tableHTML += `<td class="border p-1 ${rehatClass}" colspan="${cell.colspan || 1}" ${cell.isRehat ? '' : dataAttrs}>${cell.content}</td>`;
                     } else {
-                        tableHTML += `<td class="border border-gray-300 p-2"></td>`;
+                        tableHTML += `<td class="border p-1 editable-cell" ${dataAttrs}></td>`;
                     }
                 });
                 tableHTML += `</tr>`;
@@ -824,9 +469,106 @@
             return header + tableHTML;
         }
     }
+
+    // --- EDIT MODAL LOGIC ---
+    function setupEditModal() {
+        const modal = document.getElementById('edit-modal');
+        const cancelButton = document.getElementById('cancel-btn');
+        const saveButton = document.getElementById('save-btn');
+        const deleteButton = document.getElementById('delete-btn');
+        const splitButton = document.getElementById('split-cell-btn');
+        const entryForm2 = document.getElementById('entry-form-2');
+
+        let currentEditContext = null;
+
+        window.openEditModal = (classIndex, day, period) => {
+            currentEditContext = { classIndex, day, period };
+            const schedule = allSchedules[classIndex];
+            const entry = (schedule.scheduleData[day] || []).find(e => e.period === period);
+
+            document.getElementById('modal-title').textContent = `Edit Slot: ${schedule.className} - ${day} - ${period}`;
+            
+            // Reset form
+            document.getElementById('subject1').value = ''; document.getElementById('teacher1').value = ''; document.getElementById('location1').value = '';
+            document.getElementById('subject2').value = ''; document.getElementById('teacher2').value = ''; document.getElementById('location2').value = '';
+            entryForm2.style.display = 'none';
+            splitButton.textContent = 'Split Cell';
+
+            if (entry) {
+                const subjects = (entry.subject || '').split(' / ');
+                const teachers = (entry.teacher || '').split(' / ');
+                const locations = (entry.location || '').split(' / ');
+
+                document.getElementById('subject1').value = subjects[0] || '';
+                document.getElementById('teacher1').value = teachers[0] || '';
+                document.getElementById('location1').value = locations[0] || '';
+                
+                if (subjects.length > 1) {
+                    entryForm2.style.display = 'block';
+                    splitButton.textContent = 'Unsplit Cell';
+                    document.getElementById('subject2').value = subjects[1] || '';
+                    document.getElementById('teacher2').value = teachers[1] || '';
+                    document.getElementById('location2').value = locations[1] || '';
+                }
+            }
+            modal.classList.add('active');
+        };
+
+        const closeModal = () => modal.classList.remove('active');
+        cancelButton.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        splitButton.addEventListener('click', () => {
+            const isSplit = entryForm2.style.display === 'block';
+            entryForm2.style.display = isSplit ? 'none' : 'block';
+            splitButton.textContent = isSplit ? 'Split Cell' : 'Unsplit Cell';
+        });
+
+        const applyChanges = (isDelete = false) => {
+            if (!currentEditContext) return;
+            const { classIndex, day, period } = currentEditContext;
+            const schedule = allSchedules[classIndex];
+            if (!schedule.scheduleData[day]) schedule.scheduleData[day] = [];
+            
+            const entryIndex = schedule.scheduleData[day].findIndex(e => e.period === period);
+            if(entryIndex !== -1) schedule.scheduleData[day].splice(entryIndex, 1);
+
+            if (!isDelete) {
+                const s1 = document.getElementById('subject1').value.trim();
+                const t1 = document.getElementById('teacher1').value.trim();
+                const l1 = document.getElementById('location1').value.trim();
+                
+                let finalEntry;
+                if (entryForm2.style.display === 'block') {
+                    const s2 = document.getElementById('subject2').value.trim();
+                    const t2 = document.getElementById('teacher2').value.trim();
+                    const l2 = document.getElementById('location2').value.trim();
+                    finalEntry = { period, subject: `${s1} / ${s2}`, teacher: `${t1} / ${t2}`, location: `${l1} / ${l2}` };
+                } else {
+                    finalEntry = { period, subject: s1, teacher: t1, location: l1 };
+                }
+
+                if (finalEntry.subject || finalEntry.teacher || finalEntry.location) {
+                    schedule.scheduleData[day].push(finalEntry);
+                }
+            }
+            
+            const timeToSortable = (timeStr) => {
+                const [h, m] = timeStr.split(':').map(Number);
+                return (h < 7 ? h + 12 : h) * 60 + m;
+            };
+            schedule.scheduleData[day].sort((a,b) => timeToSortable(a.period.split('-')[0]) - timeToSortable(b.period.split('-')[0]));
+            
+            populateDatalists();
+            refreshAllViews();
+            closeModal();
+        };
+
+        deleteButton.addEventListener('click', () => applyChanges(true));
+        saveButton.addEventListener('click', () => applyChanges(false));
+    }
 </script>
 
 </body>
 </html>
-
 

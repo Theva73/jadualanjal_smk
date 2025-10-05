@@ -41,6 +41,7 @@
         .modal-backdrop.active { opacity: 1; visibility: visible; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; transform: translateY(-20px); transition: transform 0.3s; }
         .modal-backdrop.active .modal-content { transform: translateY(0); }
+        .select-input { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
 
         @media print {
             .no-print { display: none !important; }
@@ -61,13 +62,8 @@
             <button id="view-class-btn" class="view-toggle-button active py-2 px-4 text-sm sm:text-base -mb-px border-b-2 border-transparent">Class View (Editor)</button>
         </div>
 
-        <!-- Relief Teacher Finder View -->
         <div id="relief-view" class="view-container"></div>
-        
-        <!-- Teacher View Container -->
         <div id="teacher-view" class="view-container"></div>
-
-        <!-- Class View Container -->
         <div id="class-view" class="view-container active"></div>
     </div>
 
@@ -77,35 +73,35 @@
             <h3 id="modal-title" class="text-lg font-bold mb-4">Edit Schedule Slot</h3>
             <div id="modal-body" class="space-y-4">
                 <!-- Entry Form 1 -->
-                <div id="entry-form-1" class="p-3 border rounded-lg bg-gray-50">
-                    <p class="text-sm font-semibold mb-2 text-gray-600">Entry 1</p>
+                <div id="entry-form-1" class="p-3 border rounded-lg bg-gray-50 space-y-2">
+                    <p class="text-sm font-semibold text-gray-600">Entry 1</p>
                     <div>
                         <label class="block text-sm font-medium">Subject</label>
-                        <input type="text" id="subject1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="subject-datalist">
+                        <select id="subject1" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Teacher</label>
-                        <input type="text" id="teacher1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="teacher-datalist">
+                        <select id="teacher1" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Location</label>
-                        <input type="text" id="location1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="location-datalist">
+                        <select id="location1" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                     </div>
                 </div>
                 <!-- Entry Form 2 (for split cells) -->
-                <div id="entry-form-2" class="p-3 border rounded-lg bg-gray-50" style="display: none;">
-                    <p class="text-sm font-semibold mb-2 text-gray-600">Entry 2 (Split)</p>
+                <div id="entry-form-2" class="p-3 border rounded-lg bg-gray-50 space-y-2" style="display: none;">
+                    <p class="text-sm font-semibold text-gray-600">Entry 2 (Split)</p>
                      <div>
                         <label class="block text-sm font-medium">Subject</label>
-                        <input type="text" id="subject2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="subject-datalist">
+                        <select id="subject2" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Teacher</label>
-                        <input type="text" id="teacher2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="teacher-datalist">
+                        <select id="teacher2" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Location</label>
-                        <input type="text" id="location2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" list="location-datalist">
+                        <select id="location2" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                     </div>
                 </div>
             </div>
@@ -119,9 +115,6 @@
             </div>
         </div>
     </div>
-    <datalist id="subject-datalist"></datalist>
-    <datalist id="teacher-datalist"></datalist>
-    <datalist id="location-datalist"></datalist>
 
 <script>
     // --- DATA INITIALIZATION ---
@@ -129,20 +122,47 @@
     let teacherDetails = {};
     const days = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     
-    // Store original data for the reset functionality
     let originalAllSchedules = [];
     let originalTeacherDetails = {};
 
+    let availableSubjects = [];
+    let availableTeachers = [];
+    let availableLocations = [];
+
     function initializeData() {
-        const form5Data = typeof form5Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form5Schedules)) : [];
-        const form4to1Data = typeof form4to1Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form4to1Schedules)) : [];
-        
-        originalAllSchedules = [...form5Data, ...form4to1Data];
-        originalTeacherDetails = typeof teacherData !== 'undefined' ? JSON.parse(JSON.stringify(teacherData)) : {};
-        
-        // These are the variables that will be modified during the session
-        allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
-        teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
+        try {
+            const form5Data = typeof form5Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form5Schedules)) : [];
+            const form4to1Data = typeof form4to1Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form4to1Schedules)) : [];
+            
+            originalAllSchedules = [...form5Data, ...form4to1Data];
+            originalTeacherDetails = typeof teacherData !== 'undefined' ? JSON.parse(JSON.stringify(teacherData)) : {};
+            
+            allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
+            teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
+        } catch(e) {
+            console.error("Error loading initial data. Make sure schedule files are loaded correctly.", e);
+            document.body.innerHTML = `<div class="p-8 text-center text-red-600"><strong>Error:</strong> Schedule data files could not be loaded. Please check the console for details.</div>`;
+        }
+    }
+
+    function extractAvailableOptions() {
+        const subjects = new Set();
+        const teachers = new Set();
+        const locations = new Set();
+
+        Object.values(teacherDetails).forEach(t => teachers.add(t.fullName.trim()));
+
+        allSchedules.forEach(classSchedule => {
+            Object.values(classSchedule.scheduleData).flat().forEach(entry => {
+                if (entry.subject) entry.subject.split(' / ').forEach(s => s.trim() && subjects.add(s.trim()));
+                if (entry.teacher) entry.teacher.split(' / ').forEach(t => t.trim() && teachers.add(t.trim()));
+                if (entry.location) entry.location.split(' / ').forEach(l => l.trim() && locations.add(l.trim()));
+            });
+        });
+
+        availableSubjects = ["", ...[...subjects].sort()];
+        availableTeachers = ["", ...[...teachers].sort()];
+        availableLocations = ["", ...[...locations].sort()];
     }
 
     function resetSchedules() {
@@ -154,11 +174,9 @@
     }
 
     function saveAndDownloadFiles() {
-        // 1. Separate the schedules back into their original groups
         const updatedForm5Schedules = allSchedules.filter(s => s.className.startsWith('5'));
         const updatedForm4to1Schedules = allSchedules.filter(s => !s.className.startsWith('5'));
 
-        // 2. Generate and download each file
         downloadJSFile('teacher_data.js', 'teacherData', teacherDetails);
         downloadJSFile('form5_schedule.js', 'form5Schedules', updatedForm5Schedules);
         downloadJSFile('form4to1_schedule.js', 'form4to1Schedules', updatedForm4to1Schedules);
@@ -167,7 +185,6 @@
     }
     
     function downloadJSFile(filename, variableName, data) {
-        // Pretty-print the JSON object into a string
         const fileContent = `const ${variableName} = ${JSON.stringify(data, null, 4)};`;
         
         const blob = new Blob([fileContent], { type: 'text/javascript' });
@@ -184,37 +201,26 @@
     // --- SHARED HELPER FUNCTIONS ---
     function getMasterTimeSlots() {
         const allSlots = new Set();
-        allSchedules.forEach(c => c.timeSlots.forEach(slot => {
-            if (slot !== "2:00-3:00") allSlots.add(slot);
-        }));
-
-        const timeToSortable = (timeStr) => {
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            if (hours < 7) return (hours + 12) * 100 + minutes;
-            return hours * 100 + minutes;
-        };
+        allSchedules.forEach(c => c.timeSlots.forEach(slot => { if (slot !== "2:00-3:00") allSlots.add(slot); }));
+        const timeToSortable = (timeStr) => { const [h, m] = timeStr.split(':').map(Number); return (h < 7 ? h + 12 : h) * 100 + m; };
         return Array.from(allSlots).sort((a, b) => timeToSortable(a.split('-')[0]) - timeToSortable(b.split('-')[0]));
     }
     
     function processSchedules() {
         const schedules = {};
-        const teacherNames = Object.keys(teacherDetails).map(normalizeTeacherName);
-        
         allSchedules.forEach(classSchedule => {
             days.forEach(day => {
-                if (classSchedule.scheduleData[day]) {
-                    classSchedule.scheduleData[day].forEach(entry => {
-                        if (entry.teacher) {
-                            entry.teacher.split(/\s*\/\s*/).forEach(t => {
-                                const teacherKey = findTeacherKey(t);
-                                if (teacherKey) {
-                                    if (!schedules[teacherKey]) schedules[teacherKey] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] };
-                                    schedules[teacherKey][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className });
-                                }
-                            });
-                        }
-                    });
-                }
+                (classSchedule.scheduleData[day] || []).forEach(entry => {
+                    if (entry.teacher) {
+                        entry.teacher.split(/\s*\/\s*/).forEach(t => {
+                            const teacherKey = findTeacherKey(t);
+                            if (teacherKey) {
+                                if (!schedules[teacherKey]) schedules[teacherKey] = { ISNIN: [], SELASA: [], RABU: [], KHAMIS: [], JUMAAT: [] };
+                                schedules[teacherKey][day].push({ period: entry.period, subject: entry.subject, className: classSchedule.className });
+                            }
+                        });
+                    }
+                });
             });
         });
         return schedules;
@@ -224,9 +230,7 @@
         if (!fullName) return null;
         const normalizedFullName = normalizeTeacherName(fullName);
         for (const key in teacherDetails) {
-            if (normalizeTeacherName(teacherDetails[key].fullName) === normalizedFullName) {
-                return key;
-            }
+            if (normalizeTeacherName(teacherDetails[key].fullName) === normalizedFullName) return key;
         }
         return null;
     }
@@ -234,12 +238,7 @@
 
     function findCoveringPeriod(slot, busyPeriods) {
         if (!busyPeriods) return null;
-        const timeToSortable = (timeStr) => {
-            if (!timeStr) return 0;
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            if (hours < 7) return (hours + 12) * 100 + minutes;
-            return hours * 100 + minutes;
-        };
+        const timeToSortable = (timeStr) => { if (!timeStr) return 0; const [h, m] = timeStr.split(':').map(Number); return (h < 7 ? h + 12 : h) * 100 + m; };
         const [slotStart, slotEnd] = slot.split('-').map(timeToSortable);
         for (const busyPeriod of busyPeriods) {
             const [busyStart, busyEnd] = busyPeriod.period.split('-').map(timeToSortable);
@@ -250,43 +249,18 @@
 
     // --- MAIN SCRIPT EXECUTION ---
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof form5Schedules === 'undefined' || typeof form4to1Schedules === 'undefined') {
-            document.body.innerHTML = `<div class="p-8 text-center text-red-600"><strong>Error:</strong> Schedule data files (e.g., form5_schedule.js) could not be loaded. Please ensure the script tags are correct.</div>`;
-            return;
-        }
-        
         initializeData();
-        populateDatalists();
+        extractAvailableOptions();
         setupViewToggler();
         refreshAllViews();
         setupEditModal();
     });
-
-    function populateDatalists() {
-        const subjects = new Set();
-        const teachers = new Set();
-        const locations = new Set();
-
-        Object.values(teacherDetails).forEach(t => teachers.add(t.fullName));
-
-        allSchedules.forEach(classSchedule => {
-            Object.values(classSchedule.scheduleData).flat().forEach(entry => {
-                if (entry.subject) entry.subject.split(' / ').forEach(s => subjects.add(s.trim()));
-                if (entry.teacher) entry.teacher.split(' / ').forEach(t => teachers.add(t.trim()));
-                if (entry.location) entry.location.split(' / ').forEach(l => locations.add(l.trim()));
-            });
-        });
-
-        document.getElementById('subject-datalist').innerHTML = [...subjects].sort().map(s => `<option value="${s}">`).join('');
-        document.getElementById('teacher-datalist').innerHTML = [...teachers].sort().map(t => `<option value="${t}">`).join('');
-        document.getElementById('location-datalist').innerHTML = [...locations].sort().map(l => `<option value="${l}">`).join('');
-    }
     
     function refreshAllViews() {
         const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
         const currentDayName = jsDayToMalay[new Date().getDay()];
         document.getElementById('current-day-display').textContent = currentDayName ? `Today is ${currentDayName}` : 'Have a great weekend!';
-
+        
         document.getElementById('relief-view').innerHTML = getReliefViewHTML();
         setupReliefViewLogic(currentDayName);
         
@@ -300,17 +274,11 @@
     function setupViewToggler() {
         const buttons = document.querySelectorAll('.view-toggle-button');
         const views = document.querySelectorAll('.view-container');
-        const buttonViewMap = {
-            'view-relief-btn': 'relief-view',
-            'view-teacher-btn': 'teacher-view',
-            'view-class-btn': 'class-view'
-        };
-
+        const buttonViewMap = { 'view-relief-btn': 'relief-view', 'view-teacher-btn': 'teacher-view', 'view-class-btn': 'class-view' };
         buttons.forEach(button => {
             button.addEventListener('click', () => {
                 buttons.forEach(btn => btn.classList.remove('active'));
                 views.forEach(view => view.classList.remove('active'));
-                
                 button.classList.add('active');
                 document.getElementById(buttonViewMap[button.id]).classList.add('active');
             });
@@ -335,7 +303,7 @@
 
     // --- LOGIC FUNCTIONS FOR EACH VIEW ---
     function setupReliefViewLogic(currentDayName) {
-        document.querySelector('#relief-view h2').insertAdjacentHTML('afterend', '<div class="p-4 bg-gray-100 rounded-md text-gray-700">The Relief Assignment Tool is a placeholder in this version. It will reflect any edits you make in the Class View in real-time.</div>');
+        document.querySelector('#relief-view h2').insertAdjacentHTML('afterend', '<div class="p-4 bg-gray-100 rounded-md text-gray-700">The Relief Assignment Tool reflects any edits you make in the Class View in real-time.</div>');
     }
     
     function setupTeacherViewLogic(currentDayName) {
@@ -433,7 +401,7 @@
                         const teachers = (entry.teacher || '').split(' / ');
                         const locations = (entry.location || '').split(' / ');
 
-                        if (subjects.length > 1 && subjects[0].trim()) { // Split cell
+                        if (subjects.length > 1 && subjects[0].trim()) {
                             content = `<div class="split-content">
                                 <div class="split-entry"><div class="subject">${subjects[0]}</div><div class="teacher">${teachers[0] || ''}</div><div class="location">${locations[0] || ''}</div></div>
                                 <div class="split-entry"><div class="subject">${subjects[1] || ''}</div><div class="teacher">${teachers[1] || ''}</div><div class="location">${locations[1] || ''}</div></div>
@@ -449,7 +417,7 @@
 
                 if (schedule.rehatSlot) {
                     const rehatIndex = filteredTimeSlots.indexOf(schedule.rehatSlot);
-                    if (rehatIndex !== -1) { cellsToRender[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true }; }
+                    if (rehatIndex !== -1) cellsToRender[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true };
                 }
 
                 cellsToRender.forEach((cell, index) => {
@@ -481,6 +449,12 @@
 
         let currentEditContext = null;
 
+        const populateSelect = (selectId, options, selectedValue) => {
+            const select = document.getElementById(selectId);
+            select.innerHTML = options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt || '-- Select --'}</option>`).join('');
+            select.value = selectedValue || "";
+        };
+
         window.openEditModal = (classIndex, day, period) => {
             currentEditContext = { classIndex, day, period };
             const schedule = allSchedules[classIndex];
@@ -488,29 +462,26 @@
 
             document.getElementById('modal-title').textContent = `Edit Slot: ${schedule.className} - ${day} - ${period}`;
             
-            // Reset form
-            document.getElementById('subject1').value = ''; document.getElementById('teacher1').value = ''; document.getElementById('location1').value = '';
-            document.getElementById('subject2').value = ''; document.getElementById('teacher2').value = ''; document.getElementById('location2').value = '';
-            entryForm2.style.display = 'none';
-            splitButton.textContent = 'Split Cell';
+            const subjects = (entry?.subject || '').split(' / ');
+            const teachers = (entry?.teacher || '').split(' / ');
+            const locations = (entry?.location || '').split(' / ');
 
-            if (entry) {
-                const subjects = (entry.subject || '').split(' / ');
-                const teachers = (entry.teacher || '').split(' / ');
-                const locations = (entry.location || '').split(' / ');
-
-                document.getElementById('subject1').value = subjects[0] || '';
-                document.getElementById('teacher1').value = teachers[0] || '';
-                document.getElementById('location1').value = locations[0] || '';
-                
-                if (subjects.length > 1) {
-                    entryForm2.style.display = 'block';
-                    splitButton.textContent = 'Unsplit Cell';
-                    document.getElementById('subject2').value = subjects[1] || '';
-                    document.getElementById('teacher2').value = teachers[1] || '';
-                    document.getElementById('location2').value = locations[1] || '';
-                }
+            populateSelect('subject1', availableSubjects, subjects[0]?.trim());
+            populateSelect('teacher1', availableTeachers, teachers[0]?.trim());
+            populateSelect('location1', availableLocations, locations[0]?.trim());
+            
+            populateSelect('subject2', availableSubjects, subjects[1]?.trim());
+            populateSelect('teacher2', availableTeachers, teachers[1]?.trim());
+            populateSelect('location2', availableLocations, locations[1]?.trim());
+            
+            if (subjects.length > 1) {
+                entryForm2.style.display = 'block';
+                splitButton.textContent = 'Unsplit Cell';
+            } else {
+                entryForm2.style.display = 'none';
+                splitButton.textContent = 'Split Cell';
             }
+
             modal.classList.add('active');
         };
 
@@ -534,15 +505,15 @@
             if(entryIndex !== -1) schedule.scheduleData[day].splice(entryIndex, 1);
 
             if (!isDelete) {
-                const s1 = document.getElementById('subject1').value.trim();
-                const t1 = document.getElementById('teacher1').value.trim();
-                const l1 = document.getElementById('location1').value.trim();
+                const s1 = document.getElementById('subject1').value;
+                const t1 = document.getElementById('teacher1').value;
+                const l1 = document.getElementById('location1').value;
                 
                 let finalEntry;
                 if (entryForm2.style.display === 'block') {
-                    const s2 = document.getElementById('subject2').value.trim();
-                    const t2 = document.getElementById('teacher2').value.trim();
-                    const l2 = document.getElementById('location2').value.trim();
+                    const s2 = document.getElementById('subject2').value;
+                    const t2 = document.getElementById('teacher2').value;
+                    const l2 = document.getElementById('location2').value;
                     finalEntry = { period, subject: `${s1} / ${s2}`, teacher: `${t1} / ${t2}`, location: `${l1} / ${l2}` };
                 } else {
                     finalEntry = { period, subject: s1, teacher: t1, location: l1 };
@@ -553,13 +524,10 @@
                 }
             }
             
-            const timeToSortable = (timeStr) => {
-                const [h, m] = timeStr.split(':').map(Number);
-                return (h < 7 ? h + 12 : h) * 60 + m;
-            };
+            const timeToSortable = (timeStr) => { const [h, m] = timeStr.split(':').map(Number); return (h < 7 ? h + 12 : h) * 60 + m; };
             schedule.scheduleData[day].sort((a,b) => timeToSortable(a.period.split('-')[0]) - timeToSortable(b.period.split('-')[0]));
             
-            populateDatalists();
+            extractAvailableOptions();
             refreshAllViews();
             closeModal();
         };

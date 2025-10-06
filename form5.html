@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
-    <!-- Ensure these data files are in the same folder -->
+    <!-- Ensure these data files are in the same folder as this HTML file -->
     <script src="form5_schedule.js"></script>
     <script src="form4to1_schedule.js"></script>
     <script src="teacher_data.js"></script> 
@@ -93,13 +93,36 @@
     </div>
 
     <div id="edit-modal" class="modal-backdrop">
-        <!-- Complete modal HTML is here -->
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-lg font-bold mb-4">Edit Slot</h3>
+            <div id="modal-body" class="space-y-4">
+                <div id="entry-form-1" class="p-3 border rounded-lg bg-gray-50 space-y-2">
+                    <p class="text-sm font-semibold text-gray-600">Entry 1</p>
+                    <div><label class="block text-sm font-medium">Subject</label><select id="subject1" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select></div>
+                    <div><label class="block text-sm font-medium">Teacher</label><select id="teacher1" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select></div>
+                    <div><label class="block text-sm font-medium">Location</label><select id="location1" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select></div>
+                </div>
+                <div id="entry-form-2" class="p-3 border rounded-lg bg-gray-50 space-y-2" style="display: none;">
+                    <p class="text-sm font-semibold text-gray-600">Entry 2 (Split)</p>
+                    <div><label class="block text-sm font-medium">Subject</label><select id="subject2" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select></div>
+                    <div><label class="block text-sm font-medium">Teacher</label><select id="teacher2" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select></div>
+                    <div><label class="block text-sm font-medium">Location</label><select id="location2" class="select-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></select></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-between items-center">
+                 <button id="split-cell-btn" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">Split Cell</button>
+                 <div class="flex gap-2">
+                    <button id="delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Clear</button>
+                    <button id="save-btn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Apply</button>
+                    <button id="cancel-btn" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">Cancel</button>
+                 </div>
+            </div>
+        </div>
     </div>
 
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-    // All global variables and setup functions are here and complete
     let allSchedules = [], teacherDetails = {};
     const days = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     let originalAllSchedules = [], originalTeacherDetails = {}, currentPdfData = null;
@@ -114,9 +137,32 @@
         setupPdfViewer();
     });
 
-    // All main functions are here and complete
-    function initializeData() { /* ... */ }
-    function extractAvailableOptions() { /* ... */ }
+    function initializeData() {
+        try {
+            const form5Data = typeof form5Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form5Schedules)) : [];
+            const form4to1Data = typeof form4to1Schedules !== 'undefined' ? JSON.parse(JSON.stringify(form4to1Schedules)) : [];
+            originalAllSchedules = [...form5Data, ...form4to1Data];
+            originalTeacherDetails = typeof teacherData !== 'undefined' ? JSON.parse(JSON.stringify(teacherData)) : {};
+            allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
+            teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
+        } catch(e) { document.body.innerHTML = `<div class="p-8 text-center text-red-600"><strong>Error:</strong> Schedule data files failed to load. Please check that form5_schedule.js, form4to1_schedule.js, and teacher_data.js are present.</div>`; console.error(e); }
+    }
+
+    function extractAvailableOptions() {
+        const subjects = new Set(), teachers = new Set(), locations = new Set();
+        Object.values(teacherDetails).forEach(t => { if(t.fullName) teachers.add(t.fullName.trim()) });
+        allSchedules.forEach(cs => {
+            Object.values(cs.scheduleData).flat().forEach(e => {
+                if (e.subject) e.subject.split(' / ').forEach(s => s.trim() && subjects.add(s.trim()));
+                if (e.teacher) e.teacher.split(' / ').forEach(t => t.trim() && teachers.add(t.trim()));
+                if (e.location) e.location.split(' / ').forEach(l => l.trim() && locations.add(l.trim()));
+            });
+        });
+        availableSubjects = ["", ...[...subjects].sort()];
+        availableTeachers = ["", ...[...teachers].sort()];
+        availableLocations = ["", ...[...locations].sort()];
+    }
+    
     function refreshAllViews() {
         const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
         const currentDayName = jsDayToMalay[new Date().getDay()];
@@ -124,6 +170,7 @@
         document.getElementById('class-view').innerHTML = getClassViewHTML();
         setupClassViewLogic(currentDayName);
     }
+    
     function setupViewToggler() {
         const buttons = document.querySelectorAll('.view-toggle-button');
         const views = document.querySelectorAll('.view-container');
@@ -159,11 +206,32 @@
         const sortedSchedules = [...allSchedules].sort((a, b) => a.className.localeCompare(b.className));
 
         sortedSchedules.forEach((schedule, index) => {
-            // ... (Button creation logic is here)
+            const safeClassName = schedule.className.replace(/[^a-zA-Z0-9]/g, '-');
+            const button = document.createElement('button');
+            button.textContent = schedule.className;
+            button.className = 'class-nav-button px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300';
+            if (index === 0) button.classList.add('active');
+            button.addEventListener('click', () => {
+                navigationContainer.querySelector('.active')?.classList.remove('active');
+                schedulesContainer.querySelector('.active')?.classList.remove('active');
+                button.classList.add('active');
+                document.getElementById(`schedule-${safeClassName}`).classList.add('active');
+            });
+            navigationContainer.appendChild(button);
+            const scheduleDiv = document.createElement('div');
+            scheduleDiv.id = `schedule-${safeClassName}`;
+            scheduleDiv.className = 'class-schedule-table';
+            if (index === 0) scheduleDiv.classList.add('active');
+            scheduleDiv.innerHTML = renderClassSchedule(schedule, currentDayName);
+            schedulesContainer.appendChild(scheduleDiv);
         });
 
         schedulesContainer.addEventListener('click', (e) => {
-            // ... (Cell click logic is here)
+            const cell = e.target.closest('.editable-cell');
+            if (cell) {
+                const { className, day, period } = cell.dataset;
+                window.openEditModal(className, day, period);
+            }
         });
         
         document.getElementById('toggle-pdf-btn').addEventListener('click', () => {
@@ -172,7 +240,42 @@
     }
     
     function renderClassSchedule(schedule, currentDayName) {
-        // ... (The full, correct rendering logic is here)
+        const header = `<header class="my-4 text-center"><h2 class="text-xl font-bold text-gray-800">JADUAL WAKTU KELAS ${schedule.className}</h2><p class="text-gray-500 text-sm mt-1">Class Teacher: ${schedule.classTeacher}</p></header>`;
+        const filteredTimeSlots = schedule.timeSlots.filter(slot => slot !== "2:00-3:00");
+        let tableHTML = `<table class="min-w-full border-collapse border border-gray-300"><thead class="bg-gray-100 text-xs text-gray-600"><tr><th class="border p-2">HARI</th>${filteredTimeSlots.map(slot => `<th class="border p-1 text-xs">${slot.replace('-', '-<br>')}</th>`).join('')}</tr></thead><tbody class="align-top text-xs">`;
+        days.forEach(day => {
+            tableHTML += `<tr><td class="font-bold border p-2">${day}</td>`;
+            let cellsToRender = new Array(filteredTimeSlots.length).fill(null);
+            (schedule.scheduleData[day] || []).forEach(entry => {
+                const startIndex = filteredTimeSlots.findIndex(slot => slot.startsWith(entry.period.split('-')[0]));
+                const endIndex = filteredTimeSlots.findIndex(slot => slot.endsWith(entry.period.split('-')[1]));
+                if (startIndex !== -1) {
+                    const colspan = (endIndex !== -1 ? endIndex : startIndex) - startIndex + 1;
+                    const subjects = (entry.subject || '').split(' / ');
+                    const teachers = (entry.teacher || '').split(' / ');
+                    const locations = (entry.location || '').split(' / ');
+                    let content = (subjects.length > 1 && subjects[0].trim())
+                        ? `<div class="split-content"><div class="split-entry"><div class="subject">${subjects[0]}</div><div class="teacher">${teachers[0]||''}</div><div class="location">${locations[0]||''}</div></div><div class="split-entry"><div class="subject">${subjects[1]||''}</div><div class="teacher">${teachers[1]||''}</div><div class="location">${locations[1]||''}</div></div></div>`
+                        : `<div class="subject">${entry.subject||''}</div><div class="teacher">${entry.teacher||''}</div><div class="location">${entry.location||''}</div>`;
+                    cellsToRender[startIndex] = { content, colspan, period: entry.period };
+                    for (let i = 1; i < colspan; i++) { if (startIndex + i < cellsToRender.length) cellsToRender[startIndex + i] = 'covered'; }
+                }
+            });
+            if (schedule.rehatSlot) {
+                const rehatIndex = filteredTimeSlots.indexOf(schedule.rehatSlot);
+                if (rehatIndex !== -1) cellsToRender[rehatIndex] = { content: 'REHAT', colspan: 1, isRehat: true };
+            }
+            cellsToRender.forEach((cell, index) => {
+                if (cell === 'covered') return;
+                const period = cell?.period || filteredTimeSlots[index];
+                const dataAttrs = `data-class-name="${schedule.className}" data-day="${day}" data-period="${period}"`;
+                const cellClass = cell?.isRehat ? 'class-rehat-slot font-semibold writing-mode-vertical-rl' : 'editable-cell';
+                tableHTML += `<td class="border p-1 ${cellClass}" colspan="${cell?.colspan||1}" ${cell?.isRehat ? '' : dataAttrs}>${cell?.content||''}</td>`;
+            });
+            tableHTML += `</tr>`;
+        });
+        tableHTML += `</tbody></table>`;
+        return header + tableHTML;
     }
 
     function setupPdfViewer() {
@@ -182,16 +285,41 @@
         const container = document.getElementById('pdf-viewer-container');
         const closeBtn = document.getElementById('pdf-close-btn');
         const resizeHandle = document.getElementById('pdf-resize-handle');
+        
         closeBtn.addEventListener('click', () => floater.classList.remove('visible'));
         
         fileInput.addEventListener('change', (event) => {
-            // ... (File loading logic is here)
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                const fileReader = new FileReader();
+                fileReader.onload = () => {
+                    currentPdfData = new Uint8Array(fileReader.result);
+                    renderPdf(currentPdfData);
+                };
+                fileReader.readAsArrayBuffer(file);
+            }
         });
+
         async function renderPdf(data) {
-            // ... (PDF rendering logic is here)
+            if (!data) return;
+            container.innerHTML = '<p class="text-center">Loading PDF...</p>';
+            try {
+                const pdf = await pdfjsLib.getDocument(data).promise;
+                container.innerHTML = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const scale = container.clientWidth / page.getViewport({ scale: 1.0 }).width;
+                    const viewport = page.getViewport({ scale: scale });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    container.appendChild(canvas);
+                }
+            } catch (error) { console.error(error); container.innerHTML = '<p class="text-red-500 text-center">Error loading PDF.</p>'; }
         }
 
-        // --- FIX: DRAG AND RESIZE EVENT LISTENERS ARE NOW CORRECTLY IMPLEMENTED ---
         let isDragging = false, offsetX, offsetY;
         header.addEventListener('mousedown', (e) => {
             isDragging = true;
@@ -205,30 +333,116 @@
 
         let isResizing = false;
         resizeHandle.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Prevent text selection during resize
+            e.preventDefault();
             isResizing = true;
             document.addEventListener('mousemove', onResizeMove);
             document.addEventListener('mouseup', onResizeUp);
         });
-        function onResizeMove(e) {
-            if (isResizing) {
-                floater.style.width = `${e.clientX - floater.offsetLeft}px`;
-                floater.style.height = `${e.clientY - floater.offsetTop}px`;
-            }
-        }
-        function onResizeUp() {
-            isResizing = false;
-            document.removeEventListener('mousemove', onResizeMove);
-            document.removeEventListener('mouseup', onResizeUp);
-            renderPdf(currentPdfData);
-        }
+        function onResizeMove(e) { if (isResizing) { floater.style.width = `${e.clientX - floater.offsetLeft}px`; floater.style.height = `${e.clientY - floater.offsetTop}px`; } }
+        function onResizeUp() { isResizing = false; document.removeEventListener('mousemove', onResizeMove); document.removeEventListener('mouseup', onResizeUp); renderPdf(currentPdfData); }
     }
     
-    // All other functions are complete and present in the final file.
-    // Ellipses are used for display brevity.
-    function setupEditModal() { /* ... complete modal logic ... */ }
-    function saveAndDownloadFiles() { /* ... complete save logic ... */ }
-    function resetSchedules() { /* ... complete reset logic ... */ }
+    function setupEditModal() {
+        const modal = document.getElementById('edit-modal');
+        const cancelButton = document.getElementById('cancel-btn');
+        const saveButton = document.getElementById('save-btn');
+        const deleteButton = document.getElementById('delete-btn');
+        const splitButton = document.getElementById('split-cell-btn');
+        const entryForm2 = document.getElementById('entry-form-2');
+        let currentEditContext = null;
+
+        const populateSelect = (selectId, options, selectedValue) => {
+            const select = document.getElementById(selectId);
+            select.innerHTML = options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt || '-- Select --'}</option>`).join('');
+            select.value = selectedValue || "";
+        };
+
+        window.openEditModal = (className, day, period) => {
+            currentEditContext = { className, day, period };
+            const schedule = allSchedules.find(s => s.className === className);
+            if (!schedule) return;
+            const entry = (schedule.scheduleData[day] || []).find(e => e.period === period);
+            document.getElementById('modal-title').textContent = `Edit Slot: ${className} - ${day} - ${period}`;
+            const subjects = (entry?.subject || '').split(' / '), teachers = (entry?.teacher || '').split(' / '), locations = (entry?.location || '').split(' / ');
+            populateSelect('subject1', availableSubjects, subjects[0]?.trim());
+            populateSelect('teacher1', availableTeachers, teachers[0]?.trim());
+            populateSelect('location1', availableLocations, locations[0]?.trim());
+            populateSelect('subject2', availableSubjects, subjects[1]?.trim());
+            populateSelect('teacher2', availableTeachers, teachers[1]?.trim());
+            populateSelect('location2', availableLocations, locations[1]?.trim());
+            entryForm2.style.display = (subjects.length > 1) ? 'block' : 'none';
+            splitButton.textContent = (subjects.length > 1) ? 'Unsplit Cell' : 'Split Cell';
+            modal.classList.add('active');
+        };
+
+        const closeModal = () => modal.classList.remove('active');
+        cancelButton.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        splitButton.addEventListener('click', () => {
+            const isSplit = entryForm2.style.display === 'block';
+            entryForm2.style.display = isSplit ? 'none' : 'block';
+            splitButton.textContent = isSplit ? 'Split Cell' : 'Unsplit Cell';
+        });
+
+        const applyChanges = (isDelete = false) => {
+            if (!currentEditContext) return;
+            const { className, day, period } = currentEditContext;
+            const schedule = allSchedules.find(s => s.className === className);
+            if (!schedule) return;
+            if (!schedule.scheduleData[day]) schedule.scheduleData[day] = [];
+            const entryIndex = schedule.scheduleData[day].findIndex(e => e.period === period);
+            if(entryIndex !== -1) schedule.scheduleData[day].splice(entryIndex, 1);
+            if (!isDelete) {
+                const s1 = document.getElementById('subject1').value, t1 = document.getElementById('teacher1').value, l1 = document.getElementById('location1').value;
+                let finalEntry;
+                if (entryForm2.style.display === 'block') {
+                    const s2 = document.getElementById('subject2').value, t2 = document.getElementById('teacher2').value, l2 = document.getElementById('location2').value;
+                    finalEntry = { period, subject: `${s1} / ${s2}`, teacher: `${t1} / ${t2}`, location: `${l1} / ${l2}` };
+                } else {
+                    finalEntry = { period, subject: s1, teacher: t1, location: l1 };
+                }
+                if (finalEntry.subject || finalEntry.teacher || finalEntry.location) {
+                    schedule.scheduleData[day].push(finalEntry);
+                }
+            }
+            const timeToSortable = (timeStr) => { const [h, m] = timeStr.split(':').map(Number); return (h < 7 ? h + 12 : h) * 60 + m; };
+            schedule.scheduleData[day].sort((a,b) => timeToSortable(a.period.split('-')[0]) - timeToSortable(b.period.split('-')[0]));
+            extractAvailableOptions();
+            refreshAllViews();
+            closeModal();
+        };
+        deleteButton.addEventListener('click', () => applyChanges(true));
+        saveButton.addEventListener('click', () => applyChanges(false));
+    }
+    
+    function saveAndDownloadFiles() {
+        const updatedForm5 = allSchedules.filter(s => originalAllSchedules.some(o => o.className === s.className && o.className.startsWith('5')));
+        const updatedForm4to1 = allSchedules.filter(s => originalAllSchedules.some(o => o.className === s.className && !o.className.startsWith('5')));
+        downloadJSFile('teacher_data.js', 'teacherData', teacherDetails);
+        downloadJSFile('form5_schedule.js', 'form5Schedules', updatedForm5);
+        downloadJSFile('form4to1_schedule.js', 'form4to1Schedules', updatedForm4to1);
+        alert("Updated schedule files downloaded.");
+    }
+
+    function downloadJSFile(filename, varName, data) {
+        const fileContent = `const ${varName} = ${JSON.stringify(data, null, 4)};`;
+        const blob = new Blob([fileContent], { type: 'text/javascript' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }
+
+    function resetSchedules() {
+        if (confirm("Are you sure? This will discard all changes made in this session.")) {
+            allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
+            teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
+            refreshAllViews();
+        }
+    }
 </script>
 </body>
 </html>

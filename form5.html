@@ -189,7 +189,7 @@
     const days = ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT"];
     let originalAllSchedules = [], originalTeacherDetails = {}, currentPdfData = null;
     let availableSubjects = [], availableTeachers = [], availableLocations = [];
-    let isViewLocked = false; // Shared state for PDF and Web View lock
+    let isViewLocked = false; 
     
     document.addEventListener('DOMContentLoaded', () => {
         initializeData();
@@ -226,12 +226,14 @@
         availableLocations = ["", ...[...locations].sort()];
     }
     
-    function refreshAllViews() {
+    // FIX: Modified refreshAllViews to accept the currently active class name
+    function refreshAllViews(activeClassName = null) {
         const jsDayToMalay = [null, "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", null];
         const currentDayName = jsDayToMalay[new Date().getDay()];
         document.getElementById('current-day-display').textContent = `Today is ${currentDayName || 'the weekend'}`;
-        document.getElementById('class-view').innerHTML = getClassViewHTML();
-        setupClassViewLogic(currentDayName);
+        
+        // Pass the activeClassName to the setup function
+        setupClassViewLogic(currentDayName, activeClassName);
     }
 
     function syncLockState() {
@@ -240,13 +242,11 @@
         const lockedIcon = document.getElementById('lock-icon-locked');
         const unlockedIcon = document.getElementById('lock-icon-unlocked');
         
-        // Sync PDF viewer scroll lock
         container.classList.toggle('pdf-locked', isViewLocked);
         lockedIcon.classList.toggle('hidden', !isViewLocked);
         unlockedIcon.classList.toggle('hidden', isViewLocked);
         lockBtn.title = isViewLocked ? 'Unlock PDF & Class View' : 'Lock PDF & Class View';
         
-        // Sync Web schedule navigation lock
         const navButtons = document.querySelectorAll('#class-navigation .class-nav-button');
         navButtons.forEach(button => {
             if (isViewLocked) {
@@ -288,19 +288,27 @@
                 <div id="class-schedules-container" class="overflow-x-auto"></div>`;
     }
 
-    function setupClassViewLogic(currentDayName) {
+    // FIX: Modified setupClassViewLogic to restore the correct active class
+    function setupClassViewLogic(currentDayName, activeClassName = null) {
+        document.getElementById('class-view').innerHTML = getClassViewHTML(); // Rebuild HTML first
         const navigationContainer = document.getElementById('class-navigation');
         const schedulesContainer = document.getElementById('class-schedules-container');
-        navigationContainer.innerHTML = '';
-        schedulesContainer.innerHTML = '';
+        
         const sortedSchedules = [...allSchedules].sort((a, b) => a.className.localeCompare(b.className));
+        
+        // Determine which class should be active
+        const activeClassToShow = activeClassName || (sortedSchedules.length > 0 ? sortedSchedules[0].className : null);
 
-        sortedSchedules.forEach((schedule, index) => {
+        sortedSchedules.forEach(schedule => {
             const safeClassName = schedule.className.replace(/[^a-zA-Z0-9]/g, '-');
             const button = document.createElement('button');
             button.textContent = schedule.className;
             button.className = 'class-nav-button px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300';
-            if (index === 0) button.classList.add('active');
+            
+            if (schedule.className === activeClassToShow) {
+                button.classList.add('active');
+            }
+
             button.addEventListener('click', () => {
                 navigationContainer.querySelector('.active')?.classList.remove('active');
                 schedulesContainer.querySelector('.active')?.classList.remove('active');
@@ -308,10 +316,15 @@
                 document.getElementById(`schedule-${safeClassName}`).classList.add('active');
             });
             navigationContainer.appendChild(button);
+
             const scheduleDiv = document.createElement('div');
             scheduleDiv.id = `schedule-${safeClassName}`;
             scheduleDiv.className = 'class-schedule-table';
-            if (index === 0) scheduleDiv.classList.add('active');
+            
+            if (schedule.className === activeClassToShow) {
+                scheduleDiv.classList.add('active');
+            }
+
             scheduleDiv.innerHTML = renderClassSchedule(schedule, currentDayName);
             schedulesContainer.appendChild(scheduleDiv);
         });
@@ -345,7 +358,7 @@
                 }
             }
         });
-        syncLockState(); // Apply lock state to newly created buttons
+        syncLockState();
     }
     
     function renderClassSchedule(schedule, currentDayName) {
@@ -501,7 +514,7 @@
         document.getElementById('zoom-100').addEventListener('click', () => { fitMode = 'custom'; zoom = 1.0; rerenderDebounced(); });
         
         container.addEventListener('wheel', (e) => {
-            if (isViewLocked || !e.ctrlKey && !e.metaKey) return;
+            if (isViewLocked || (!e.ctrlKey && !e.metaKey)) return;
             e.preventDefault();
             zoom = e.deltaY < 0 ? Math.min(4, zoom * 1.1) : Math.max(0.25, zoom / 1.1);
             fitMode = 'custom';
@@ -645,7 +658,10 @@
             const timeToSortable = (timeStr) => { const [h, m] = timeStr.split(':').map(Number); return (h < 7 ? h + 12 : h) * 60 + m; };
             schedule.scheduleData[day].sort((a,b) => timeToSortable(a.period.split('-')[0]) - timeToSortable(b.period.split('-')[0]));
             extractAvailableOptions();
-            refreshAllViews();
+            
+            // FIX: Pass the current class name to refreshAllViews
+            refreshAllViews(className);
+            
             closeModal();
         };
         deleteButton.addEventListener('click', () => applyChanges(true));
@@ -675,9 +691,12 @@
 
     function resetSchedules() {
         if (confirm("Are you sure? This will discard all changes made in this session.")) {
+            // FIX: Preserve active class on reset as well
+            const activeNavButton = document.querySelector('#class-navigation .class-nav-button.active');
+            const activeClassName = activeNavButton ? activeNavButton.textContent : null;
             allSchedules = JSON.parse(JSON.stringify(originalAllSchedules));
             teacherDetails = JSON.parse(JSON.stringify(originalTeacherDetails));
-            refreshAllViews();
+            refreshAllViews(activeClassName);
         }
     }
 </script>

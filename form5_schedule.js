@@ -1,41 +1,41 @@
 // This file contains the schedule data for Form 5 classes.
-// The schedule for 5SN1 has been meticulously corrected to match the master timetable image provided.
+// The schedule for 5SN1 has been corrected to match the provided PDF timetable.
 
 const form5Schedules = [
     {
         className: "5SN1", classTeacher: "SITI ZURAIDAH MOHD KADIS",
-        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:30", "12:30-1:30", "1:30-2:30"],
+        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:30", "12:30-1:30", "1:30-2:30", "2:30-3:30"],
         rehatSlot: "10:15-10:30",
         scheduleData: {
             "ISNIN": [
-                { period: "7:15-8:15", subject: "PH", teacher: "5SN1" },
-                { period: "8:15-9:15", subject: "AS", teacher: "PN HASLINA" },
-                { period: "9:15-10:15", subject: "BI", teacher: "MISS NIVETHA" },
-                { period: "10:30-11:30", subject: "BM", teacher: "CIK NAZA" },
-                { period: "11:30-12:30", subject: "FIZ", teacher: "PN. MALINA", location: "MAK. FIZ" },
-                { period: "12:30-1:30", subject: "KKQ", teacher: "UST FARIS", location: "M. KOM 1" },
-                { period: "1:30-2:30", subject: "MMT / MM", teacher: "PN FAEZAH / CIK ZURAIDAH", location: "M. KOM 1" }
+                { period: "7:15-8:15", subject: "PH / AS", teacher: "PN HASLINA" },
+                { period: "8:15-9:15", subject: "BI", teacher: "MISS NIVETHA" },
+                { period: "9:15-10:15", subject: "FIZ / BM", teacher: "PN. MALINA / CIK NAZA", location: "MAK. FIZ / -" },
+                { period: "10:30-11:30", subject: "KKQ", teacher: "UST FARIS", location: "M. KOM 1" },
+                { period: "11:30-12:30", subject: "MMT", teacher: "PN FAEZAH", location: "M. KOM 1" },
+                { period: "12:30-1:30", subject: "MM", teacher: "CIK ZURAIDAH", location: "M. KOM 1" }
             ],
             "SELASA": [
                 { period: "7:15-8:15", subject: "BM", teacher: "CIK NAZA" },
-                { period: "8:15-9:15", subject: "MM", teacher: "CIK ZURAIDAH" },
-                { period: "9:15-10:15", subject: "PJ", teacher: "EN AHMAD" },
-                { period: "10:30-11:30", subject: "BIO", teacher: "PN NOROSNIZA", location: "MAK. BIO" },
-                { period: "11:30-12:30", subject: "SJ", teacher: "PN. ROSIEATI" },
+                { period: "8:15-9:15", subject: "BM", teacher: "CIK NAZA" },
+                { period: "9:15-10:15", subject: "MM", teacher: "CIK ZURAIDAH" },
+                { period: "10:30-11:30", subject: "PJ / PA", teacher: "EN AHMAD / PN. GURCHAN" },
+                { period: "11:30-12:30", subject: "BIO", teacher: "PN NOROSNIZA", location: "MAK. BIO" },
                 { period: "12:30-1:30", subject: "AS", teacher: "PN HASLINA" },
-                { period: "1:30-2:30", subject: "BA", teacher: "CIK NADIA" }
+                { period: "1:30-2:30", subject: "SJ", teacher: "PN. ROSIEATI" },
+                { period: "2:30-3:30", subject: "BA", teacher: "CIK NADIA" }
             ],
             "RABU": [
                 { period: "7:15-8:15", subject: "KOKO" },
-                { period: "8:15-9:15", subject: "BM", teacher: "CIK NAZA", location: "5SN1" },
-                { period: "9:15-10:15", subject: "SI", teacher: "UST HAJAR" },
-                { period: "10:30-11:30", subject: "PA", teacher: "PN. GURCHAN" },
-                { period: "11:30-12:30", subject: "MM", teacher: "CIK ZURAIDAH" },
-                { period: "12:30-1:30", subject: "MMT", teacher: "PN FAEZAH" },
-                { period: "1:30-2:30", subject: "KIM / KKQ", teacher: "PN SYAMIMI / UST FARIS", location: "MAK. KIM / M. KOM 1" }
+                { period: "8:15-9:15", subject: "BM", teacher: "CIK NAZA" },
+                { period: "9:15-10:15", subject: "BM", teacher: "CIK NAZA" },
+                { period: "10:30-11:30", subject: "SI / PA", teacher: "UST HAJAR / PN. GURCHAN" },
+                { period: "11:30-12:30", subject: "MM / MMT", teacher: "CIK ZURAIDAH / PN FAEZAH" },
+                { period: "12:30-1:30", subject: "KIM", teacher: "PN SYAMIMI", location: "MAK. KIM" },
+                { period: "1:30-2:30", subject: "KKQ", teacher: "UST FARIS", location: "M. KOM 1" }
             ],
             "KHAMIS": [
-                { period: "7:15-8:15", subject: "BIO", teacher: "PN NOROSNIZA", location: "MAK. BIO" },
+                { period: "7:15-8:15", subject: "BIO / PA", teacher: "PN NOROSNIZA / PN. GURCHAN", location: "MAK. BIO / -" },
                 { period: "8:15-9:15", subject: "BM", teacher: "CIK NAZA" },
                 { period: "9:15-10:15", subject: "BA", teacher: "CIK NADIA" },
                 { period: "10:30-11:30", subject: "SJ", teacher: "PN. ROSIEATI" },
@@ -44,11 +44,11 @@ const form5Schedules = [
                 { period: "1:30-2:30", subject: "SI", teacher: "UST HAJAR", location: "M. KOM 1" }
             ],
             "JUMAAT": [
-                { period: "7:15-8:15", subject: "PA", teacher: "PN. GURCHAN" },
+                { period: "7:15-8:15", subject: "FIZ", teacher: "PN. MALINA" },
                 { period: "8:15-9:15", subject: "BI", teacher: "MISS NIVETHA" },
-                { period: "9:15-10:15", subject: "PJ", teacher: "EN AHMAD" },
-                { period: "10:30-11:30", subject: "FIZ", teacher: "PN. MALINA" },
-                { period: "11:30-12:30", subject: "MMT / AS", teacher: "PN FAEZAH / PN HASLINA" }
+                { period: "9:15-10:15", subject: "PJ", teacher: "EN AHMAD / PN. GURCHAN" },
+                { period: "10:30-11:30", subject: "MMT / AS", teacher: "PN FAEZAH / PN HASLINA" },
+                { period: "11:30-12:30", subject: "MT", teacher: "PN HASLINA" }
             ]
         }
     },
@@ -173,5 +173,4 @@ const form5Schedules = [
         }
     }
 ];
-
 

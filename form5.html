@@ -51,6 +51,7 @@
             box-sizing: border-box; 
         }
         #pdf-viewer-container { flex-grow: 1; overflow: auto; background-color: #e9e9e9; padding: 10px; }
+        #pdf-viewer-container.pdf-locked { overflow: hidden; } /* Lock scroll */
         #pdf-viewer-container canvas { margin: 0 auto 10px auto; display: block; max-width: 100%; height: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         #pdf-close-btn { cursor: pointer; font-size: 1.5rem; font-weight: bold; }
         #pdf-resize-handle { position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; cursor: nwse-resize; background: repeating-linear-gradient(-45deg, #bbb, #bbb 2px, transparent 2px, transparent 4px); border-top-left-radius: 6px; touch-action: none; z-index: 1; }
@@ -98,6 +99,14 @@
             <div class="flex items-center gap-x-4">
                 <!-- Zoom Controls -->
                 <div class="flex items-center gap-x-1 text-sm">
+                    <button id="pdf-lock-btn" class="w-7 h-7 border rounded hover:bg-gray-200 transition flex items-center justify-center" title="Lock/Unlock PDF Scroll">
+                        <svg id="lock-icon-unlocked" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-unlock-fill" viewBox="0 0 16 16">
+                            <path d="M11 1a2 2 0 0 0-2 2v4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5V3a3 3 0 0 1 6 0v4a.5.5 0 0 1-1 0V3a2 2 0 0 0-2-2z"/>
+                        </svg>
+                        <svg id="lock-icon-locked" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lock-fill hidden" viewBox="0 0 16 16">
+                            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                        </svg>
+                    </button>
                     <button id="zoom-out" class="w-7 h-7 border rounded hover:bg-gray-200 transition">-</button>
                     <span id="zoom-label" class="min-w-[50px] text-center font-medium">100%</span>
                     <button id="zoom-in" class="w-7 h-7 border rounded hover:bg-gray-200 transition">+</button>
@@ -326,7 +335,8 @@
     function setupPdfViewer() {
         // --- STATE ---
         let zoom = 1.0;
-        let fitMode = 'fitWidth'; // 'fitWidth' or 'custom'
+        let fitMode = 'fitWidth';
+        let isPdfScrollLocked = false;
         
         // --- ELEMENTS ---
         const floater = document.getElementById('pdf-floater');
@@ -342,6 +352,9 @@
         const zoomFitBtn = document.getElementById('zoom-fit');
         const zoom100Btn = document.getElementById('zoom-100');
         const zoomLabel = document.getElementById('zoom-label');
+        const lockBtn = document.getElementById('pdf-lock-btn');
+        const lockedIcon = document.getElementById('lock-icon-locked');
+        const unlockedIcon = document.getElementById('lock-icon-unlocked');
 
         // --- RENDER LOGIC ---
         let renderTimeout;
@@ -352,17 +365,19 @@
 
         async function renderPdf(data) {
             if (!data) return;
+            const savedScrollTop = container.scrollTop;
+            const savedScrollLeft = container.scrollLeft;
             container.innerHTML = '<p class="text-center text-gray-500">Rendering PDF...</p>';
             try {
                 const pdf = await pdfjsLib.getDocument({ data }).promise;
-                container.innerHTML = ''; // Clear previous pages and loading text
+                container.innerHTML = '';
                 
                 const firstPage = await pdf.getPage(1);
                 const viewport1 = firstPage.getViewport({ scale: 1.0 });
                 let currentScale;
 
                 if (fitMode === 'fitWidth') {
-                    currentScale = (container.clientWidth - 20) / viewport1.width; // 20px for padding
+                    currentScale = (container.clientWidth - 20) / viewport1.width;
                     zoomLabel.textContent = `Fit`;
                 } else {
                     currentScale = zoom;
@@ -373,12 +388,14 @@
                     const page = await pdf.getPage(pageNum);
                     const viewport = page.getViewport({ scale: currentScale });
                     const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
+                    canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
                     container.appendChild(canvas);
                 }
+                container.scrollTop = savedScrollTop;
+                container.scrollLeft = savedScrollLeft;
             } catch (error) {
                 console.error("Error rendering PDF:", error);
                 container.innerHTML = '<p class="text-red-500 text-center">Error: Could not render PDF.</p>';
@@ -394,14 +411,22 @@
                 const fileReader = new FileReader();
                 fileReader.onload = () => {
                     currentPdfData = new Uint8Array(fileReader.result);
-                    fitMode = 'fitWidth'; // Reset to fit mode for new PDF
+                    fitMode = 'fitWidth';
                     rerenderDebounced();
                 };
                 fileReader.readAsArrayBuffer(file);
             }
         });
 
-        // --- ZOOM CONTROLS ---
+        // --- CONTROLS ---
+        lockBtn.addEventListener('click', () => {
+            isPdfScrollLocked = !isPdfScrollLocked;
+            container.classList.toggle('pdf-locked', isPdfScrollLocked);
+            lockedIcon.classList.toggle('hidden', !isPdfScrollLocked);
+            unlockedIcon.classList.toggle('hidden', isPdfScrollLocked);
+            lockBtn.title = isPdfScrollLocked ? 'Unlock PDF Scroll' : 'Lock PDF Scroll';
+        });
+
         zoomInBtn.addEventListener('click', () => { zoom = Math.min(4, zoom * 1.2); fitMode = 'custom'; rerenderDebounced(); });
         zoomOutBtn.addEventListener('click', () => { zoom = Math.max(0.25, zoom / 1.2); fitMode = 'custom'; rerenderDebounced(); });
         zoomFitBtn.addEventListener('click', () => { fitMode = 'fitWidth'; rerenderDebounced(); });
@@ -414,39 +439,25 @@
             fitMode = 'custom';
             rerenderDebounced();
         }, { passive: false });
-
-        let pinchStartDist = null, pinchStartZoom = null;
-        container.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                pinchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                pinchStartZoom = zoom;
-            }
-        }, { passive: true });
-        container.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2 && pinchStartDist) {
-                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                zoom = Math.min(4, Math.max(0.25, pinchStartZoom * (dist / pinchStartDist)));
-                fitMode = 'custom';
-                rerenderDebounced();
-            }
-        }, { passive: true });
-        container.addEventListener('touchend', () => { pinchStartDist = null; });
-
-        // --- DRAG LOGIC ---
+        
+        // --- DRAG LOGIC (FIXED FOR MOBILE SCROLL) ---
         let isDragging = false, dragOffsetX, dragOffsetY;
         const startDrag = (e) => {
+            if (e.target !== header && !header.contains(e.target)) return;
             isDragging = true;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             dragOffsetX = clientX - floater.offsetLeft;
             dragOffsetY = clientY - floater.offsetTop;
+            document.body.style.userSelect = 'none';
             document.addEventListener('mousemove', onDrag);
-            document.addEventListener('touchmove', onDrag, { passive: true });
+            document.addEventListener('touchmove', onDrag, { passive: false });
             document.addEventListener('mouseup', endDrag);
             document.addEventListener('touchend', endDrag);
         };
         const onDrag = (e) => {
             if (!isDragging) return;
+            if (e.touches) e.preventDefault(); // Prevent page scroll on touch
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             floater.style.left = `${clientX - dragOffsetX}px`;
@@ -454,6 +465,7 @@
         };
         const endDrag = () => {
             isDragging = false;
+            document.body.style.userSelect = '';
             document.removeEventListener('mousemove', onDrag);
             document.removeEventListener('touchmove', onDrag);
             document.removeEventListener('mouseup', endDrag);
@@ -462,7 +474,7 @@
         header.addEventListener('mousedown', startDrag);
         header.addEventListener('touchstart', startDrag, { passive: true });
 
-        // --- RESIZE LOGIC (FIXED) ---
+        // --- RESIZE LOGIC ---
         let isResizing = false;
         function startResize(e, mode) {
             e.preventDefault();
@@ -479,49 +491,30 @@
                 const dx = currentX - startX;
                 const dy = currentY - startY;
 
-                if (mode === 'corner' || mode === 'right') {
-                    floater.style.width = `${Math.max(300, startWidth + dx)}px`;
-                }
-                if (mode === 'corner' || mode === 'bottom') {
-                    floater.style.height = `${Math.max(200, startHeight + dy)}px`;
-                }
+                if (mode.includes('right')) floater.style.width = `${Math.max(300, startWidth + dx)}px`;
+                if (mode.includes('bottom')) floater.style.height = `${Math.max(200, startHeight + dy)}px`;
             }
-
             function onResizeUp() {
-                if (!isResizing) return;
                 isResizing = false;
                 document.removeEventListener('mousemove', onResizeMove);
                 document.removeEventListener('touchmove', onResizeMove);
                 document.removeEventListener('mouseup', onResizeUp);
                 document.removeEventListener('touchend', onResizeUp);
-                rerenderDebounced(); // Re-render PDF after resizing
+                rerenderDebounced();
             }
-
             document.addEventListener('mousemove', onResizeMove);
-            document.addEventListener('touchmove', onResizeMove, { passive: true });
+            document.addEventListener('touchmove', onResizeMove, { passive: false });
             document.addEventListener('mouseup', onResizeUp);
             document.addEventListener('touchend', onResizeUp);
         }
-
-        resizeHandle.addEventListener('mousedown', (e) => startResize(e, 'corner'));
-        resizeHandle.addEventListener('touchstart', (e) => startResize(e, 'corner'), { passive: false });
+        resizeHandle.addEventListener('mousedown', (e) => startResize(e, 'right-bottom'));
+        resizeHandle.addEventListener('touchstart', (e) => startResize(e, 'right-bottom'), { passive: false });
         resizeHandleBottom.addEventListener('mousedown', (e) => startResize(e, 'bottom'));
         resizeHandleBottom.addEventListener('touchstart', (e) => startResize(e, 'bottom'), { passive: false });
         resizeHandleRight.addEventListener('mousedown', (e) => startResize(e, 'right'));
         resizeHandleRight.addEventListener('touchstart', (e) => startResize(e, 'right'), { passive: false });
 
-        // --- WINDOW RESIZE ---
-        window.addEventListener('resize', () => {
-            const margin = 10;
-            const rect = floater.getBoundingClientRect();
-            if (rect.right > window.innerWidth - margin) {
-                floater.style.left = `${window.innerWidth - rect.width - margin}px`;
-            }
-            if (rect.bottom > window.innerHeight - margin) {
-                floater.style.top = `${window.innerHeight - rect.height - margin}px`;
-            }
-            if (currentPdfData) { rerenderDebounced(); }
-        });
+        window.addEventListener('resize', rerenderDebounced);
     }
 
     function setupEditModal() {

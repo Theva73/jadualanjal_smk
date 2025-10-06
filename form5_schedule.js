@@ -14,48 +14,49 @@ const form5Schedules = [
         "rehatSlot": "10:15-10:30",
         "scheduleData": {
           "ISNIN": [
-            { "period": "7:00-7:15", "subject": "PH", "teacher": "", "location": "" },
             { "period": "7:15-8:15", "subject": "AS", "teacher": "PN HASLINA", "location": "5SN1" },
-            { "period": "8:15-9:15", "subject": "BI", "teacher": "MISS NIVETHA", "location": "" },
+            { "period": "8:15-9:45", "subject": "BI", "teacher": "MISS NIVETHA", "location": "" },
             { "period": "10:30-11:30", "subject": "BM", "teacher": "CIK NAZA", "location": "" },
             { "period": "11:30-12:30", "subject": "FIZ", "teacher": "PN. MALINA", "location": "MAK. FIZ" },
-            { "period": "12:30-1:30", "subject": "KKQ", "teacher": "UST FARIS", "location": "M. KOM 1" },
-            { "period": "1:30-2:30", "subject": "MMT", "teacher": "PN FAEZAH", "location": "" },
-            { "period": "2:30-3:30", "subject": "MM", "teacher": "CIK ZURAIDAH", "location": "M. KOM 1" }
+            { "period": "12:30-1:30", "subject": "KKQ", "teacher": "UST FARIS", "location": "M.KOM 1" },
+            { "period": "1:30-2:00", "subject": "MMT", "teacher": "PN FAEZAH", "location": "" },
+            { "period": "2:00-3:00", "subject": "MM", "teacher": "CIK ZURAIDAH", "location": "" }
           ],
           "SELASA": [
-            { "period": "7:15-8:15", "subject": "BM", "teacher": "CIK NAZA", "location": "" },
-            { "period": "8:15-9:15", "subject": "MM", "teacher": "CIK ZURAIDAH", "location": "" },
-            { "period": "9:15-10:15", "subject": "PJ", "teacher": "EN AHMAD / PN. GURCHAN", "location": "" },
+            { "period": "7:15-8:45", "subject": "BM", "teacher": "CIK NAZA", "location": "" },
+            { "period": "8:45-9:15", "subject": "MM", "teacher": "CIK ZURAIDAH", "location": "" },
+            { "period": "9:15-10:15", "subject": "PJ / PJ", "teacher": "EN AHMAD / PN. GURCHAN", "location": "" },
             { "period": "10:30-11:30", "subject": "BIO", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
-            { "period": "11:30-12:30", "subject": "PA / SJ", "teacher": "PN. GURCHAN / PN. ROSIEATI", "location": "" },
-            { "period": "12:30-1:30", "subject": "AS", "teacher": "PN HASLINA", "location": "" },
-            { "period": "1:30-2:30", "subject": "BA", "teacher": "CIK NADIA", "location": "M. KOM 1" }
+            { "period": "12:00-12:30", "subject": "PA", "teacher": "PN. GURCHAN", "location": "" },
+            { "period": "11:30-12:00", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "" },
+            { "period": "12:30-1:00", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "" },
+            { "period": "1:00-2:00", "subject": "AS", "teacher": "PN HASLINA", "location": "" },
+            { "period": "2:00-3:30", "subject": "BA", "teacher": "CIK NADIA", "location": "M. KOM 1" }
           ],
           "RABU": [
-            { "period": "7:15-8:15", "subject": "KOKO", "teacher": "CIK NAZA", "location": "5SN1" },
+            { "period": "7:15-8:15", "subject": "KOKO", "teacher": "", "location": "" },
             { "period": "8:15-9:15", "subject": "BM", "teacher": "CIK NAZA", "location": "" },
             { "period": "9:15-10:15", "subject": "SI", "teacher": "UST HAJAR", "location": "" },
             { "period": "10:30-11:30", "subject": "MM", "teacher": "CIK ZURAIDAH", "location": "" },
             { "period": "11:30-12:30", "subject": "MMT", "teacher": "PN FAEZAH", "location": "" },
             { "period": "12:30-1:30", "subject": "KIM", "teacher": "PN SYAMIMI", "location": "MAK. KIM" },
-            { "period": "1:30-2:30", "subject": "KKQ", "teacher": "UST FARIS", "location": "M. KOM 1" }
+            { "period": "1:30-3:00", "subject": "KKQ", "teacher": "UST FARIS", "location": "M.KOM 1" }
           ],
           "KHAMIS": [
-            { "period": "7:15-8:15", "subject": "BIO", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
-            { "period": "8:15-8:45", "subject": "PA", "teacher": "PN. GURCHAN", "location": "" },
+            { "period": "7:15-8:45", "subject": "BIO / PA", "teacher": "PN NOROSNIZA / PN. GURCHAN", "location": "MAK. BIO / " },
             { "period": "8:45-9:45", "subject": "BM", "teacher": "CIK NAZA", "location": "" },
             { "period": "9:45-10:15", "subject": "BA", "teacher": "CIK NADIA", "location": "" },
-            { "period": "10:30-11:00", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "" },
-            { "period": "11:00-12:00", "subject": "BI", "teacher": "MISS NIVETHA", "location": "" },
-            { "period": "12:00-1:00", "subject": "KIM", "teacher": "PN SYAMIMI", "location": "MAK. KIM" },
-            { "period": "1:00-2:00", "subject": "SI", "teacher": "UST HAJAR", "location": "M. KOM 1" }
+            { "period": "10:30-11:30", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "" },
+            { "period": "11:30-12:30", "subject": "BI", "teacher": "MISS NIVETHA", "location": "" },
+            { "period": "12:30-2:00", "subject": "KIM", "teacher": "PN SYAMIMI", "location": "MAK. KIM" },
+            { "period": "2:00-3:30", "subject": "SI", "teacher": "UST HAJAR", "location": "M. KOM 1" }
           ],
           "JUMAAT": [
-            { "period": "7:15-8:15", "subject": "FIZ", "teacher": "PN. MALINA", "location": "" },
-            { "period": "8:15-9:15", "subject": "BI", "teacher": "MISS NIVETHA", "location": "" },
-            { "period": "9:15-10:15", "subject": "PJ", "teacher": "EN AHMAD / PN. GURCHAN", "location": "" },
-            { "period": "10:30-11:30", "subject": "MT / AS", "teacher": "PN FAEZAH / PN HASLINA", "location": "" }
+            { "period": "7:15-8:45", "subject": "FIZ", "teacher": "PN. MALINA", "location": "" },
+            { "period": "8:45-9:45", "subject": "BI", "teacher": "MISS NIVETHA", "location": "" },
+            { "period": "9:45-10:15", "subject": "PJ / PJ", "teacher": "EN AHMAD / PN. GURCHAN", "location": "" },
+            { "period": "10:30-11:30", "subject": "MT", "teacher": "PN FAEZAH", "location": "" },
+            { "period": "11:30-12:30", "subject": "AS", "teacher": "PN HASLINA", "location": "" }
           ]
         }
     },
@@ -180,4 +181,5 @@ const form5Schedules = [
         }
     }
 ];
+
 

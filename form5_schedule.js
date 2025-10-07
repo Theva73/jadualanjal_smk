@@ -1,12 +1,13 @@
 // This file contains the schedule data for Form 5 classes.
-// The schedules for 5SN1, 5SN2, 5AP1, 5AP2, 5PTS1, and 5PTS2 have been updated.
+// The schedules for 5TS1, 5TS2, 5S1, 5S2, and 5S3 have been updated.
+// Added the "Rehat" time slot to the timeSlots array for all classes.
 
 const form5Schedules = [
     {
         "className": "5SN1",
         "classTeacher": "SITI ZURAIDAH MOHD KADIS",
         "timeSlots": [
-            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15",
+            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15", "10:15-10:30",
             "10:30-11:00", "11:00-11:30", "11:30-12:00", "12:00-12:30", "12:30-1:00",
             "1:00-1:30", "1:30-2:00", "2:00-2:30", "2:30-3:00", "3:00-3:30"
         ],
@@ -58,7 +59,7 @@ const form5Schedules = [
         "className": "5SN2",
         "classTeacher": "IRDA SYUHADA ISHAK",
         "timeSlots": [
-            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15",
+            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15", "10:15-10:30",
             "10:30-11:00", "11:00-11:30", "11:30-12:00", "12:00-12:30", "12:30-1:00",
             "1:00-1:30", "1:30-2:00", "2:00-2:30", "2:30-3:00", "3:00-3:30"
         ],
@@ -102,7 +103,7 @@ const form5Schedules = [
         "className": "5AP1",
         "classTeacher": "GURCHAN KAUR DHARAM SINGH",
         "timeSlots": [
-            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15",
+            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15", "10:15-10:30",
             "10:30-11:00", "11:00-11:30", "11:30-12:00", "12:00-12:30", "12:30-1:00",
             "1:00-1:30", "1:30-2:00", "2:00-2:30", "2:30-3:00", "3:00-3:30"
         ],
@@ -148,7 +149,7 @@ const form5Schedules = [
         "className": "5AP2",
         "classTeacher": "HANIM SURIA HUSSIN",
         "timeSlots": [
-            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15",
+            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15", "10:15-10:30",
             "10:30-11:00", "11:00-11:30", "11:30-12:00", "12:00-12:30", "12:30-1:00",
             "1:00-1:30", "1:30-2:00", "2:00-2:30", "2:30-3:00", "3:00-3:30"
         ],
@@ -196,7 +197,7 @@ const form5Schedules = [
         "className": "5PTS1",
         "classTeacher": "THEVANDRAN A/L BATHUMALAI",
         "timeSlots": [
-            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15",
+            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15", "10:15-10:30",
             "10:30-11:00", "11:00-11:30", "11:30-12:00", "12:00-12:30", "12:30-1:00",
             "1:00-1:30", "1:30-2:00", "2:00-2:30", "2:30-3:00", "3:00-3:30"
         ],
@@ -244,7 +245,7 @@ const form5Schedules = [
         "className": "5PTS2",
         "classTeacher": "KALAIVANI A/P ANANTHANAR",
         "timeSlots": [
-            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15",
+            "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", "9:45-10:15", "10:15-10:30",
             "10:30-11:00", "11:00-11:30", "11:30-12:00", "12:00-12:30", "12:30-1:00",
             "1:00-1:30", "1:30-2:00", "2:00-2:30", "2:30-3:00", "3:00-3:30"
         ],
@@ -289,64 +290,237 @@ const form5Schedules = [
         }
     },
     {
-        className: "5TS1", classTeacher: "NOROSNIZA OSMAN",
-        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:00", "12:00-1:00", "1:00-2:00", "2:00-3:00"],
-        rehatSlot: "10:15-10:30",
-        scheduleData: {
-            "ISNIN": [ { period: "8:15-9:15", subject: "PJ", teacher: "EN AHMAD" }, { period: "9:15-10:15", subject: "SN", teacher: "PN NOROSNIZA", location: "MAK. BIO" }, { period: "10:30-11:30", subject: "PS", teacher: "EN. IQBAL" }, { period: "11:30-12:00", subject: "SJ", teacher: "PN. ROSIEATI" }, { period: "12:00-1:00", subject: "TAW", teacher: "UST HAJAR" }, { period: "1:00-2:00", subject: "PS", teacher: "EN. IQBAL" }, { period: "2:00-3:00", subject: "TAW", teacher: "UST HAJAR" } ],
-            "SELASA": [ { period: "7:15-8:15", subject: "BM", teacher: "CIK NASUHA" }, { period: "8:15-9:15", subject: "SN", teacher: "PN NOROSNIZA", location: "MAK. BIO" }, { period: "9:15-10:15", subject: "SJ", teacher: "PN. ROSIEATI" }, { period: "10:30-11:30", subject: "BI MM", teacher: "MR. THEVA / PN LISAH" }, { period: "11:30-12:00", subject: "PI" } ],
-            "RABU": [ { period: "7:15-8:15", subject: "KOKO" }, { period: "8:15-9:15", subject: "PJ", teacher: "EN AHMAD" }, { period: "9:15-10:15", subject: "BI", teacher: "MR. THEVA" }, { period: "10:30-11:30", subject: "MM", teacher: "PN LISAH" } ],
-            "KHAMIS": [ { period: "7:15-8:15", subject: "PJ", teacher: "PN NURAIN" }, { period: "8:15-9:15", subject: "SJ", teacher: "PN. ROSIEATI" }, { period: "10:30-11:30", subject: "PS", teacher: "PN NIK TAWN RUHAZANA" }, { period: "11:30-12:00", subject: "PS", teacher: "EN. IQBAL" }, { period: "12:00-1:00", subject: "TAW", teacher: "UST HAJAR" }, { period: "1:00-2:00", subject: "BT/BC/IS", teacher: "SARASWADI/MISS LAU/PN. GOWRY" }, { period: "2:00-3:00", subject: "BM", teacher: "CIK NASUHA" } ],
-            "JUMAAT": [ { period: "7:15-8:15", subject: "BM", teacher: "CIK NASUHA" }, { period: "8:15-9:15", "subject": "B.INSAN"}, { period: "9:15-10:15", subject: "SN", teacher: "PN NOROSNIZA", location: "MAK. BIO" }, { period: "10:30-11:30", subject: "MM", teacher: "PN LISAH" }, { period: "11:30-12:00", subject: "SJ", teacher: "PN. ROSIEATI" }, { period: "12:00-1:00", subject: "BI", teacher: "MR. THEVA" } ]
+        "className": "5TS1",
+        "classTeacher": "NOROSNIZA OSMAN",
+        "timeSlots": [
+          "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", 
+          "9:45-10:15", "10:15-10:30", "10:30-11:00", "11:00-11:30", "11:30-12:00", 
+          "12:00-12:30", "12:30-1:00", "1:00-1:30", "1:30-2:00"
+        ],
+        "rehatSlot": "10:15-10:30",
+        "scheduleData": {
+          "ISNIN": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN AHMAD / PN NURAIN", "location": "5TS1" },
+            { "period": "8:15-9:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
+            { "period": "9:15-10:15", "subject": "IS / BT / BC / IM", "teacher": "PN. ROSIEATI / SARASWADI / MISS LAU / PN SYAMIMI", "location": "ST HAJAR WARFAH" },
+            { "period": "10:30-11:30", "subject": "PS / TAW", "teacher": "PN NIK RUHAZANA / UST HAJAR", "location": "TAW" },
+            { "period": "11:30-12:00", "subject": "PS", "teacher": "EN. IQBAL", "location": "" }
+          ],
+          "SELASA": [
+            { "period": "7:15-8:15", "subject": "BM", "teacher": "CIK NASUHA", "location": "5TS1" },
+            { "period": "8:15-9:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
+            { "period": "9:15-10:15", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "5TS1" },
+            { "period": "10:30-11:30", "subject": "PI / PM", "teacher": "PUST ZUHDAH / PN KALAI & PN. KARTINI", "location": "T5" },
+            { "period": "11:30-1:00", "subject": "BI", "teacher": "MR. THEVA", "location": "5TS1" }
+          ],
+          "RABU": [
+            { "period": "7:45-9:15", "subject": "KOKO", "teacher": "", "location": "" },
+            { "period": "9:15-10:15", "subject": "MM", "teacher": "PN LISAH", "location": "5TS1" },
+            { "period": "10:30-11:30", "subject": "PI / PM / PS", "teacher": "PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "T3 & T5" },
+            { "period": "11:30-1:00", "subject": "BM", "teacher": "CIK NASUHA", "location": "5TS1" }
+          ],
+          "KHAMIS": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN AHMAD / PN NURAIN", "location": "5TS1" },
+            { "period": "8:15-9:15", "subject": "MM", "teacher": "PN LISAH", "location": "5TS1" },
+            { "period": "9:15-10:15", "subject": "ST / PI / PM / PS", "teacher": "STAZ MASJUKI / PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "REHAT T3 & T5" },
+            { "period": "10:30-11:30", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "5TS1" },
+            { "period": "11:30-12:30", "subject": "PS / TAW / IS / BT / BC", "teacher": "EN. IQBAL / UST HAJAR / PN. GOWRY / SARASWADI / MISS LAU", "location": "TAW" }
+          ],
+          "JUMAAT": [
+            { "period": "7:15-7:45", "subject": "Bina Insan", "teacher": "", "location": "" },
+            { "period": "7:45-9:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
+            { "period": "9:15-10:15", "subject": "MM", "teacher": "PN LISAH", "location": "5TS1" },
+            { "period": "10:30-11:30", "subject": "SJ", "teacher": "PN. ROSIEATI", "location": "5TS1" },
+            { "period": "11:30-12:30", "subject": "BI", "teacher": "MR. THEVA", "location": "5TS1" }
+          ]
         }
-    },
-    {
-        className: "5TS2", classTeacher: "KARTINI YA'AKUB",
-        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:00", "12:00-1:00", "1:00-2:00", "2:00-3:00"],
-        rehatSlot: "10:15-10:30",
-        scheduleData: {
-            "ISNIN": [ { period: "7:15-8:15", subject: "PJ", teacher: "EN AHMAD" }, { period: "9:15-10:15", subject: "SJ", teacher: "PN. KARTINI" }, { period: "10:30-11:30", subject: "M. KOM 2 BI", teacher: "PN. MASRUL" }, { period: "11:30-12:00", subject: "PS", teacher: "PN NIK" }, { period: "12:00-1:00", subject: "TAW", teacher: "UST HAJAR" }, { period: "1:00-2:00", subject: "PS", teacher: "EN. IQBAL" }, { period: "2:00-3:00", subject: "TAW", teacher: "UST HAJAR" } ],
-            "SELASA": [ { period: "7:15-8:15", subject: "PJ", teacher: "PN NURAIN" }, { period: "8:15-9:15", subject: "SJ", teacher: "PN. KARTINI" }, { period: "9:15-10:15", subject: "MM", teacher: "PN. MALINA" }, { period: "10:30-11:30", subject: "M. KOM 2 BI", teacher: "PN. MASRUL" }, { period: "11:30-12:00", subject: "PI"} ],
-            "RABU": [ { period: "7:15-8:15", subject: "KOKO" }, { period: "8:15-9:15", subject: "PJ", teacher: "EN AHMAD" }, { period: "9:15-10:15", subject: "MM", teacher: "PN. MALINA" }, { period: "12:00-1:00", subject: "SN", teacher: "PN ARFAH", location: "MAK. FIZ" }, { period: "1:00-2:00", subject: "M. KOM 2 BI", teacher: "PN. MASRUL" } ],
-            "KHAMIS": [ { period: "8:15-9:15", subject: "BM", teacher: "CIK HAZIQAH" }, { period: "9:15-10:15", subject: "SN", teacher: "PN ARFAH", location: "MAK. FIZ" }, { period: "10:30-11:30", subject: "BT/BC/IS"}, { period: "11:30-12:00", "subject": "PS", "teacher": "PN NIK TAWN RUHAZANA"}, { period: "12:00-1:00", subject: "PS", teacher: "EN. IQBAL" }, { period: "1:00-2:00", subject: "SJ", teacher: "PN. KARTINI" }, { period: "2:00-3:00", subject: "TAW", teacher: "UST HAJAR" } ],
-            "JUMAAT": [ { period: "7:15-8:15", subject: "B.INSAN" }, { period: "8:15-9:15", "subject": "BM", "teacher": "CIK HAZIQAH"}, { "period": "9:15-10:15", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ"}, { "period": "10:30-11:30", "subject": "MM", "teacher": "PN. MALINA"} ]
+      },
+      {
+        "className": "5TS2",
+        "classTeacher": "KARTINI YA'AKUB",
+        "timeSlots": [
+          "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", 
+          "9:45-10:15", "10:15-10:30", "10:30-11:00", "11:00-11:30", "11:30-12:00", 
+          "12:00-12:30", "12:30-1:00", "1:00-1:30", "1:30-2:00"
+        ],
+        "rehatSlot": "10:15-10:30",
+        "scheduleData": {
+          "ISNIN": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN AHMAD / PN NURAIN", "location": "5TS2" },
+            { "period": "8:15-9:15", "subject": "SJ", "teacher": "PN. KARTINI", "location": "5TS2" },
+            { "period": "9:15-10:15", "subject": "IS / BT / BC / IM", "teacher": "PN. ROSIEATI / SARASWADI / MISS LAU / PN SYAMIMI", "location": "ST HAJAR WARFAH" },
+            { "period": "10:30-11:30", "subject": "PS / TAW", "teacher": "PN NIK RUHAZANA / UST HAJAR", "location": "TAW" },
+            { "period": "11:30-12:00", "subject": "PS", "teacher": "EN. IQBAL", "location": "" }
+          ],
+          "SELASA": [
+            { "period": "7:15-8:15", "subject": "SJ", "teacher": "PN. KARTINI", "location": "5TS2" },
+            { "period": "8:15-9:45", "subject": "MM", "teacher": "PN. MALINA", "location": "5TS2" },
+            { "period": "9:45-10:15", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" },
+            { "period": "10:30-11:30", "subject": "PI / PM", "teacher": "PUST ZUHDAH / PN KALAI & PN. KARTINI", "location": "BMT" },
+            { "period": "11:30-1:00", "subject": "BI", "teacher": "PN. MASRUL", "location": "M. KOM 2" }
+          ],
+          "RABU": [
+            { "period": "7:45-9:15", "subject": "KOKO", "teacher": "", "location": "" },
+            { "period": "9:15-10:15", "subject": "BM", "teacher": "CIK HAZIQAH", "location": "5TS2" },
+            { "period": "10:30-11:30", "subject": "ST / PI / PM / PS", "teacher": "STAZ MASJUKI / PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "T3 & T5" },
+            { "period": "11:30-1:00", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" }
+          ],
+          "KHAMIS": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN AHMAD / PN NURAIN", "location": "5TS2" },
+            { "period": "8:15-9:15", "subject": "BM", "teacher": "CIK HAZIQAH", "location": "5TS2" },
+            { "period": "9:15-10:15", "subject": "SJ", "teacher": "PN. KARTINI", "location": "5TS2" },
+            { "period": "10:30-12:00", "subject": "MM", "teacher": "PN. MALINA", "location": "5TS2" },
+            { "period": "12:00-1:30", "subject": "PS / TAW / IS / BT / BC", "teacher": "EN. IQBAL / UST HAJAR / PN. GOWRY / SARASWADI / MISS LAU", "location": "TAW" }
+          ],
+          "JUMAAT": [
+            { "period": "7:15-7:45", "subject": "Bina Insan", "teacher": "", "location": "" },
+            { "period": "7:45-9:15", "subject": "BM", "teacher": "CIK HAZIQAH", "location": "5TS2" },
+            { "period": "9:15-10:15", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" },
+            { "period": "10:30-11:30", "subject": "MM", "teacher": "PN. MALINA", "location": "5TS2" },
+            { "period": "11:30-12:30", "subject": "BI", "teacher": "PN. MASRUL", "location": "M. KOM 2" }
+          ]
         }
-    },
-    {
-        className: "5S1", classTeacher: "NORARFAH HASIM",
-        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:00", "12:00-1:00", "1:00-2:00", "2:00-3:00"],
-        rehatSlot: "10:15-10:30",
-        scheduleData: {
-            "ISNIN": [ { period: "7:15-8:15", subject: "MM", teacher: "PN. RAIHAH" }, { period: "9:15-10:15", subject: "SN", teacher: "PN ARFAH", location: "MAK. FIZ" }, { period: "10:30-11:30", subject: "PS", teacher: "EN. IQBAL" }, { period: "11:30-12:00", subject: "SJ", teacher: "EN. RIDZUAN" } ],
-            "SELASA": [ { "period": "9:15-10:15", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ"}, { period: "10:30-11:30", subject: "BI", teacher: "PN. ZURINA" } ],
-            "RABU": [ { period: "7:15-8:15", subject: "KOKO" }, { period: "8:15-9:15", subject: "SN", teacher: "PN ARFAH", location: "MAK. FIZ" }, { period: "10:30-11:30", subject: "MM", teacher: "PN. RAIHAH" }, { period: "11:30-12:00", subject: "MM", teacher: "PN. RAIHAH" }, { period: "1:00-2:00", subject: "BM", teacher: "CIK NAZA" } ],
-            "KHAMIS": [ { period: "7:15-8:15", subject: "PJ" }, { period: "8:15-9:15", "subject": "PS", "teacher": "PN NIK" }, { period: "9:15-10:15", "subject": "SJ", "teacher": "EN.RIDZUAN" }, { "period": "10:30-11:30", "subject": "BM", "teacher": "CIK NAZA"}, { period: "12:00-1:00", "subject": "BM", "teacher": "CIK NAZA" } ],
-            "JUMAAT": [ { period: "7:15-8:15", "subject": "B.INSAN" }, { period: "8:15-9:15", subject: "BI", teacher: "PN. ZURINA" }, { period: "9:15-10:15", subject: "MM", teacher: "PN. RAIHAH" }, { period: "10:30-11:30", "subject": "BM", "teacher": "CIK NAZA"} ]
+      },
+      {
+        "className": "5S1",
+        "classTeacher": "NORARFAH HASIM",
+        "timeSlots": [
+          "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", 
+          "9:45-10:15", "10:15-10:30", "10:30-11:00", "11:00-11:30", "11:30-12:00", 
+          "12:00-12:30", "12:30-1:00", "1:00-1:30", "1:30-2:00"
+        ],
+        "rehatSlot": "10:15-10:30",
+        "scheduleData": {
+          "ISNIN": [
+            { "period": "7:15-8:45", "subject": "MM", "teacher": "PN. RAIHAH", "location": "5S1" },
+            { "period": "8:45-10:15", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" },
+            { "period": "10:30-11:30", "subject": "IS / BT / BC / IM", "teacher": "PN. ROSIEATI / SARASWADI / MISS LAU / PN SYAMIMI", "location": "ST HAJAR WARFAH" },
+            { "period": "11:30-1:00", "subject": "PS", "teacher": "EN. IQBAL / PN NIK RUHAZANA", "location": "SAN / NIK" }
+          ],
+          "SELASA": [
+            { "period": "7:15-8:45", "subject": "BI", "teacher": "PN. ZURINA", "location": "5S1" },
+            { "period": "8:45-9:45", "subject": "SJ", "teacher": "EN. RIDZUAN", "location": "5S1" },
+            { "period": "9:45-10:15", "subject": "IV / JUST / IM", "teacher": "MISS LAU / VPN. MALINA / UAR", "location": "MAK. FIZ" },
+            { "period": "10:30-11:30", "subject": "PI / PM", "teacher": "PUST ZUHDAH / PN KALAI & PN. KARTINI", "location": "T5" },
+            { "period": "11:30-1:00", "subject": "BM", "teacher": "CIK NAZA", "location": "5S1" }
+          ],
+          "RABU": [
+            { "period": "7:45-9:15", "subject": "KOKO", "teacher": "", "location": "" },
+            { "period": "9:15-10:15", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" },
+            { "period": "10:30-11:30", "subject": "MM", "teacher": "PN. RAIHAH", "location": "5S1" },
+            { "period": "11:30-1:00", "subject": "BI", "teacher": "PN. ZURINA", "location": "5S1" }
+          ],
+          "KHAMIS": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN. FAUZI / PN NURAIN / EN. IQBAL", "location": "5S1" },
+            { "period": "8:15-9:15", "subject": "MM", "teacher": "PN SYAMIMI", "location": "5S1" },
+            { "period": "9:15-10:15", "subject": "ST / BT / BC / IS / PS", "teacher": "RETAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY / EN. IQBAL", "location": "T3 & T5" },
+            { "period": "10:30-11:30", "subject": "BM", "teacher": "CIK NAZA", "location": "5S1" },
+            { "period": "11:30-1:00", "subject": "PS / IV", "teacher": "PN NIK RUHAZANA / VPN. GOWRY", "location": "SAN / GOWRY" }
+          ],
+          "JUMAAT": [
+            { "period": "7:15-7:45", "subject": "Bina Insan", "teacher": "", "location": "" },
+            { "period": "7:45-8:45", "subject": "SJ", "teacher": "EN. RIDZUAN", "location": "5S1" },
+            { "period": "8:45-9:45", "subject": "BM", "teacher": "CIK NAZA", "location": "5S1" },
+            { "period": "9:45-10:15", "subject": "BY", "teacher": "NOROSNIZA", "location": "5S1" },
+            { "period": "10:30-11:30", "subject": "MM", "teacher": "PN. RAIHAH", "location": "5S1" },
+            { "period": "11:30-12:30", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" }
+          ]
         }
-    },
-    {
-        className: "5S2", classTeacher: "SITI QALILAH RADIN",
-        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:00", "12:00-1:00", "1:00-2:00"],
-        rehatSlot: "10:15-10:30",
-        scheduleData: {
-            "ISNIN": [ { period: "8:15-9:15", subject: "BI", teacher: "MR. THEVA" }, { period: "9:15-10:15", subject: "PS", teacher: "EN. IQBAL" }, { period: "10:30-11:30", "subject": "MM", "teacher": "PN SYAMIMI"}, { period: "12:00-1:00", subject: "SJ", teacher: "EN. AZHAR" }, { period: "1:00-2:00", subject: "MM", teacher: "PN SYAMIMI" } ],
-            "SELASA": [ { period: "7:15-8:15", subject: "SN", teacher: "CIK QALILAH", location: "MAK. KIM" }, { period: "8:15-9:15", "subject": "MM", "teacher": "PN SYAMIMI" }, { period: "9:15-10:15", "subject": "BI", "teacher": "MR. THEVA" }, { "period": "11:30-12:00", "subject": "PI"}, { period: "1:00-2:00", "subject": "BM", "teacher": "CIK NASUHA" } ],
-            "RABU": [ { period: "7:15-8:15", subject: "KOKO" }, { period: "8:15-9:15", subject: "MM BM", teacher: "PN SYAMIMI / CIK NASUHA" }, { period: "10:30-11:30", "subject": "PS", "teacher": "PN NIK" } ],
-            "KHAMIS": [ { period: "7:15-8:15", subject: "PJ" }, { period: "8:15-9:15", "subject": "BM", "teacher": "CIK NASUHA" }, { period: "11:30-12:00", "subject": "SN", "teacher": "CIK QALILAH", "location": "MAK. KIM" }, { period: "12:00-1:00", "subject": "SJ", "teacher": "EN. AZHAR" } ],
-            "JUMAAT": [ { period: "7:15-8:15", subject: "B.INSAN"}, { "period": "8:15-9:15", "subject": "BI", "teacher": "MR. THEVA" }, { period: "9:15-10:15", "subject": "SN", "teacher": "CIK QALILAH", "location": "MAK. KIM" }, { "period": "10:30-11:30", "subject": "SJ", "teacher": "EN. AZHAR" } ]
+      },
+      {
+        "className": "5S2",
+        "classTeacher": "SITI QALILAH RADIN",
+        "timeSlots": [
+          "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", 
+          "9:45-10:15", "10:15-10:30", "10:30-11:00", "11:00-11:30", "11:30-12:00", 
+          "12:00-12:30", "12:30-1:00", "1:00-1:30", "1:30-2:00"
+        ],
+        "rehatSlot": "10:15-10:30",
+        "scheduleData": {
+          "ISNIN": [
+            { "period": "7:15-8:15", "subject": "BI", "teacher": "MR. THEVA", "location": "5S2" },
+            { "period": "8:15-9:15", "subject": "PS", "teacher": "EN. IQBAL", "location": "SAN" },
+            { "period": "9:15-10:15", "subject": "IS / BT / BC / IM", "teacher": "PN. ROSIEATI / SARASWADI / MISS LAU / PN SYAMIMI", "location": "ST HAJAR WARFAH" },
+            { "period": "10:30-12:00", "subject": "SJ", "teacher": "EN. AZHAR", "location": "5S2" },
+            { "period": "12:00-1:30", "subject": "MM", "teacher": "PN SYAMIMI", "location": "5S2" }
+          ],
+          "SELASA": [
+            { "period": "7:15-8:15", "subject": "SN", "teacher": "CIK QALILAH", "location": "MAK. KIM" },
+            { "period": "8:15-9:45", "subject": "MM", "teacher": "PN SYAMIMI", "location": "5S2" },
+            { "period": "9:45-10:15", "subject": "BI", "teacher": "MR. THEVA", "location": "5S2" },
+            { "period": "10:30-11:30", "subject": "ST / BT / BC / IS", "teacher": "RETAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY", "location": "T5" },
+            { "period": "11:30-1:00", "subject": "BM", "teacher": "CIK NASUHA", "location": "5S2" }
+          ],
+          "RABU": [
+            { "period": "7:45-9:15", "subject": "KOKO", "teacher": "", "location": "" },
+            { "period": "9:15-10:15", "subject": "MM", "teacher": "PN SYAMIMI", "location": "5S2" },
+            { "period": "10:30-11:30", "subject": "PI / PM / PS", "teacher": "PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "T3 & T5" },
+            { "period": "11:30-1:00", "subject": "BM", "teacher": "CIK NASUHA", "location": "5S2" }
+          ],
+          "KHAMIS": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN. FAUZI / PN NURAIN / EN. IQBAL", "location": "5S2" },
+            { "period": "8:15-9:15", "subject": "BI", "teacher": "MR. THEVA", "location": "5S2" },
+            { "period": "9:15-10:15", "subject": "SN", "teacher": "CIK QALILAH", "location": "MAK. KIM" },
+            { "period": "10:30-11:30", "subject": "SJ", "teacher": "EN. AZHAR", "location": "5S2" },
+            { "period": "11:30-1:00", "subject": "BM", "teacher": "CIK NASUHA", "location": "5S2" }
+          ],
+          "JUMAAT": [
+            { "period": "7:15-7:45", "subject": "Bina Insan", "teacher": "", "location": "" },
+            { "period": "7:45-8:45", "subject": "PJ", "teacher": "EN. FAUZI / PN NURAIN / EN. IQBAL", "location": "5S2" },
+            { "period": "8:45-9:45", "subject": "MM", "teacher": "PN SYAMIMI", "location": "5S2" },
+            { "period": "9:45-10:15", "subject": "IV", "teacher": "PN. GOWRY", "location": "5S2" },
+            { "period": "10:30-12:00", "subject": "SN", "teacher": "CIK QALILAH", "location": "MAK. KIM" },
+            { "period": "12:00-1:00", "subject": "SJ", "teacher": "EN. AZHAR", "location": "5S2" }
+          ]
         }
-    },
-    {
-        className: "5S3", classTeacher: "EFAH SUHAILA SALAMON",
-        timeSlots: ["7:15-8:15", "8:15-9:15", "9:15-10:15", "10:15-10:30", "10:30-11:30", "11:30-12:00", "12:00-1:00", "1:00-2:00"],
-        rehatSlot: "10:15-10:30",
-        scheduleData: {
-            "ISNIN": [ { period: "8:15-9:15", subject: "BM", teacher: "PN. EFAH" }, { period: "9:15-10:15", "subject": "PS", "teacher": "EN. IQBAL" }, { period: "10:30-11:30", "subject": "SJ", "teacher": "PN.GOWRY"}, { period: "12:00-1:00", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" }, { period: "1:00-2:00", "subject": "SJ", "teacher": "PN. GOWRY" } ],
-            "SELASA": [ { period: "7:15-8:15", subject: "SN", teacher: "PN NOROSNIZA", location: "MAK. BIO" }, { period: "8:15-9:15", "subject": "BI", "teacher": "MISS NIVETHA" }, { period: "9:15-10:15", "subject": "BM", "teacher": "PN. EFAH" }, { period: "10:30-11:30", "subject": "MM", "teacher": "PN. IMELDA" } ],
-            "RABU": [ { period: "7:15-8:15", subject: "KOKO" }, { period: "8:15-9:15", "subject": "MM", "teacher": "PN. IMELDA" }, { period: "9:15-10:15", "subject": "BM", "teacher": "PN. EFAH" }, { "period": "10:30-11:30", "subject": "PS", "teacher": "PN NIK"} ],
-            "KHAMIS": [ { period: "7:15-8:15", subject: "PJ" }, { period: "9:15-10:15", "subject": "SJ", "teacher": "PN. GOWRY" }, { period: "10:30-11:30", "subject": "BI", "teacher": "MISS NIVETHA" }, { "period": "11:30-12:00", "subject": "PI"}, { period: "1:00-2:00", "subject": "BM", "teacher": "PN.EFAH"} ],
-            "JUMAAT": [ { period: "7:15-8:15", subject: "PJ" }, { period: "8:15-9:15", "subject": "B.INSAN"}, { "period": "9:15-10:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" }, { "period": "10:30-11:30", "subject": "MM", "teacher": "PN. IMELDA" }, { "period": "11:30-12:00", "subject": "BI", "teacher": "MISS NIVETHA"} ]
+      },
+      {
+        "className": "5S3",
+        "classTeacher": "EFAH SUHAILA SALAMON",
+        "timeSlots": [
+          "7:15-7:45", "7:45-8:15", "8:15-8:45", "8:45-9:15", "9:15-9:45", 
+          "9:45-10:15", "10:15-10:30", "10:30-11:00", "11:00-11:30", "11:30-12:00", 
+          "12:00-12:30", "12:30-1:00", "1:00-1:30", "1:30-2:00"
+        ],
+        "rehatSlot": "10:15-10:30",
+        "scheduleData": {
+          "ISNIN": [
+            { "period": "7:15-8:15", "subject": "BM", "teacher": "PN. EFAH", "location": "5S3" },
+            { "period": "8:15-9:15", "subject": "PS", "teacher": "EN. IQBAL", "location": "SAN" },
+            { "period": "9:15-10:15", "subject": "IS / BT / BC / IM", "teacher": "PN. ROSIEATI / SARASWADI / MISS LAU / PN SYAMIMI", "location": "ST HAJAR WARFAH" },
+            { "period": "10:30-12:00", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
+            { "period": "12:00-1:30", "subject": "SJ", "teacher": "PN. GOWRY", "location": "5S3" }
+          ],
+          "SELASA": [
+            { "period": "7:15-8:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
+            { "period": "8:15-9:45", "subject": "BM", "teacher": "PN. EFAH", "location": "5S3" },
+            { "period": "9:45-10:15", "subject": "BI", "teacher": "MISS NIVETHA", "location": "5S3" },
+            { "period": "10:30-11:30", "subject": "ST / BT / BC / IS", "teacher": "RETAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY", "location": "T5" },
+            { "period": "11:30-1:00", "subject": "MM", "teacher": "PN. IMELDA", "location": "5S3" }
+          ],
+          "RABU": [
+            { "period": "7:45-9:15", "subject": "KOKO", "teacher": "", "location": "" },
+            { "period": "9:15-10:15", "subject": "MM", "teacher": "PN. IMELDA", "location": "5S3" },
+            { "period": "10:30-11:30", "subject": "PI / PM / PS", "teacher": "PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "T3 & T5" },
+            { "period": "11:30-1:00", "subject": "BM", "teacher": "PN. EFAH", "location": "5S3" }
+          ],
+          "KHAMIS": [
+            { "period": "7:15-8:15", "subject": "PJ", "teacher": "EN. FAUZI / PN NURAIN / EN. IQBAL", "location": "5S3" },
+            { "period": "8:15-9:15", "subject": "SJ", "teacher": "PN. GOWRY", "location": "5S3" },
+            { "period": "9:15-10:15", "subject": "BI", "teacher": "MISS NIVETHA", "location": "5S3" },
+            { "period": "10:30-12:00", "subject": "MM", "teacher": "PN. IMELDA", "location": "5S3" },
+            { "period": "12:00-1:00", "subject": "BM", "teacher": "PN. EFAH", "location": "5S3" }
+          ],
+          "JUMAAT": [
+            { "period": "7:15-7:45", "subject": "Bina Insan", "teacher": "", "location": "" },
+            { "period": "7:45-8:45", "subject": "PJ", "teacher": "EN. FAUZI / PN NURAIN / EN. IQBAL", "location": "5S3" },
+            { "period": "8:45-9:45", "subject": "SJ", "teacher": "PN. GOWRY", "location": "5S3" },
+            { "period": "9:45-10:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
+            { "period": "10:30-12:00", "subject": "MM", "teacher": "PN. IMELDA", "location": "5S3" },
+            { "period": "12:00-1:00", "subject": "BI", "teacher": "MISS NIVETHA", "location": "5S3" }
+          ]
         }
-    }
+      }
 ];
+
 

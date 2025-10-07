@@ -371,7 +371,7 @@ const form5Schedules = [
           "RABU": [
             { "period": "7:45-9:15", "subject": "KOKO", "teacher": "", "location": "" },
             { "period": "9:15-10:15", "subject": "BM", "teacher": "CIK HAZIQAH", "location": "5TS2" },
-            { "period": "10:30-11:30", "subject": "ST / PI / PM / PS", "teacher": "RETAZ MASJUKI / PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "T3 & T5" },
+            { "period": "10:30-11:30", "subject": "ST / PI / PM / PS", "teacher": "STAZ MASJUKI / PUST ZUHDAH / PN KALAI & PN. KARTINI / PN NIK RUHAZANA", "location": "T3 & T5" },
             { "period": "11:30-1:00", "subject": "SN", "teacher": "PN ARFAH", "location": "MAK. FIZ" }
           ],
           "KHAMIS": [
@@ -457,7 +457,7 @@ const form5Schedules = [
             { "period": "7:15-8:15", "subject": "SN", "teacher": "CIK QALILAH", "location": "MAK. KIM" },
             { "period": "8:15-9:45", "subject": "MM", "teacher": "PN SYAMIMI", "location": "5S2" },
             { "period": "9:45-10:15", "subject": "BI", "teacher": "MR. THEVA", "location": "5S2" },
-            { "period": "10:30-11:30", "subject": "ST / BT / BC / IS", "teacher": "RETAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY", "location": "T5" },
+            { "period": "10:30-11:30", "subject": "ST / BT / BC / IS", "teacher": "STAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY", "location": "T5" },
             { "period": "11:30-1:00", "subject": "BM", "teacher": "CIK NASUHA", "location": "5S2" }
           ],
           "RABU": [
@@ -504,7 +504,7 @@ const form5Schedules = [
             { "period": "7:15-8:15", "subject": "SN", "teacher": "PN NOROSNIZA", "location": "MAK. BIO" },
             { "period": "8:15-9:45", "subject": "BM", "teacher": "PN. EFAH", "location": "5S3" },
             { "period": "9:45-10:15", "subject": "BI", "teacher": "MISS NIVETHA", "location": "5S3" },
-            { "period": "10:30-11:30", "subject": "ST / BT / BC / IS", "teacher": "RETAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY", "location": "T5" },
+            { "period": "10:30-11:30", "subject": "ST / BT / BC / IS", "teacher": "STAZ MASJUKI / SARASWADI / MISS LAU / PN. GOWRY", "location": "T5" },
             { "period": "11:30-1:00", "subject": "MM", "teacher": "PN. IMELDA", "location": "5S3" }
           ],
           "RABU": [
@@ -531,4 +531,5 @@ const form5Schedules = [
         }
       }
 ];
+
 

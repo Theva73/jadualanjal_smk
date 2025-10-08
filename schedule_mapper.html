@@ -80,7 +80,6 @@
                                 <th class="p-2 border border-gray-300 font-semibold">15</th>
                                 <th class="p-2 border border-gray-300 font-semibold">16</th>
                             </tr>
-                            <!-- HTML CHANGE: Updated the time slots in this row -->
                             <tr class="divide-x divide-gray-300">
                                 <td class="p-1 border border-gray-300 font-medium">7:00<br>7:15</td>
                                 <td class="p-1 border border-gray-300 font-medium">7:15<br>7:45</td>
@@ -207,7 +206,7 @@
     let schedules = {}, subjects = {}, classes = {}, locations = {};
     let selectedTeacherId = null;
     
-    // JS CHANGE: This object is updated to match your new time slot list
+    // JS CHANGE: This object now includes the missing 6* slot
     const PERIOD_MAP = {
         "P": "P (7:00-7:15)", 
         "1": "1 (7:15-7:45)", 

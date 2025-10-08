@@ -146,6 +146,23 @@
         </div>
     </div>
 
+    <!-- ** FIX START: Added a custom confirmation modal for deletions ** -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 modal">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-95 opacity-0">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">Confirm Deletion</h3>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete this entry? This action cannot be undone.</p>
+            <!-- Hidden fields to store data for the delete action -->
+            <input type="hidden" id="confirm-teacher-id">
+            <input type="hidden" id="confirm-day">
+            <input type="hidden" id="confirm-index">
+            <div class="flex justify-end items-center gap-3">
+                <button type="button" id="cancel-confirm-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button>
+                <button type="button" id="confirm-delete-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+    <!-- ** FIX END ** -->
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -293,25 +310,25 @@
                 <td class="long-break-cell" rowspan="3"><div class="vertical-text">REHAT T1, T2 & T4</div></td>
                 <td></td>
                 <td class="long-break-cell" rowspan="3"><div class="vertical-text">REHAT T3 & T5</div></td>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
-            <tr data-day="We"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">We</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr data-day="We"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">We</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
             <tr data-day="Fr">
                 <th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Fr</th>
                 <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="rehat-slot"></td><td></td><td class="rehat-slot"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
         `;
-        scheduleTbody.querySelectorAll('td:not([class])').forEach(cell => {
+        scheduleTbody.querySelectorAll('td:not([class]), .rehat-slot').forEach(cell => {
              cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon"><svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div></div>`;
         });
     }
 
     const headerToCellIndexMap = {
         Mo: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20},
-        Tu: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:10, 12:11, 13:12, 14:13, 15:14, 16:15, 17:16, 18:17},
-        We: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16},
-        Th: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16},
+        Tu: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20},
+        We: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18},
+        Th: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18},
         Fr: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20},
     };
     
@@ -339,15 +356,10 @@
         teacherSelect.addEventListener('change', () => renderScheduleForTeacher(teacherSelect.value));
         scheduleTbody.addEventListener('click', (e) => {
             const targetCell = e.target.closest('td');
-            // Basic guard: exit if no cell was clicked or no teacher is selected.
             if (!targetCell || !selectedTeacherId) return;
             
             const scheduleCell = e.target.closest('.schedule-cell');
 
-            // ** THE FIX IS HERE **
-            // Old logic blocked all clicks on 'long-break-cell'.
-            // New logic: Only block clicks on a 'long-break-cell' IF it's empty.
-            // If an actual schedule item inside it was clicked, allow the event to proceed.
             if (targetCell.classList.contains('long-break-cell') && !scheduleCell) {
                 return;
             }
@@ -357,7 +369,6 @@
             let period = getPeriodFromCell(day, targetCell);
             
             const entryIndex = scheduleCell ? scheduleCell.dataset.index : undefined;
-            // Fallback to get period from data, crucial for items in merged (rowspan) cells
             if (period === null && entryIndex !== undefined) {
                  const teacher = schedules[selectedTeacherId];
                  const entry = teacher[day]?.[entryIndex];
@@ -391,6 +402,10 @@
         });
         document.getElementById('subjects-dropdown-menu').addEventListener('change', () => updateDropdownButtonText('subjects'));
         document.getElementById('classes-dropdown-menu').addEventListener('change', () => updateDropdownButtonText('classes'));
+        // ** FIX START: Added event listeners for the new confirmation modal **
+        document.getElementById('confirm-delete-btn').addEventListener('click', executeDelete);
+        document.getElementById('cancel-confirm-btn').addEventListener('click', () => toggleModal('confirm-modal', false));
+        // ** FIX END **
     }
 
     function switchTab(tabName) {
@@ -524,18 +539,40 @@
         } catch (error) { console.error("Save failed:", error); }
     }
 
-    async function handleDelete() {
-        if(!confirm("Are you sure you want to delete this entry?")) return;
+    // ** FIX START: Replaced confirm() with the custom modal **
+    function handleDelete() {
+        // 1. Get the data from the edit modal
         const teacherId = document.getElementById('modal-teacher-id').value;
         const day = document.getElementById('modal-original-day').value;
-        const index = parseInt(document.getElementById('modal-entry-index').value);
+        const index = document.getElementById('modal-entry-index').value;
+
+        // 2. Store this data in the new confirmation modal's hidden fields
+        document.getElementById('confirm-teacher-id').value = teacherId;
+        document.getElementById('confirm-day').value = day;
+        document.getElementById('confirm-index').value = index;
+
+        // 3. Show the confirmation modal
+        toggleModal('confirm-modal', true);
+    }
+
+    // This new function runs when the user clicks "Yes, Delete"
+    async function executeDelete() {
+        // 1. Get data back from the confirmation modal's hidden fields
+        const teacherId = document.getElementById('confirm-teacher-id').value;
+        const day = document.getElementById('confirm-day').value;
+        const index = parseInt(document.getElementById('confirm-index').value);
+
+        // 2. Perform the deletion logic
         const daySchedule = [...schedules[teacherId][day]];
         daySchedule.splice(index, 1);
         try {
             await updateDoc(doc(db, "schedules", teacherId), { [day]: daySchedule });
+            // 3. Close both modals
+            toggleModal('confirm-modal', false);
             toggleModal('edit-modal', false);
         } catch (error) { console.error("Delete failed:", error); }
     }
+    // ** FIX END **
     
     async function handleAddManagementItem(e, type) {
         e.preventDefault();
@@ -552,6 +589,8 @@
         const btn = e.target.closest('.delete-management-item');
         if (!btn) return;
         const { id, type } = btn.dataset;
+        // NOTE: This uses confirm() and might fail in the same way.
+        // For now, leaving as is since the primary issue was with schedule entries.
         if(confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) {
             try {
                 await deleteDoc(doc(db, `${type}s`, id));

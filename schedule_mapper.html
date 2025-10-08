@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Schedule Editor (Stable)</title>
+    <title>Advanced Schedule Editor (Final Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -42,7 +42,7 @@
                 <nav class="flex space-x-4" aria-label="Tabs">
                     <button id="tab-schedule-btn" class="tab-btn active px-3 py-2 font-semibold text-sm rounded-t-md">Schedule</button>
                     <button id="tab-management-btn" class="tab-btn px-3 py-2 font-semibold text-sm rounded-t-md">Management</button>
-                    <button id="tab-uploader-btn" class="tab-btn px-3 py-2 font-semibold text-sm rounded-t-md">Data Uploader</button>
+                    <button id="tab-correction-btn" class="tab-btn px-3 py-2 font-semibold text-sm rounded-t-md">Correction Tool</button>
                 </nav>
             </div>
 
@@ -58,12 +58,50 @@
                     <div id="loader" class="loader"></div>
                     <table id="schedule-table" class="hidden w-full min-w-[1400px] border-collapse border border-gray-300 text-center text-xs sm:text-sm">
                         <thead>
-                            <tr>
-                                <th class="p-2 border border-gray-300" rowspan="2"></th>
-                                <th class="p-2 border border-gray-300 font-semibold">1</th><th class="p-2 border border-gray-300 font-semibold">2</th><th class="p-2 border border-gray-300 font-semibold">3</th><th class="p-2 border border-gray-300 font-semibold">4</th><th class="p-2 border border-gray-300 font-semibold">5</th><th class="p-2 border border-gray-300 font-semibold">6</th><th class="p-2 border border-gray-300 font-semibold">6*</th><th class="p-2 border border-gray-300 font-semibold bg-amber-200">REHAT</th><th class="p-2 border border-gray-300 font-semibold">7</th><th class="p-2 border border-gray-300 font-semibold bg-amber-200">REHAT</th><th class="p-2 border border-gray-300 font-semibold">7*</th><th class="p-2 border border-gray-300 font-semibold">8</th><th class="p-2 border border-gray-300 font-semibold">9</th><th class="p-2 border border-gray-300 font-semibold">10</th><th class="p-2 border border-gray-300 font-semibold">11</th><th class="p-2 border border-gray-300 font-semibold">12</th><th class="p-2 border border-gray-300 font-semibold">13</th><th class="p-2 border border-gray-300 font-semibold">14</th><th class="p-2 border border-gray-300 font-semibold">15</th><th class="p-2 border border-gray-300 font-semibold">16</th>
+                            <tr class="divide-x divide-gray-300">
+                                <th class="p-2 border border-gray-300" rowspan="2">Day</th>
+                                <th class="p-2 border border-gray-300 font-semibold"></th>
+                                <th class="p-2 border border-gray-300 font-semibold">1</th>
+                                <th class="p-2 border border-gray-300 font-semibold">2</th>
+                                <th class="p-2 border border-gray-300 font-semibold">3</th>
+                                <th class="p-2 border border-gray-300 font-semibold">4</th>
+                                <th class="p-2 border border-gray-300 font-semibold">5</th>
+                                <th class="p-2 border border-gray-300 font-semibold">6</th>
+                                <th class="p-2 border border-gray-300 font-semibold bg-amber-200">REHAT</th>
+                                <th class="p-2 border border-gray-300 font-semibold">6*</th>
+                                <th class="p-2 border border-gray-300 font-semibold bg-amber-200">REHAT</th>
+                                <th class="p-2 border border-gray-300 font-semibold">7</th>
+                                <th class="p-2 border border-gray-300 font-semibold">8</th>
+                                <th class="p-2 border border-gray-300 font-semibold">9</th>
+                                <th class="p-2 border border-gray-300 font-semibold">10</th>
+                                <th class="p-2 border border-gray-300 font-semibold">11</th>
+                                <th class="p-2 border border-gray-300 font-semibold">12</th>
+                                <th class="p-2 border border-gray-300 font-semibold">13</th>
+                                <th class="p-2 border border-gray-300 font-semibold">14</th>
+                                <th class="p-2 border border-gray-300 font-semibold">15</th>
+                                <th class="p-2 border border-gray-300 font-semibold">16</th>
                             </tr>
-                            <tr>
-                                <td class="p-1 border border-gray-300 font-medium">7:00<br>7:15</td><td class="p-1 border border-gray-300 font-medium">7:15<br>7:45</td><td class="p-1 border border-gray-300 font-medium">7:45<br>8:15</td><td class="p-1 border border-gray-300 font-medium">8:15<br>8:45</td><td class="p-1 border border-gray-300 font-medium">8:45<br>9:15</td><td class="p-1 border border-gray-300 font-medium">9:15<br>9:45</td><td class="p-1 border border-gray-300 font-medium">9:45<br>10:15</td><td class="p-1 border border-gray-300 font-medium bg-amber-100">9:45<br>10:00</td><td class="p-1 border border-gray-300 font-medium">10:00<br>10:15</td><td class="p-1 border border-gray-300 font-medium bg-amber-100">10:15<br>10:30</td><td class="p-1 border border-gray-300 font-medium">10:00<br>10:30</td><td class="p-1 border border-gray-300 font-medium">10:30<br>11:00</td><td class="p-1 border border-gray-300 font-medium">11:00<br>11:30</td><td class="p-1 border border-gray-300 font-medium">11:30<br>12:00</td><td class="p-1 border border-gray-300 font-medium">12:00<br>12:30</td><td class="p-1 border border-gray-300 font-medium">12:30<br>1:00</td><td class="p-1 border border-gray-300 font-medium">1:00<br>1:30</td><td class="p-1 border border-gray-300 font-medium">1:30<br>2:00</td><td class="p-1 border border-gray-300 font-medium">2:00<br>2:30</td><td class="p-1 border border-gray-300 font-medium">2:30<br>3:00</td>
+                            <tr class="divide-x divide-gray-300">
+                                <td class="p-1 border border-gray-300 font-medium">7:00<br>7:15</td>
+                                <td class="p-1 border border-gray-300 font-medium">7:15<br>7:45</td>
+                                <td class="p-1 border border-gray-300 font-medium">7:45<br>8:15</td>
+                                <td class="p-1 border border-gray-300 font-medium">8:15<br>8:45</td>
+                                <td class="p-1 border border-gray-300 font-medium">8:45<br>9:15</td>
+                                <td class="p-1 border border-gray-300 font-medium">9:15<br>9:45</td>
+                                <td class="p-1 border border-gray-300 font-medium">9:45<br>10:15</td>
+                                <td class="p-1 border border-gray-300 font-medium bg-amber-100">9:45<br>10:00</td>
+                                <td class="p-1 border border-gray-300 font-medium">10:00<br>10:15</td>
+                                <td class="p-1 border border-gray-300 font-medium bg-amber-100">10:15<br>10:30</td>
+                                <td class="p-1 border border-gray-300 font-medium">10:00<br>10:30</td>
+                                <td class="p-1 border border-gray-300 font-medium">10:30<br>11:00</td>
+                                <td class="p-1 border border-gray-300 font-medium">11:00<br>11:30</td>
+                                <td class="p-1 border border-gray-300 font-medium">11:30<br>12:00</td>
+                                <td class="p-1 border border-gray-300 font-medium">12:00<br>12:30</td>
+                                <td class="p-1 border border-gray-300 font-medium">12:30<br>1:00</td>
+                                <td class="p-1 border border-gray-300 font-medium">1:00<br>1:30</td>
+                                <td class="p-1 border border-gray-300 font-medium">1:30<br>2:00</td>
+                                <td class="p-1 border border-gray-300 font-medium">2:00<br>2:30</td>
+                                <td class="p-1 border border-gray-300 font-medium">2:30<br>3:00</td>
                             </tr>
                         </thead>
                         <tbody id="schedule-tbody"></tbody>
@@ -91,14 +129,14 @@
                  </div>
             </div>
             
-            <div id="tab-uploader-content" class="hidden">
+            <div id="tab-correction-content" class="hidden">
                 <div class="w-full max-w-lg mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
-                    <h1 class="text-2xl font-bold text-gray-800 mb-2">Initial Data Uploader</h1>
-                    <p class="text-gray-600 mb-6">Use this tool once to populate Firestore with the initial set of teachers, subjects, classes, and locations. This will clear existing data in the collections.</p>
-                    <button id="upload-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                        Upload Initial Data
+                    <h1 class="text-2xl font-bold text-gray-800 mb-2">Data Correction Tool</h1>
+                    <p class="text-gray-600 mb-6">If your existing schedule data is showing in the wrong time slots, this tool will fix it. This is a one-time operation that will scan and correct all schedules in the database.</p>
+                    <button id="fix-data-btn" class="w-full bg-orange-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors">
+                        Fix Incorrect Schedule Data
                     </button>
-                    <div id="upload-status" class="mt-6 text-sm text-gray-700">Ready to begin.</div>
+                    <div id="fix-status" class="mt-6 text-sm text-gray-700">Ready to begin.</div>
                 </div>
             </div>
         </div>
@@ -178,7 +216,9 @@
     let schedules = {}, subjects = {}, classes = {}, locations = {};
     let selectedTeacherId = null;
     
-    const PERIOD_MAP = { 1: "1 (7:00-7:15)", 2: "2 (7:15-7:45)", 3: "3 (7:45-8:15)", 4: "4 (8:15-8:45)", 5: "5 (8:45-9:15)", 6: "6 (9:15-9:45)", "6*": "6* (9:45-10:15)", "R1": "REHAT (9:45-10:00)", 7: "7 (10:00-10:15)", "R2": "REHAT (10:15-10:30)", "7*": "7* (10:00-10:30)", 8: "8 (10:30-11:00)", 9: "9 (11:00-11:30)", 10: "10 (11:30-12:00)", 11: "11 (12:00-12:30)", 12: "12 (12:30-1:00)", 13: "13 (1:00-1:30)", 14: "14 (1:30-2:00)", 15: "15 (2:00-2:30)", 16: "16 (2:30-3:00)" };
+    const PERIOD_MAP = {
+        "P": "P (7:00-7:15)", "1": "1 (7:15-7:45)", "2": "2 (7:45-8:15)", "3": "3 (8:15-8:45)", "4": "4 (8:45-9:15)", "5": "5 (9:15-9:45)", "6": "6 (9:45-10:15)", "R1": "REHAT (9:45-10:00)", "6*": "6* (10:00-10:15)", "R2": "REHAT (10:15-10:30)", "7": "7 (10:00-10:30)", "8": "8 (10:30-11:00)", "9": "9 (11:00-11:30)", "10": "10 (11:30-12:00)", "11": "11 (12:00-12:30)", "12": "12 (12:30-1:00)", "13": "13 (1:00-1:30)", "14": "14 (1:30-2:00)", "15": "15 (2:00-2:30)", "16": "16 (2:30-3:00)"
+    };
     const DAYS = ["Mo", "Tu", "We", "Th", "Fr"];
 
     const loadingStatus = document.getElementById('loading-status');
@@ -237,7 +277,7 @@
             }
             loader.style.display = 'none';
             scheduleTable.classList.remove('hidden');
-        }, err => handleLoadingError("Error fetching data. Try the Data Uploader."));
+        }, err => handleLoadingError("Error fetching data. Check database rules."));
         onSnapshot(collection(db, "subjects"), s => (subjects = Object.fromEntries(s.docs.map(d=>[d.id, {id: d.id, ...d.data()}])), renderManagementList('subject', subjects, document.getElementById('subject-list'))));
         onSnapshot(collection(db, "classes"), s => (classes = Object.fromEntries(s.docs.map(d=>[d.id, {id: d.id, ...d.data()}])), renderManagementList('class', classes, document.getElementById('class-list'))));
         onSnapshot(collection(db, "locations"), s => (locations = Object.fromEntries(s.docs.map(d=>[d.id, {id: d.id, ...d.data()}])), renderManagementList('location', locations, document.getElementById('location-list'))));
@@ -262,23 +302,26 @@
         }
     }
 
+    const periodToCellIndex = {
+        "P": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 7, "R1": 8, "6*": 9, "R2": 10, "7": 11, "8": 12, "9": 13, "10": 14, "11": 15, "12": 16, "13": 17, "14": 18, "15": 19, "16": 20
+    };
+
     function renderScheduleForTeacher(teacherId) {
         selectedTeacherId = teacherId;
         const teacherData = schedules[teacherId];
         buildStaticTable(); 
         if (!teacherData) return;
         
-        const periodToHeaderCol = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, "6*": 7, "R1": 8, 7: 9, "R2": 10, "7*": 11, 8: 12, 9: 13, 10: 14, 11: 15, 12: 16, 13: 17, 14: 18, 15: 19, 16: 20 };
-
         for(const day of DAYS) {
             const daySchedule = teacherData[day] || [];
             const row = scheduleTbody.querySelector(`tr[data-day="${day}"]`);
             if (!row) continue;
 
             daySchedule.forEach((item, index) => {
-                const headerCol = periodToHeaderCol[item.period];
-                if (headerCol === undefined) return;
-                const targetCell = getCellFromHeaderCol(row, day, headerCol);
+                const cellIndex = periodToCellIndex[item.period];
+                if (cellIndex === undefined) return;
+                
+                const targetCell = getCellFromDisplayIndex(row, day, cellIndex);
                 
                 if(targetCell) {
                     const subjectNames = (item.subjectIds || []).map(id => subjects[id]?.name).filter(Boolean).join('<br>');
@@ -288,20 +331,16 @@
                     if (subjectNames) content += `<strong class="text-xs">${subjectNames}</strong>`;
                     if (classNames) content += `<span class="text-[10px] mt-1">${classNames}</span>`;
                     if (locationName) content += `<span class="text-[10px] mt-1 text-red-600 font-bold">${locationName}</span>`;
-                    if (!content && (item.subjectIds?.length > 0 || item.classIds?.length > 0)) content = '...';
                     if(content) targetCell.innerHTML = `<div class="schedule-cell" data-index="${index}">${content}</div>`;
                 }
             });
         }
     }
     
-    // ** FIX START: Corrected the HTML structure for Tuesday **
     function buildStaticTable() {
+        const monFriRow = `<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="rehat-slot"></td><td></td><td class="rehat-slot"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
         scheduleTbody.innerHTML = `
-            <tr data-day="Mo">
-                <th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Mo</th>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="rehat-slot"></td><td></td><td class="rehat-slot"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-            </tr>
+            <tr data-day="Mo"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Mo</th>${monFriRow}</tr>
             <tr data-day="Tu">
                 <th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Tu</th>
                 <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
@@ -310,78 +349,69 @@
                 <td class="long-break-cell" rowspan="3"><div class="vertical-text">REHAT T3 & T5</div></td>
                 <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
-            <tr data-day="We"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">We</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr data-day="Fr">
-                <th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Fr</th>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="rehat-slot"></td><td></td><td class="rehat-slot"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-            </tr>
+            <tr data-day="We"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">We</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr data-day="Fr"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Fr</th>${monFriRow}</tr>
         `;
-        scheduleTbody.querySelectorAll('td:not([class]), .rehat-slot').forEach(cell => {
+        scheduleTbody.querySelectorAll('td:not([class])').forEach(cell => {
              cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon"><svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div></div>`;
+        });
+         scheduleTbody.querySelectorAll('.rehat-slot').forEach(cell => {
+             if(!cell.innerHTML) cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon"><svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div></div>`;
         });
     }
 
-    // ** FIX START: Rebuilt the entire map to be accurate for all days **
-    const headerToCellIndexMap = {
-        Mo: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20},
-        Tu: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20},
+    const displayIndexToActualCellIndexMap = {
         We: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16},
         Th: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16},
-        Fr: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20},
     };
-    // ** FIX END **
-    
-    function getCellFromHeaderCol(row, day, headerCol) {
-        const cellIndex = headerToCellIndexMap[day]?.[headerCol];
-        return cellIndex ? row.children[cellIndex] : null;
+    displayIndexToActualCellIndexMap.Tu = displayIndexToActualCellIndexMap.We;
+
+
+    function getCellFromDisplayIndex(row, day, displayIndex) {
+        if (day === "Mo" || day === "Fr") return row.children[displayIndex] || null;
+        const actualIndex = displayIndexToActualCellIndexMap[day]?.[displayIndex];
+        return actualIndex ? row.children[actualIndex] : null;
     }
     
     function getPeriodFromCell(day, cell) {
-        const cellIndex = Array.from(cell.parentNode.children).indexOf(cell);
-        const dayMap = headerToCellIndexMap[day];
-        for (const headerCol in dayMap) {
-            if (dayMap[headerCol] === cellIndex) {
-                 const inversePeriodMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:"6*", 8:"R1", 9:7, 10:"R2", 11:"7*", 12:8, 13:9, 14:10, 15:11, 16:12, 17:13, 18:14, 19:15, 20:16 };
-                 return inversePeriodMap[headerCol] || null;
+        const actualCellIndex = Array.from(cell.parentNode.children).indexOf(cell);
+        let displayIndex = actualCellIndex;
+
+        if (day !== "Mo" && day !== "Fr") {
+            const dayMap = displayIndexToActualCellIndexMap[day];
+            for (const dIndex in dayMap) {
+                if (dayMap[dIndex] === actualCellIndex) {
+                    displayIndex = parseInt(dIndex);
+                    break;
+                }
             }
         }
+        for (const period in periodToCellIndex) if (periodToCellIndex[period] === displayIndex) return period;
         return null;
     }
     
     function setupEventListeners() {
         document.getElementById('tab-schedule-btn').addEventListener('click', () => switchTab('schedule'));
         document.getElementById('tab-management-btn').addEventListener('click', () => switchTab('management'));
-        document.getElementById('tab-uploader-btn').addEventListener('click', () => switchTab('uploader'));
+        document.getElementById('tab-correction-btn').addEventListener('click', () => switchTab('correction'));
+
         teacherSelect.addEventListener('change', () => renderScheduleForTeacher(teacherSelect.value));
         scheduleTbody.addEventListener('click', (e) => {
             const targetCell = e.target.closest('td');
             if (!targetCell || !selectedTeacherId) return;
-            
             const scheduleCell = e.target.closest('.schedule-cell');
-
-            if (targetCell.classList.contains('long-break-cell') && !scheduleCell) {
-                return;
-            }
-
+            if (targetCell.classList.contains('long-break-cell') && !scheduleCell) return;
             const row = targetCell.closest('tr');
             const day = row.dataset.day;
-            let period = getPeriodFromCell(day, targetCell);
-            
-            const entryIndex = scheduleCell ? scheduleCell.dataset.index : undefined;
-            if (period === null && entryIndex !== undefined) {
-                 const teacher = schedules[selectedTeacherId];
-                 const entry = teacher[day]?.[entryIndex];
-                 if (entry) period = entry.period;
-            }
-
+            const period = getPeriodFromCell(day, targetCell);
             if (period === null) {
                 console.error("Could not determine period for the clicked cell.", {day, targetCell});
                 return;
             };
-            
-            openEditModal(day, period, entryIndex);
+            openEditModal(day, period, scheduleCell?.dataset.index);
         });
+
         document.getElementById('edit-form').addEventListener('submit', handleSave);
         document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
         document.getElementById('delete-entry-btn').addEventListener('click', handleDelete);
@@ -391,7 +421,6 @@
         document.getElementById('subject-list').addEventListener('click', e => handleDeleteManagementItem(e));
         document.getElementById('class-list').addEventListener('click', e => handleDeleteManagementItem(e));
         document.getElementById('location-list').addEventListener('click', e => handleDeleteManagementItem(e));
-        document.getElementById('upload-btn').addEventListener('click', handleInitialUpload);
         document.getElementById('subjects-dropdown-btn').addEventListener('click', () => toggleDropdown('subjects'));
         document.getElementById('classes-dropdown-btn').addEventListener('click', () => toggleDropdown('classes'));
         document.addEventListener('click', (e) => {
@@ -404,6 +433,9 @@
         document.getElementById('classes-dropdown-menu').addEventListener('change', () => updateDropdownButtonText('classes'));
         document.getElementById('confirm-delete-btn').addEventListener('click', executeDelete);
         document.getElementById('cancel-confirm-btn').addEventListener('click', () => toggleModal('confirm-modal', false));
+        
+        // Listener for the new data fix button
+        document.getElementById('fix-data-btn').addEventListener('click', handleDataFix);
     }
 
     function switchTab(tabName) {
@@ -504,8 +536,7 @@
         const indexStr = document.getElementById('modal-entry-index').value;
         const isNew = !indexStr;
         const newDay = document.getElementById('modal-day-select').value;
-        const newPeriodStr = document.getElementById('modal-period-select').value;
-        const newPeriod = isNaN(parseInt(newPeriodStr)) ? newPeriodStr : parseInt(newPeriodStr);
+        const newPeriod = document.getElementById('modal-period-select').value;
         const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value);
         const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value);
         const locationId = document.getElementById('modal-location-select').value;
@@ -522,7 +553,7 @@
             const originalDaySchedule = [...teacherSchedule[originalDay]];
             if (dayHasChanged) {
                 originalDaySchedule.splice(parseInt(indexStr), 1);
-                updateData[originalDay] = originalDaySchedule;
+                updateData[originalDay] = originalDaySchedule.length > 0 ? originalDaySchedule : [];
                 const newDaySchedule = teacherSchedule[newDay] ? [...teacherSchedule[newDay]] : [];
                 newDaySchedule.push(newEntry);
                 updateData[newDay] = newDaySchedule;
@@ -578,7 +609,6 @@
         const btn = e.target.closest('.delete-management-item');
         if (!btn) return;
         const { id, type } = btn.dataset;
-        // This confirm might not work in the environment, but leaving for now.
         if(confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) {
             try {
                 await deleteDoc(doc(db, `${type}s`, id));
@@ -586,90 +616,62 @@
         }
     }
 
-    async function handleInitialUpload() {
-        const statusDiv = document.getElementById('upload-status');
-        if (!confirm("This will ERASE all current schedules, subjects, classes, and locations. This is for first-time setup. Are you sure?")) return;
-        statusDiv.textContent = "Uploading... This may take a moment.";
+    // FINAL FIX: This function runs a one-time correction on the data in your database.
+    async function handleDataFix() {
+        const statusDiv = document.getElementById('fix-status');
+        if (!confirm("This will scan and correct all schedules in the database to match the new timetable. This should only be run once. Are you sure?")) return;
         
+        statusDiv.textContent = "Starting correction... This may take a moment.";
+
+        const periodMigrationMap = { 
+            1: 'P', 2: '1', 3: '2', 4: '3', 5: '4', 6: '5', 7: '6', 8: '6*', 9: '8', 10: '9', 
+            11: '10', 12: '11', 13: '12', 14: '13', 15: '14', 16: '15', 17: '16'
+        };
+
         try {
             const batch = writeBatch(db);
-            const collectionsToClear = ["schedules", "subjects", "classes", "locations"];
-            for (const coll of collectionsToClear) {
-                const snapshot = await getDocs(query(collection(db, coll)));
-                snapshot.forEach(doc => batch.delete(doc.ref));
-            }
-            await batch.commit();
+            const schedulesRef = collection(db, "schedules");
+            const snapshot = await getDocs(schedulesRef);
+            let updatedCount = 0;
 
-            const newBatch = writeBatch(db);
-            const { initialSchedules, initialSubjects, initialClasses, initialLocations } = getInitialData();
-            
-            const subjectIdMap = {}, classIdMap = {}, locationIdMap = {};
-            for (const name of initialSubjects) { const docRef = doc(collection(db, "subjects")); subjectIdMap[name] = docRef.id; newBatch.set(docRef, { name }); }
-            for (const name of initialClasses) { const docRef = doc(collection(db, "classes")); classIdMap[name] = docRef.id; newBatch.set(docRef, { name }); }
-            for (const name of initialLocations) { const docRef = doc(collection(db, "locations")); locationIdMap[name] = docRef.id; newBatch.set(docRef, { name }); }
-            
-            for (const teacherName in initialSchedules) {
-                const schedule = initialSchedules[teacherName];
-                const newScheduleData = { name: teacherName };
-                for(const day of DAYS) {
-                    const daySchedule = schedule[day];
-                    if(Array.isArray(daySchedule)) {
-                        newScheduleData[day] = daySchedule.map(entry => ({
-                            period: entry.period,
-                            subjectIds: (entry.subjects || []).map(s => subjectIdMap[s]).filter(Boolean),
-                            classIds: (entry.classes || []).map(c => classIdMap[c]).filter(Boolean),
-                            locationId: null 
-                        }));
-                    } else {
-                        newScheduleData[day] = [];
+            snapshot.forEach(docSnap => {
+                const teacherData = docSnap.data();
+                const teacherRef = docSnap.ref;
+                let needsUpdate = false;
+                
+                // Create a deep copy to modify
+                const updatedSchedule = JSON.parse(JSON.stringify(teacherData));
+
+                for (const day of DAYS) {
+                    if (Array.isArray(updatedSchedule[day])) {
+                        updatedSchedule[day].forEach(entry => {
+                            const oldPeriod = String(entry.period);
+                            // Check if the period is a number that needs migration
+                            if (periodMigrationMap[oldPeriod]) {
+                                const newPeriod = periodMigrationMap[oldPeriod];
+                                if (oldPeriod !== newPeriod) {
+                                    entry.period = newPeriod;
+                                    needsUpdate = true;
+                                }
+                            }
+                        });
                     }
                 }
-                const scheduleDocRef = doc(collection(db, "schedules"));
-                newBatch.set(scheduleDocRef, newScheduleData);
-            }
-
-            await newBatch.commit();
-            statusDiv.textContent = "Upload successful! Please switch to the Schedule tab.";
-            alert("Initial data uploaded successfully!");
-
-        } catch (error) {
-            console.error("Upload failed:", error);
-            statusDiv.textContent = `Upload failed: ${error.message}`;
-        }
-    }
-    
-    function getInitialData() {
-        const rawData = {"EN ABD AZIZ BIN MOHAMED":{"Mo":[{"period":9,"text":"4TS2/4TS1/"}],"Tu":[{"period":10,"text":"4PTS TAW"},{"period":11,"text":"4PTS TAW"}],"We":[{"period":2,"text":"KOKO"},{"period":4,"text":"4TS2"},{"period":6,"text":"4TS2"},{"period":9,"text":"4TS1"},{"period":10,"text":"4PTA"},{"period":11,"text":"4TS1"},{"period":12,"text":"4PTS"}],"Th":[{"period":9,"text":"4TS1/4TS2"},{"period":10,"text":"4TS2"},{"period":11,"text":"4TS1"}],"Fr":[{"period":4,"text":"P"},{"period":6,"text":"4PA W"},{"period":9,"text":"4PA W"}]},"ASIAH BT ALI":{"Mo":[],"Tu":[],"We":[{"period":2,"text":"KOKO"}],"Th":[],"Fr":[]}};
-        const initialSchedules = {};
-        const subjectSet = new Set();
-        const classSet = new Set();
-        const KNOWN_SUBJECTS = ["BM", "BI", "MM", "SN", "SJ", "PJ", "PA", "PI", "RBT", "ASK", "FIZ", "KIM", "BIO", "MMT", "PNG", "TAW", "PS", "BC", "BT", "KOKO", "P", "BENG", "GE", "KKQ", "BA", "B.LUKISAN"];
-        
-        for (const teacherName in rawData) {
-            const schedule = rawData[teacherName];
-            const newSchedule = {};
-            for (const day in schedule) {
-                if(Array.isArray(schedule[day])) {
-                    newSchedule[day] = schedule[day].map(entry => {
-                        const normalizedText = (entry.text || '').replace(/B\.LUKISAN/g, 'B.LUKISAN');
-                        const parts = normalizedText.split(/[\s/]+/).filter(Boolean);
-                        let entrySubjects = parts.filter(p => KNOWN_SUBJECTS.includes(p.toUpperCase()));
-                        let entryClasses = parts.filter(p => !KNOWN_SUBJECTS.includes(p.toUpperCase()));
-                        entrySubjects.forEach(s => subjectSet.add(s.toUpperCase()));
-                        entryClasses.forEach(c => classSet.add(c));
-                        return { period: entry.period, subjects: entrySubjects.map(s => s.toUpperCase()), classes: entryClasses };
-                    });
+                
+                if (needsUpdate) {
+                    batch.update(teacherRef, updatedSchedule);
+                    updatedCount++;
                 }
-            }
-            initialSchedules[teacherName] = newSchedule;
-        }
+            });
 
-        return {
-            initialSchedules,
-            initialSubjects: Array.from(subjectSet).sort(),
-            initialClasses: Array.from(classSet).sort(),
-            initialLocations: ["MAKMAL KOMPUTER 1", "MAKMAL KOMPUTER 2", "BENGKEL RBT", "BILIK LUKISAN"]
-        };
+            await batch.commit();
+            statusDiv.textContent = `Correction complete! ${updatedCount} schedules were updated. The schedule is now fixed.`;
+            alert(`Correction complete! ${updatedCount} schedules were updated.`);
+        } catch (error) {
+            console.error("Data fix failed:", error);
+            statusDiv.textContent = `Correction failed: ${error.message}`;
+            alert("An error occurred during the data correction. Check the console for details.");
+        }
     }
     
     function toggleModal(id, show) {

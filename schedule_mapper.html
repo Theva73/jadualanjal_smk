@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Schedule Editor (Final Fix)</title>
+    <title>Advanced Schedule Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -42,7 +42,6 @@
                 <nav class="flex space-x-4" aria-label="Tabs">
                     <button id="tab-schedule-btn" class="tab-btn active px-3 py-2 font-semibold text-sm rounded-t-md">Schedule</button>
                     <button id="tab-management-btn" class="tab-btn px-3 py-2 font-semibold text-sm rounded-t-md">Management</button>
-                    <button id="tab-correction-btn" class="tab-btn px-3 py-2 font-semibold text-sm rounded-t-md">Correction Tool</button>
                 </nav>
             </div>
 
@@ -66,8 +65,8 @@
                                 <th class="p-2 border border-gray-300 font-semibold">3</th>
                                 <th class="p-2 border border-gray-300 font-semibold">4</th>
                                 <th class="p-2 border border-gray-300 font-semibold">5</th>
-                                <th class="p-2 border border-gray-300 font-semibold">6</th>
                                 <th class="p-2 border border-gray-300 font-semibold bg-amber-200">REHAT</th>
+                                <th class="p-2 border border-gray-300 font-semibold">6</th>
                                 <th class="p-2 border border-gray-300 font-semibold">6*</th>
                                 <th class="p-2 border border-gray-300 font-semibold bg-amber-200">REHAT</th>
                                 <th class="p-2 border border-gray-300 font-semibold">7</th>
@@ -88,8 +87,8 @@
                                 <td class="p-1 border border-gray-300 font-medium">8:15<br>8:45</td>
                                 <td class="p-1 border border-gray-300 font-medium">8:45<br>9:15</td>
                                 <td class="p-1 border border-gray-300 font-medium">9:15<br>9:45</td>
-                                <td class="p-1 border border-gray-300 font-medium">9:45<br>10:15</td>
                                 <td class="p-1 border border-gray-300 font-medium bg-amber-100">9:45<br>10:00</td>
+                                <td class="p-1 border border-gray-300 font-medium">9:45<br>10:15</td>
                                 <td class="p-1 border border-gray-300 font-medium">10:00<br>10:15</td>
                                 <td class="p-1 border border-gray-300 font-medium bg-amber-100">10:15<br>10:30</td>
                                 <td class="p-1 border border-gray-300 font-medium">10:00<br>10:30</td>
@@ -127,17 +126,6 @@
                         <div id="location-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
                     </div>
                  </div>
-            </div>
-            
-            <div id="tab-correction-content" class="hidden">
-                <div class="w-full max-w-lg mx-auto bg-white p-8 rounded-xl shadow-lg text-center">
-                    <h1 class="text-2xl font-bold text-gray-800 mb-2">Data Correction Tool</h1>
-                    <p class="text-gray-600 mb-6">If your existing schedule data is showing in the wrong time slots, this tool will fix it. This is a one-time operation that will scan and correct all schedules in the database.</p>
-                    <button id="fix-data-btn" class="w-full bg-orange-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors">
-                        Fix Incorrect Schedule Data
-                    </button>
-                    <div id="fix-status" class="mt-6 text-sm text-gray-700">Ready to begin.</div>
-                </div>
             </div>
         </div>
     </div>
@@ -188,9 +176,6 @@
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-95 opacity-0">
             <h3 class="text-lg font-semibold mb-2 text-gray-800">Confirm Deletion</h3>
             <p class="text-gray-600 mb-6">Are you sure you want to delete this entry? This action cannot be undone.</p>
-            <input type="hidden" id="confirm-teacher-id">
-            <input type="hidden" id="confirm-day">
-            <input type="hidden" id="confirm-index">
             <div class="flex justify-end items-center gap-3">
                 <button type="button" id="cancel-confirm-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button>
                 <button type="button" id="confirm-delete-btn" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">Yes, Delete</button>
@@ -236,7 +221,7 @@
             
             loadingTimeout = setTimeout(() => {
                 if (loader.style.display !== 'none') {
-                    handleLoadingError('Error: Could not connect to the database. Please check your Firestore security rules.');
+                    handleLoadingError('Error: Could not connect to the database.');
                 }
             }, 10000);
 
@@ -246,13 +231,13 @@
                 } else {
                     signInAnonymously(auth).catch(err => {
                         console.error("Auth failed", err);
-                        handleLoadingError('Authentication Failed. Please check Firebase Auth settings.');
+                        handleLoadingError('Authentication Failed.');
                     });
                 }
             });
         } catch (error) {
             console.error("Firebase Init Failed:", error);
-            handleLoadingError('Firebase Initialization Failed. Check the console for errors.');
+            handleLoadingError('Firebase Initialization Failed.');
         }
     }
 
@@ -277,7 +262,7 @@
             }
             loader.style.display = 'none';
             scheduleTable.classList.remove('hidden');
-        }, err => handleLoadingError("Error fetching data. Check database rules."));
+        }, err => handleLoadingError("Error fetching data."));
         onSnapshot(collection(db, "subjects"), s => (subjects = Object.fromEntries(s.docs.map(d=>[d.id, {id: d.id, ...d.data()}])), renderManagementList('subject', subjects, document.getElementById('subject-list'))));
         onSnapshot(collection(db, "classes"), s => (classes = Object.fromEntries(s.docs.map(d=>[d.id, {id: d.id, ...d.data()}])), renderManagementList('class', classes, document.getElementById('class-list'))));
         onSnapshot(collection(db, "locations"), s => (locations = Object.fromEntries(s.docs.map(d=>[d.id, {id: d.id, ...d.data()}])), renderManagementList('location', locations, document.getElementById('location-list'))));
@@ -295,7 +280,7 @@
         });
         teacherSelect.disabled = false;
         if (Object.keys(schedules).length > 0) {
-            loadingStatus.textContent = `Loaded ${sortedTeachers.length} schedules. Click any cell to edit.`;
+            loadingStatus.textContent = `Loaded ${sortedTeachers.length} schedules.`;
         }
         if (currentVal && schedules[currentVal]) {
             teacherSelect.value = currentVal;
@@ -303,7 +288,9 @@
     }
 
     const periodToCellIndex = {
-        "P": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 7, "R1": 8, "6*": 9, "R2": 10, "7": 11, "8": 12, "9": 13, "10": 14, "11": 15, "12": 16, "13": 17, "14": 18, "15": 19, "16": 20
+        "P": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, 
+        "R1": 7, "6": 8, 
+        "6*": 9, "R2": 10, "7": 11, "8": 12, "9": 13, "10": 14, "11": 15, "12": 16, "13": 17, "14": 18, "15": 19, "16": 20
     };
 
     function renderScheduleForTeacher(teacherId) {
@@ -318,6 +305,11 @@
             if (!row) continue;
 
             daySchedule.forEach((item, index) => {
+                // *** THE FIX: Skip rendering any entry in the "P" (7:00-7:15) slot ***
+                if (item.period === 'P') {
+                    return; 
+                }
+
                 const cellIndex = periodToCellIndex[item.period];
                 if (cellIndex === undefined) return;
                 
@@ -338,19 +330,19 @@
     }
     
     function buildStaticTable() {
-        const monFriRow = `<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="rehat-slot"></td><td></td><td class="rehat-slot"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+        const monFriRow = `<td></td><td></td><td></td><td></td><td></td><td></td><td class="rehat-slot"></td><td></td><td></td><td class="rehat-slot"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
         scheduleTbody.innerHTML = `
             <tr data-day="Mo"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Mo</th>${monFriRow}</tr>
             <tr data-day="Tu">
                 <th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Tu</th>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td>
                 <td class="long-break-cell" rowspan="3"><div class="vertical-text">REHAT T1, T2 & T4</div></td>
-                <td></td>
+                <td></td><td></td>
                 <td class="long-break-cell" rowspan="3"><div class="vertical-text">REHAT T3 & T5</div></td>
                 <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
-            <tr data-day="We"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">We</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr data-day="We"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">We</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
             <tr data-day="Fr"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Fr</th>${monFriRow}</tr>
         `;
         scheduleTbody.querySelectorAll('td:not([class])').forEach(cell => {
@@ -362,11 +354,10 @@
     }
 
     const displayIndexToActualCellIndexMap = {
-        We: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16},
-        Th: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16},
+        We: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 8:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18},
+        Th: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 8:7, 9:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18},
     };
     displayIndexToActualCellIndexMap.Tu = displayIndexToActualCellIndexMap.We;
-
 
     function getCellFromDisplayIndex(row, day, displayIndex) {
         if (day === "Mo" || day === "Fr") return row.children[displayIndex] || null;
@@ -394,8 +385,6 @@
     function setupEventListeners() {
         document.getElementById('tab-schedule-btn').addEventListener('click', () => switchTab('schedule'));
         document.getElementById('tab-management-btn').addEventListener('click', () => switchTab('management'));
-        document.getElementById('tab-correction-btn').addEventListener('click', () => switchTab('correction'));
-
         teacherSelect.addEventListener('change', () => renderScheduleForTeacher(teacherSelect.value));
         scheduleTbody.addEventListener('click', (e) => {
             const targetCell = e.target.closest('td');
@@ -405,13 +394,9 @@
             const row = targetCell.closest('tr');
             const day = row.dataset.day;
             const period = getPeriodFromCell(day, targetCell);
-            if (period === null) {
-                console.error("Could not determine period for the clicked cell.", {day, targetCell});
-                return;
-            };
+            if (period === null) { console.error("Could not determine period."); return; };
             openEditModal(day, period, scheduleCell?.dataset.index);
         });
-
         document.getElementById('edit-form').addEventListener('submit', handleSave);
         document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
         document.getElementById('delete-entry-btn').addEventListener('click', handleDelete);
@@ -433,9 +418,6 @@
         document.getElementById('classes-dropdown-menu').addEventListener('change', () => updateDropdownButtonText('classes'));
         document.getElementById('confirm-delete-btn').addEventListener('click', executeDelete);
         document.getElementById('cancel-confirm-btn').addEventListener('click', () => toggleModal('confirm-modal', false));
-        
-        // Listener for the new data fix button
-        document.getElementById('fix-data-btn').addEventListener('click', handleDataFix);
     }
 
     function switchTab(tabName) {
@@ -485,6 +467,8 @@
             daySelect.appendChild(option);
         });
         for(const periodKey in PERIOD_MAP) {
+            // Do not allow adding new entries to the "P" slot
+            if (periodKey === 'P') continue;
             const option = document.createElement('option');
             option.value = periodKey; option.textContent = PERIOD_MAP[periodKey];
             if (periodKey == selectedPeriod) option.selected = true;
@@ -569,26 +553,17 @@
     }
 
     function handleDelete() {
-        const teacherId = document.getElementById('modal-teacher-id').value;
-        const day = document.getElementById('modal-original-day').value;
-        const index = document.getElementById('modal-entry-index').value;
-
-        document.getElementById('confirm-teacher-id').value = teacherId;
-        document.getElementById('confirm-day').value = day;
-        document.getElementById('confirm-index').value = index;
-
         toggleModal('confirm-modal', true);
     }
 
     async function executeDelete() {
-        const teacherId = document.getElementById('confirm-teacher-id').value;
-        const day = document.getElementById('confirm-day').value;
-        const index = parseInt(document.getElementById('confirm-index').value);
-
+        const teacherId = document.getElementById('modal-teacher-id').value;
+        const day = document.getElementById('modal-original-day').value;
+        const index = parseInt(document.getElementById('modal-entry-index').value);
         const daySchedule = [...schedules[teacherId][day]];
         daySchedule.splice(index, 1);
         try {
-            await updateDoc(doc(db, "schedules", teacherId), { [day]: daySchedule });
+            await updateDoc(doc(db, "schedules", teacherId), { [day]: daySchedule.length > 0 ? daySchedule : [] });
             toggleModal('confirm-modal', false);
             toggleModal('edit-modal', false);
         } catch (error) { console.error("Delete failed:", error); }
@@ -609,68 +584,11 @@
         const btn = e.target.closest('.delete-management-item');
         if (!btn) return;
         const { id, type } = btn.dataset;
-        if(confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) {
+        // This confirm still works for this simple case.
+        if(confirm(`Are you sure you want to delete this ${type}?`)) {
             try {
                 await deleteDoc(doc(db, `${type}s`, id));
             } catch(error) { console.error(`Error deleting ${type}:`, error); }
-        }
-    }
-
-    // FINAL FIX: This function runs a one-time correction on the data in your database.
-    async function handleDataFix() {
-        const statusDiv = document.getElementById('fix-status');
-        if (!confirm("This will scan and correct all schedules in the database to match the new timetable. This should only be run once. Are you sure?")) return;
-        
-        statusDiv.textContent = "Starting correction... This may take a moment.";
-
-        const periodMigrationMap = { 
-            1: 'P', 2: '1', 3: '2', 4: '3', 5: '4', 6: '5', 7: '6', 8: '6*', 9: '8', 10: '9', 
-            11: '10', 12: '11', 13: '12', 14: '13', 15: '14', 16: '15', 17: '16'
-        };
-
-        try {
-            const batch = writeBatch(db);
-            const schedulesRef = collection(db, "schedules");
-            const snapshot = await getDocs(schedulesRef);
-            let updatedCount = 0;
-
-            snapshot.forEach(docSnap => {
-                const teacherData = docSnap.data();
-                const teacherRef = docSnap.ref;
-                let needsUpdate = false;
-                
-                // Create a deep copy to modify
-                const updatedSchedule = JSON.parse(JSON.stringify(teacherData));
-
-                for (const day of DAYS) {
-                    if (Array.isArray(updatedSchedule[day])) {
-                        updatedSchedule[day].forEach(entry => {
-                            const oldPeriod = String(entry.period);
-                            // Check if the period is a number that needs migration
-                            if (periodMigrationMap[oldPeriod]) {
-                                const newPeriod = periodMigrationMap[oldPeriod];
-                                if (oldPeriod !== newPeriod) {
-                                    entry.period = newPeriod;
-                                    needsUpdate = true;
-                                }
-                            }
-                        });
-                    }
-                }
-                
-                if (needsUpdate) {
-                    batch.update(teacherRef, updatedSchedule);
-                    updatedCount++;
-                }
-            });
-
-            await batch.commit();
-            statusDiv.textContent = `Correction complete! ${updatedCount} schedules were updated. The schedule is now fixed.`;
-            alert(`Correction complete! ${updatedCount} schedules were updated.`);
-        } catch (error) {
-            console.error("Data fix failed:", error);
-            statusDiv.textContent = `Correction failed: ${error.message}`;
-            alert("An error occurred during the data correction. Check the console for details.");
         }
     }
     

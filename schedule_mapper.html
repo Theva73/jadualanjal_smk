@@ -14,9 +14,28 @@
         tbody td, tbody th { height: 6rem; padding: 0.25rem; vertical-align: middle; font-size: 0.75rem; }
         .schedule-cell { background-color: #e0f2fe; color: #0c4a6e; font-weight: 600; border-radius: 0.5rem; padding: 0.25rem; line-height: 1.2; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; cursor: pointer; border: 1px solid #bae6fd; transition: background-color 0.2s; }
         .schedule-cell:hover { background-color: #c0eaff; }
-        .empty-cell { cursor: pointer; height: 100%; width: 100%; }
+        .empty-cell { cursor: pointer; height: 100%; width: 100%; position: relative; }
         .empty-cell:hover .add-icon { opacity: 1; }
-        .add-icon { opacity: 0.15; transition: opacity 0.2s; }
+        .add-icon, .paste-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s;
+        }
+        .add-icon { opacity: 0.15; }
+        .paste-btn {
+            opacity: 0.6;
+            background-color: #dbeafe;
+            color: #1e40af;
+            border-radius: 9999px;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .paste-btn:hover { opacity: 1; background-color: #bfdbfe;}
+
         .long-break-cell { background-color: #FEF3C7 !important; color: #92400E; font-weight: 700; }
         .rehat-slot { background-color: #FEF9C3 !important; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 2rem auto; }
@@ -26,6 +45,10 @@
         .dropdown-checkbox-menu label { display: block; padding: 0.5rem; cursor: pointer; border-radius: 4px; }
         .dropdown-checkbox-menu label:hover { background-color: #f3f4f6; }
         .dropdown-checkbox-menu input { margin-right: 0.5rem; }
+
+        #paste-mode-indicator {
+            transition: opacity 0.3s, transform 0.3s;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -47,10 +70,20 @@
 
             <div id="tab-schedule-content">
                 <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <label for="teacher-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Teacher</label>
-                    <select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
-                        <option value="">-- Loading --</option>
-                    </select>
+                    <div class="flex justify-between items-center">
+                         <div class="flex-grow">
+                            <label for="teacher-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Teacher</label>
+                            <select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                                <option value="">-- Loading --</option>
+                            </select>
+                        </div>
+                        <div id="paste-mode-indicator" class="hidden opacity-0 transform translate-y-2 ml-4">
+                            <button id="cancel-paste-btn" class="bg-yellow-500 text-white font-bold py-2 px-3 rounded-lg text-sm flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Cancel Paste
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="schedule-container" class="overflow-x-auto">
@@ -166,8 +199,12 @@
                         <select id="modal-location-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
                     </div>
                 </div>
-                <div class="flex justify-between items-center gap-3 mt-6">
-                    <button type="button" id="delete-entry-btn" class="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button>
+                <!-- HTML CHANGE: This div is now a flex container to fix alignment -->
+                <div class="flex justify-between items-center flex-wrap gap-3 mt-6">
+                    <div class="flex gap-2">
+                        <button type="button" id="delete-entry-btn" class="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button>
+                        <button type="button" id="copy-entry-btn" class="px-4 py-2 text-sm rounded-md bg-yellow-500 text-white hover:bg-yellow-600">Copy Slot</button>
+                    </div>
                     <div class="flex gap-3">
                         <button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300">Cancel</button>
                         <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-md hover:bg-indigo-700">Save Changes</button>
@@ -205,29 +242,10 @@
     let db, auth, loadingTimeout;
     let schedules = {}, subjects = {}, classes = {}, locations = {};
     let selectedTeacherId = null;
+    let copiedSlot = null;
     
-    // JS CHANGE: This object now includes the missing 6* slot
     const PERIOD_MAP = {
-        "P": "P (7:00-7:15)", 
-        "1": "1 (7:15-7:45)", 
-        "2": "2 (7:45-8:15)", 
-        "3": "3 (8:15-8:45)", 
-        "4": "4 (8:45-9:15)", 
-        "5": "5 (9:15-9:45)", 
-        "R1": "REHAT (9:45-10:00)",
-        "6": "6 (9:45-10:15)",
-        "6*": "6* (10:00-10:30)", 
-        "R2": "REHAT (10:15-10:30)",
-        "7": "7 (10:30-11:00)", 
-        "8": "8 (11:00-11:30)", 
-        "9": "9 (11:30-12:00)", 
-        "10": "10 (12:00-12:30)", 
-        "11": "11 (12:30-1:00)", 
-        "12": "12 (1:00-1:30)", 
-        "13": "13 (1:30-2:00)", 
-        "14": "14 (2:00-2:30)", 
-        "15": "15 (2:30-3:00)",
-        "16": "16 (3:00-3:30)"
+        "P": "P (7:00-7:15)", "1": "1 (7:15-7:45)", "2": "2 (7:45-8:15)", "3": "3 (8:15-8:45)", "4": "4 (8:45-9:15)", "5": "5 (9:15-9:45)", "R1": "REHAT (9:45-10:00)", "6": "6 (9:45-10:15)", "6*": "6* (10:00-10:30)", "R2": "REHAT (10:15-10:30)", "7": "7 (10:30-11:00)", "8": "8 (11:00-11:30)", "9": "9 (11:30-12:00)", "10": "10 (12:00-12:30)", "11": "11 (12:30-1:00)", "12": "12 (1:00-1:30)", "13": "13 (1:30-2:00)", "14": "14 (2:00-2:30)", "15": "15 (2:30-3:00)","16": "16 (3:00-3:30)"
     };
     const DAYS = ["Mo", "Tu", "We", "Th", "Fr"];
 
@@ -313,9 +331,7 @@
     }
 
     const periodToCellIndex = {
-        "P": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, 
-        "R1": 7, "6": 8, 
-        "6*": 9, "R2": 10, "7": 11, "8": 12, "9": 13, "10": 14, "11": 15, "12": 16, "13": 17, "14": 18, "15": 19, "16": 20
+        "P": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "R1": 7, "6": 8, "6*": 9, "R2": 10, "7": 11, "8": 12, "9": 13, "10": 14, "11": 15, "12": 16, "13": 17, "14": 18, "15": 19, "16": 20
     };
 
     function renderScheduleForTeacher(teacherId) {
@@ -367,12 +383,16 @@
             <tr data-day="Th"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Th</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
             <tr data-day="Fr"><th class="p-2 border border-gray-300 bg-gray-50 font-semibold">Fr</th>${monFriRow}</tr>
         `;
+        const addIconSvg = `<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>`;
+        const pasteIconSvg = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8 2a1 1 0 00-1 1v1H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 10-2 0v1H8V3a1 1 0 00-1-1zM5 8h10v8H5V8z"></path></svg>`;
+        
         scheduleTbody.querySelectorAll('td:not([class])').forEach(cell => {
-             cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon"><svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div></div>`;
+             cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon">${addIconSvg}</div><button class="paste-btn hidden">${pasteIconSvg}</button></div>`;
         });
          scheduleTbody.querySelectorAll('.rehat-slot').forEach(cell => {
-             if(!cell.innerHTML) cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon"><svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div></div>`;
+             if(!cell.innerHTML) cell.innerHTML = `<div class="empty-cell flex items-center justify-center h-full"><div class="add-icon">${addIconSvg}</div><button class="paste-btn hidden">${pasteIconSvg}</button></div>`;
         });
+        updatePasteButtonsVisibility(copiedSlot !== null);
     }
 
     const displayIndexToActualCellIndexMap = {
@@ -408,20 +428,36 @@
         document.getElementById('tab-schedule-btn').addEventListener('click', () => switchTab('schedule'));
         document.getElementById('tab-management-btn').addEventListener('click', () => switchTab('management'));
         teacherSelect.addEventListener('change', () => renderScheduleForTeacher(teacherSelect.value));
+        
         scheduleTbody.addEventListener('click', (e) => {
             const targetCell = e.target.closest('td');
             if (!targetCell || !selectedTeacherId) return;
-            const scheduleCell = e.target.closest('.schedule-cell');
-            if (targetCell.classList.contains('long-break-cell') && !scheduleCell) return;
             const row = targetCell.closest('tr');
             const day = row.dataset.day;
             const period = getPeriodFromCell(day, targetCell);
             if (period === null) { console.error("Could not determine period."); return; };
+
+            const pasteBtn = e.target.closest('.paste-btn');
+            if(pasteBtn) {
+                handlePasteClick(day, period);
+                return;
+            }
+
+            const scheduleCell = e.target.closest('.schedule-cell');
+            if (targetCell.classList.contains('long-break-cell') && !scheduleCell) return;
+            
             openEditModal(day, period, scheduleCell?.dataset.index);
         });
+
         document.getElementById('edit-form').addEventListener('submit', handleSave);
         document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
         document.getElementById('delete-entry-btn').addEventListener('click', handleDeleteClick);
+        document.getElementById('copy-entry-btn').addEventListener('click', handleCopyClick);
+        document.getElementById('cancel-paste-btn').addEventListener('click', () => {
+            copiedSlot = null;
+            updatePasteButtonsVisibility(false);
+        });
+
         document.getElementById('add-subject-form').addEventListener('submit', e => handleAddManagementItem(e, 'subject'));
         document.getElementById('add-class-form').addEventListener('submit', e => handleAddManagementItem(e, 'class'));
         document.getElementById('add-location-form').addEventListener('submit', e => handleAddManagementItem(e, 'location'));
@@ -470,6 +506,7 @@
         document.getElementById('modal-teacher-id').value = selectedTeacherId;
         document.getElementById('modal-original-day').value = day;
         document.getElementById('delete-entry-btn').classList.toggle('hidden', isNew);
+        document.getElementById('copy-entry-btn').classList.toggle('hidden', isNew);
         if(!isNew) document.getElementById('modal-entry-index').value = entryIndex;
         else document.getElementById('modal-entry-index').value = '';
         populateDayPeriodDropdowns(day, period);
@@ -653,6 +690,52 @@
             alert("An error occurred. Could not clear schedule.");
         }
     }
+
+    function handleCopyClick() {
+        const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value);
+        const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value);
+        const locationId = document.getElementById('modal-location-select').value;
+        
+        copiedSlot = { subjectIds, classIds, locationId };
+        
+        toggleModal('edit-modal', false);
+        updatePasteButtonsVisibility(true);
+    }
+
+    async function handlePasteClick(day, period) {
+        if (!copiedSlot) return;
+
+        const teacherId = selectedTeacherId;
+        const newEntry = { period, ...copiedSlot };
+        const teacherSchedule = schedules[teacherId];
+        const daySchedule = teacherSchedule[day] ? [...teacherSchedule[day]] : [];
+        
+        daySchedule.push(newEntry);
+        const updateData = { [day]: daySchedule };
+
+        try {
+            await updateDoc(doc(db, "schedules", teacherId), updateData);
+        } catch (error) { console.error("Paste failed:", error); }
+    }
+    
+    function updatePasteButtonsVisibility(show) {
+        const pasteIndicator = document.getElementById('paste-mode-indicator');
+        document.querySelectorAll('.add-icon').forEach(icon => icon.classList.toggle('hidden', show));
+        document.querySelectorAll('.paste-btn').forEach(btn => btn.classList.toggle('hidden', !show));
+
+        if(show){
+            pasteIndicator.classList.remove('hidden');
+            setTimeout(() => {
+                pasteIndicator.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+        } else {
+            pasteIndicator.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => {
+                pasteIndicator.classList.add('hidden');
+            }, 300);
+        }
+    }
+
 
     function toggleModal(id, show) {
         const modal = document.getElementById(id);

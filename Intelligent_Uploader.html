@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore Schedule Uploader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2 text-center">Intelligent Schedule Uploader</h1>
+        <p class="text-gray-600 mb-6 text-center">Select your JSON file. This tool will automatically map subject and class names to their IDs before uploading.</p>
+
+        <div class="mb-4">
+            <label for="json-file-input" class="block text-sm font-medium text-gray-700 mb-2">Schedule JSON File</label>
+            <input type="file" id="json-file-input" accept=".json" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        </div>
+
+        <button id="upload-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors">
+            Upload to Firestore
+        </button>
+
+        <div id="status" class="mt-6 text-sm text-gray-700 p-4 bg-gray-50 rounded-lg border hidden"></div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgvyb95-jujtCC2HPiHXLdYMJgQquIEx4",
+      authDomain: "jadual-3f0aa.firebaseapp.com",
+      projectId: "jadual-3f0aa",
+      storageBucket: "jadual-3f0aa.firebasestorage.app",
+      messagingSenderId: "496526436851",
+      appId: "1:496526436851:web:78ff48b28bfc8c31f14a86"
+    };
+
+    const fileInput = document.getElementById('json-file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const statusDiv = document.getElementById('status');
+    
+    let db;
+    let subjects = {}, classes = {}, locations = {};
+
+    async function main() {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            const auth = getAuth(app);
+            await signInAnonymously(auth);
+            console.log("Firebase initialized and signed in anonymously.");
+            await fetchManagementData();
+        } catch (error) {
+            updateStatus(`<strong>Error:</strong> Firebase initialization failed. ${error.message}`, true);
+        }
+    }
+
+    async function fetchManagementData() {
+        try {
+            const subjectsSnapshot = await getDocs(collection(db, "subjects"));
+            subjects = Object.fromEntries(subjectsSnapshot.docs.map(d => [d.id, {id: d.id, ...d.data()}]));
+
+            const classesSnapshot = await getDocs(collection(db, "classes"));
+            classes = Object.fromEntries(classesSnapshot.docs.map(d => [d.id, {id: d.id, ...d.data()}]));
+            
+            const locationsSnapshot = await getDocs(collection(db, "locations"));
+            locations = Object.fromEntries(locationsSnapshot.docs.map(d => [d.id, {id: d.id, ...d.data()}]));
+            
+            console.log("Fetched management data:", { subjects, classes, locations });
+        } catch (error) {
+            updateStatus(`<strong>Error:</strong> Could not fetch subjects/classes. ${error.message}`, true);
+        }
+    }
+
+
+    uploadBtn.addEventListener('click', handleFileUpload);
+
+    function updateStatus(message, isError = false) {
+        statusDiv.classList.remove('hidden');
+        statusDiv.innerHTML = message;
+        statusDiv.className = isError 
+            ? 'mt-6 text-sm p-4 bg-red-50 text-red-800 rounded-lg border border-red-200'
+            : 'mt-6 text-sm p-4 bg-green-50 text-green-800 rounded-lg border border-green-200';
+    }
+
+    async function handleFileUpload() {
+        if (!db) {
+            updateStatus("<strong>Error:</strong> Database not connected. Please refresh.", true);
+            return;
+        }
+
+        const file = fileInput.files[0];
+        if (!file) {
+            updateStatus("<strong>Warning:</strong> Please select a JSON file first.", true);
+            return;
+        }
+
+        updateStatus("Reading file...");
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const importedSchedules = JSON.parse(event.target.result);
+                updateStatus("File parsed. Connecting to database and fetching existing teachers...");
+                
+                const batch = writeBatch(db);
+                const schedulesRef = collection(db, "schedules");
+                const snapshot = await getDocs(schedulesRef);
+                
+                let updatedCount = 0;
+                let notFound = [];
+
+                const existingTeachers = {};
+                snapshot.forEach(doc => {
+                    existingTeachers[doc.data().name.toUpperCase().trim()] = { id: doc.id, data: doc.data() };
+                });
+                
+                updateStatus(`Found ${Object.keys(existingTeachers).length} existing teachers. Preparing updates...`);
+
+                for (const teacherName in importedSchedules) {
+                    const upperCaseName = teacherName.toUpperCase().trim();
+                    const teacherInfo = existingTeachers[upperCaseName];
+                    
+                    if (teacherInfo) {
+                        const teacherRef = doc(db, "schedules", teacherInfo.id);
+                        const newScheduleData = importedSchedules[teacherName];
+                        
+                        // **This is the key part for mapping**
+                        const finalSchedule = {};
+                        for(const day in newScheduleData){
+                            finalSchedule[day] = newScheduleData[day].map(entry => {
+                                const details = entry.details || "";
+                                // Find subject and class IDs from their names
+                                const subjectIds = Object.values(subjects).filter(s => details.includes(s.name)).map(s => s.id);
+                                const classIds = Object.values(classes).filter(c => details.includes(c.name)).map(c => c.id);
+                                const location = Object.values(locations).find(l => details.toUpperCase().includes(l.name.toUpperCase()));
+
+                                return {
+                                    period: entry.period,
+                                    subjectIds: subjectIds,
+                                    classIds: classIds,
+                                    locationId: location ? location.id : null
+                                };
+                            });
+                        }
+
+                        // Merge new schedule with existing data to preserve name, etc.
+                        const finalData = { ...teacherInfo.data, ...finalSchedule };
+                        batch.update(teacherRef, finalData);
+                        updatedCount++;
+                    } else {
+                        notFound.push(teacherName);
+                    }
+                }
+
+                await batch.commit();
+
+                let message = `<strong>Success!</strong> ${updatedCount} schedules were updated in the database.`;
+                if (notFound.length > 0) {
+                    message += `<br><br><strong>Warning:</strong> Could not find these ${notFound.length} teachers in the database: <br>- ${notFound.join('<br>- ')}`;
+                }
+                updateStatus(message);
+
+            } catch (error) {
+                console.error("Upload failed:", error);
+                updateStatus(`<strong>Error:</strong> ${error.message}. Check the console for details.`, true);
+            }
+        };
+
+        reader.onerror = () => {
+            updateStatus(`<strong>Error:</strong> Failed to read the file.`, true);
+        };
+
+        reader.readAsText(file);
+    }
+
+    main();
+</script>
+</body>
+</html>
+
+

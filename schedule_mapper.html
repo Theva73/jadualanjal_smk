@@ -6,7 +6,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center h-screen">
-    <div id="status" class="text-2xl font-bold text-gray-700">Initializing...</div>
+    <div id="status" class="text-2xl font-bold text-gray-700 p-8 text-center">Initializing...</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -54,7 +54,7 @@
             await cleanCollection(db, 'classes');
             await cleanCollection(db, 'locations');
 
-            statusEl.innerHTML += '<p class="text-2xl font-bold text-green-600 mt-4">✅ All collections cleaned! You can now use the final script.</p>';
+            statusEl.innerHTML += '<p class="text-2xl font-bold text-green-600 mt-4">✅ All collections cleaned! You can now use the final script and MUST restore your security rules.</p>';
         } catch (error) {
             console.error("Cleanup failed:", error);
             statusEl.textContent = `❌ Error during cleanup: ${error.message}`;

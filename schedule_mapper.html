@@ -64,6 +64,11 @@
         #paste-mode-indicator {
             transition: opacity 0.3s, transform 0.3s;
         }
+        
+        #uploader-status {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -253,14 +258,24 @@
     </div>
     
     <!-- Uploader Modal -->
-    <div id="uploader-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-2 sm:p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full h-full flex flex-col">
-            <div class="flex justify-between items-center p-3 border-b">
-                <h3 class="text-lg font-semibold text-gray-800">Intelligent Uploader</h3>
+    <div id="uploader-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4 modal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg transform scale-95 opacity-0">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">Intelligent Schedule Uploader</h3>
                 <button id="close-uploader-btn" class="text-gray-500 hover:text-gray-800 text-2xl font-bold p-2 leading-none">&times;</button>
             </div>
-            <div class="flex-grow overflow-hidden">
-                <iframe id="uploader-iframe" class="w-full h-full border-0"></iframe>
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-gray-600">Select your JSON file. This tool will automatically map subject and class names to their IDs before uploading.</p>
+                <div>
+                    <label for="json-file-input" class="block text-sm font-medium text-gray-700 mb-1">Schedule JSON File</label>
+                    <input type="file" id="json-file-input" accept=".json" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"/>
+                </div>
+                <button id="upload-to-firestore-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400">
+                    Upload to Firestore
+                </button>
+                <div class="bg-gray-100 p-3 rounded-lg mt-4 max-h-48 overflow-y-auto">
+                    <pre id="uploader-status" class="text-xs text-gray-700">Ready to upload.</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -552,22 +567,101 @@
         document.getElementById('clear-schedule-btn').addEventListener('click', handleClearScheduleClick);
 
         // Uploader Modal Listeners
-        const uploaderModal = document.getElementById('uploader-modal');
-        const openUploaderBtn = document.getElementById('open-uploader-btn');
-        const closeUploaderBtn = document.getElementById('close-uploader-btn');
-        const uploaderIframe = document.getElementById('uploader-iframe');
-        const uploaderUrl = 'https://theva73.github.io/jadualanjal_smk/Intelligent_Uploader.html';
-
-        openUploaderBtn.addEventListener('click', () => {
-            uploaderIframe.src = uploaderUrl;
-            uploaderModal.classList.remove('hidden');
-        });
-
-        closeUploaderBtn.addEventListener('click', () => {
-            uploaderModal.classList.add('hidden');
-            uploaderIframe.src = ''; // Stop video/audio/scripts in iframe
-        });
+        document.getElementById('open-uploader-btn').addEventListener('click', () => toggleModal('uploader-modal', true));
+        document.getElementById('close-uploader-btn').addEventListener('click', () => toggleModal('uploader-modal', false));
+        document.getElementById('upload-to-firestore-btn').addEventListener('click', handleFileUpload);
     }
+    
+    async function handleFileUpload() {
+        const fileInput = document.getElementById('json-file-input');
+        const statusEl = document.getElementById('uploader-status');
+        const uploadBtn = document.getElementById('upload-to-firestore-btn');
+
+        if (fileInput.files.length === 0) {
+            statusEl.textContent = 'Please select a JSON file first.';
+            return;
+        }
+
+        const file = fileInput.files[0];
+        statusEl.textContent = `Reading file: ${file.name}...`;
+        uploadBtn.disabled = true;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const schedulesData = JSON.parse(event.target.result);
+                statusEl.textContent = 'File read successfully. Mapping names to IDs...';
+
+                // Create reverse lookup maps
+                const subjectNameToId = Object.fromEntries(Object.values(subjects).map(s => [s.name.toLowerCase(), s.id]));
+                const classNameToId = Object.fromEntries(Object.values(classes).map(c => [c.name.toLowerCase(), c.id]));
+                const teacherNameToId = Object.fromEntries(Object.values(schedules).map(t => [t.name.toLowerCase(), t.id]));
+                
+                const batch = writeBatch(db);
+                let updatesCount = 0;
+
+                for (const teacherName in schedulesData) {
+                    const teacherId = teacherNameToId[teacherName.toLowerCase()];
+                    if (!teacherId) {
+                        throw new Error(`Teacher "${teacherName}" not found in the database.`);
+                    }
+
+                    const scheduleFromFile = schedulesData[teacherName];
+                    const newSchedule = {};
+                    
+                    for (const day in scheduleFromFile) {
+                        if (!DAYS.includes(day)) continue;
+                        
+                        newSchedule[day] = [];
+                        for (const entry of scheduleFromFile[day]) {
+                            const subjectIds = (entry.subjects || []).map(name => {
+                                const id = subjectNameToId[name.toLowerCase()];
+                                if (!id) throw new Error(`Subject "${name}" not found for teacher "${teacherName}".`);
+                                return id;
+                            });
+                            
+                            const classIds = (entry.classes || []).map(name => {
+                                const id = classNameToId[name.toLowerCase()];
+                                if (!id) throw new Error(`Class "${name}" not found for teacher "${teacherName}".`);
+                                return id;
+                            });
+
+                            newSchedule[day].push({
+                                period: entry.period,
+                                subjectIds: subjectIds,
+                                classIds: classIds,
+                                locationId: null // Assuming location is not in JSON for now
+                            });
+                        }
+                    }
+                    
+                    const teacherDocRef = doc(db, "schedules", teacherId);
+                    batch.update(teacherDocRef, newSchedule);
+                    updatesCount++;
+                }
+                
+                statusEl.textContent = `Mapping complete. Uploading ${updatesCount} schedule(s)...`;
+                await batch.commit();
+                
+                statusEl.textContent = `✅ Success! ${updatesCount} schedule(s) have been updated.`;
+                fileInput.value = ''; // Reset file input
+
+            } catch (error) {
+                console.error("Upload failed:", error);
+                statusEl.textContent = `❌ Error: ${error.message}`;
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        };
+
+        reader.onerror = () => {
+            statusEl.textContent = 'Error reading the file.';
+            uploadBtn.disabled = false;
+        };
+
+        reader.readAsText(file);
+    }
+
 
     function switchTab(tabName) {
         document.querySelectorAll('[id$="-content"]').forEach(el => el.classList.add('hidden'));
@@ -900,9 +994,11 @@
         const modalContent = modal.querySelector('.transform');
         if (show) {
             modal.classList.remove('hidden');
-            setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 10);
+            setTimeout(() => modal.classList.remove('opacity-0'), 10); // Fade in modal background
+            setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 50); // Scale/Fade in content
         } else {
             modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('opacity-0'), 200);
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
     }

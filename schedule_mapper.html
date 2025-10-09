@@ -172,6 +172,13 @@
         document.getElementById('close-uploader-btn').addEventListener('click', () => toggleModal('uploader-modal', false));
         document.getElementById('upload-to-firestore-btn').addEventListener('click', handleFileUpload);
     }
+
+    // --- IMPROVED UPLOADER LOGIC ---
+    function normalizeName(name) {
+        if (!name) return '';
+        // Convert to uppercase, remove all punctuation, and collapse multiple spaces to one.
+        return name.toUpperCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").replace(/\s\s+/g, ' ').trim();
+    }
     
     async function handleFileUpload() {
         const fileInput = document.getElementById('json-file-input');
@@ -185,13 +192,17 @@
         reader.onload = async (event) => {
             try {
                 const importedSchedules = JSON.parse(event.target.result);
-                const existingTeachers = Object.fromEntries(Object.values(schedules).map(t => [t.name.toUpperCase().trim(), t]));
-                statusEl.textContent = `Found ${Object.keys(existingTeachers).length} existing teachers. Preparing updates...`;
+                // Create a map of normalized names to teacher objects for robust matching.
+                const existingTeachers = new Map(Object.values(schedules).map(t => [normalizeName(t.name), t]));
+
+                statusEl.textContent = `Found ${existingTeachers.size} existing teachers. Preparing updates with improved matching...`;
                 const batch = writeBatch(db);
                 let updatedCount = 0, notFound = [], successfulMatches = [];
+
                 for (const teacherName in importedSchedules) {
-                    const importedUpperCaseName = teacherName.toUpperCase().trim();
-                    const teacherInfo = existingTeachers[importedUpperCaseName];
+                    const normalizedImportName = normalizeName(teacherName);
+                    const teacherInfo = existingTeachers.get(normalizedImportName); // Direct lookup
+
                     if (teacherInfo) {
                         const teacherRef = doc(db, "schedules", teacherInfo.id);
                         const newScheduleData = importedSchedules[teacherName];
@@ -208,12 +219,12 @@
                         });
                         batch.update(teacherRef, finalScheduleData);
                         updatedCount++;
-                        successfulMatches.push(`'${teacherName}'`);
+                        successfulMatches.push(`'${teacherName}' matched with '${teacherInfo.name}'`);
                     } else { notFound.push(teacherName); }
                 }
                 await batch.commit();
                 let message = `✅ Success! ${updatedCount} schedules were updated.\n`;
-                if (successfulMatches.length > 0) message += `\nUpdated Teachers:\n- ${successfulMatches.join('\n- ')}`;
+                if (successfulMatches.length > 0) message += `\nSuccessful Matches:\n- ${successfulMatches.join('\n- ')}`;
                 if (notFound.length > 0) message += `\n\n⚠️ Could not find these ${notFound.length} teachers:\n- ${notFound.join('\n- ')}`;
                 statusEl.textContent = message;
                 fileInput.value = '';
@@ -254,7 +265,7 @@
                     if (scheduleModified) batch.update(scheduleDoc.ref, updatedScheduleData);
                 });
                 await batch.commit();
-                const collectionName = itemType === 'class' ? 'classes' : `${itemType}s`;
+                const collectionName = itemType === 'class' ? 'classes' : `${type}s`;
                 await deleteDoc(doc(db, collectionName, itemId));
             } else if (action === 'clearSchedule') {
                 confirmBtn.textContent = 'Clearing...';

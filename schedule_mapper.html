@@ -58,8 +58,7 @@
                             <select id="teacher-select" class="block w-full p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" disabled><option value="">-- Loading --</option></select>
                         </div>
                         <button id="open-uploader-btn" class="bg-teal-500 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center hover:bg-teal-600 transition-colors whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3
- 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                             <span>Uploader</span>
                         </button>
                         <div id="paste-mode-indicator" class="hidden opacity-0 transform translate-y-2">
@@ -345,7 +344,6 @@
                         content += `<div class="font-bold text-sky-900 text-xs leading-none schedule-item">${subjectNames.join(' ')}</div>`;
                     }
                     
-                    // --- CLASS WRAPPING LOGIC: Max 2 classes per line ---
                     if (classNames.length > 0) {
                         for (let j = 0; j < classNames.length; j += 2) {
                             const chunk = classNames.slice(j, j + 2);
@@ -407,7 +405,67 @@
     function toggleDropdown(type) { const otherType = type === 'subjects' ? 'classes' : 'subjects'; document.getElementById(`${otherType}-dropdown-menu`).classList.remove('show'); document.getElementById(`${type}-dropdown-menu`).classList.toggle('show'); }
     async function handleSave(e) { e.preventDefault(); const teacherId = document.getElementById('modal-teacher-id').value; const originalDay = document.getElementById('modal-original-day').value; const indexStr = document.getElementById('modal-entry-index').value; const isNew = !indexStr; const addDouble = document.getElementById('add-double-slot').checked; const newDay = document.getElementById('modal-day-select').value; const newPeriod = document.getElementById('modal-period-select').value; const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value); const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value); const locationId = document.getElementById('modal-location-select').value; const newEntryData = { subjectIds, classIds, locationId: locationId || null }; const newEntry = { period: newPeriod, ...newEntryData }; const teacherSchedule = schedules[teacherId]; const updateData = {}; if (isNew) { const daySchedule = teacherSchedule[newDay] ? [...teacherSchedule[newDay]] : []; daySchedule.push(newEntry); if (addDouble) { const currentPeriodIndex = PERIOD_ORDER.indexOf(newPeriod); if (currentPeriodIndex > -1 && currentPeriodIndex + 1 < PERIOD_ORDER.length) { const nextPeriod = PERIOD_ORDER[currentPeriodIndex + 1]; if(nextPeriod !== 'R1' && nextPeriod !== 'R2') { daySchedule.push({ period: nextPeriod, ...newEntryData }); } } } updateData[newDay] = daySchedule; } else { const dayHasChanged = newDay !== originalDay; const originalDaySchedule = [...teacherSchedule[originalDay]]; if (dayHasChanged) { originalDaySchedule.splice(parseInt(indexStr), 1); updateData[originalDay] = originalDaySchedule.length > 0 ? originalDaySchedule : []; const newDaySchedule = teacherSchedule[newDay] ? [...teacherSchedule[newDay]] : []; newDaySchedule.push(newEntry); updateData[newDay] = newDaySchedule; } else { originalDaySchedule[parseInt(indexStr)] = newEntry; updateData[originalDay] = originalDaySchedule; } } try { await updateDoc(doc(db, "schedules", teacherId), updateData); toggleModal('edit-modal', false); } catch (error) { console.error("Save failed:", error); } }
     function handleCopyClick() { const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value); const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value); const locationId = document.getElementById('modal-location-select').value; copiedSlot = { subjectIds, classIds, locationId }; toggleModal('edit-modal', false); updatePasteButtonsVisibility(true); }
-    async function handleExtendClick() { const teacherId = document.getElementById('modal-teacher-id').value; const day = document.getElementById('modal-day-select').value; const currentPeriod = document.getElementById('modal-period-select').value; const currentPeriodIndex = PERIOD_ORDER.indexOf(currentPeriod); if (currentPeriodIndex === -1 || currentPeriodIndex + 1 >= PERIOD_ORDER.length) { alert("Cannot extend the last slot of the day."); return; } const nextPeriod = PERIOD_ORDER[currentPeriodIndex + 1]; if (nextPeriod === 'R1' || nextPeriod === 'R2') { alert("Cannot extend into a break time."); return; } const daySchedule = schedules[teacherId][day] || []; const isNextSlotOccupied = daySchedule.some(entry => entry.period === nextPeriod); if (isNextSlotOccupied) { alert("Cannot extend slot, the next time slot is already occupied."); return; } const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value); const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value); const locationId = document.getElementById('modal-location-select').value; const newEntry = { period: nextPeriod, subjectIds, classIds, locationId: locationId || null }; const newDaySchedule = [...daySchedule, newEntry]; try { await updateDoc(doc(db, "schedules", teacherId), { [day]: newDaySchedule }); toggleModal('edit-modal', false); } catch(error) { console.error("Failed to extend slot:", error); alert("An error occurred. Could not extend the slot."); } }
+    
+    async function handleExtendClick() {
+        const teacherId = document.getElementById('modal-teacher-id').value;
+        const day = document.getElementById('modal-day-select').value;
+        const currentPeriod = document.getElementById('modal-period-select').value;
+        const currentPeriodIndex = PERIOD_ORDER.indexOf(currentPeriod);
+
+        if (currentPeriodIndex === -1 || currentPeriodIndex + 1 >= PERIOD_ORDER.length) {
+            alert("Cannot extend the last slot of the day.");
+            return;
+        }
+
+        const nextPeriod = PERIOD_ORDER[currentPeriodIndex + 1];
+        if (nextPeriod === 'R1' || nextPeriod === 'R2') {
+            alert("Cannot extend into a break time.");
+            return;
+        }
+
+        const daySchedule = schedules[teacherId][day] ? [...schedules[teacherId][day]] : [];
+
+        const nextSlotEntry = daySchedule.find(entry => entry.period === nextPeriod);
+        if (nextSlotEntry) {
+            const hasSubjects = nextSlotEntry.subjectIds && nextSlotEntry.subjectIds.length > 0;
+            const hasClasses = nextSlotEntry.classIds && nextSlotEntry.classIds.length > 0;
+            const hasLocation = !!nextSlotEntry.locationId;
+            if (hasSubjects || hasClasses || hasLocation) {
+                alert("Cannot extend slot, the next time slot is already occupied.");
+                return;
+            }
+        }
+        
+        const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value);
+        const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value);
+        const locationId = document.getElementById('modal-location-select').value;
+
+        const newEntryData = {
+            subjectIds,
+            classIds,
+            locationId: locationId || null
+        };
+        
+        // BUG FIX: Instead of just adding a new entry (which can cause duplicates if a ghost entry exists),
+        // we now check if an entry for the next period already exists. If it does, we update it. 
+        // If not, we add a new one. This keeps the data clean for the rendering logic to merge cells correctly.
+        const existingNextSlotIndex = daySchedule.findIndex(entry => entry.period === nextPeriod);
+
+        if (existingNextSlotIndex > -1) {
+            daySchedule[existingNextSlotIndex] = { period: nextPeriod, ...newEntryData };
+        } else {
+            daySchedule.push({ period: nextPeriod, ...newEntryData });
+        }
+
+        try {
+            await updateDoc(doc(db, "schedules", teacherId), { [day]: daySchedule });
+            toggleModal('edit-modal', false);
+        } catch (error) {
+            console.error("Failed to extend slot:", error);
+            alert("An error occurred. Could not extend the slot.");
+        }
+    }
+
     async function handlePasteClick(day, period) { if (!copiedSlot) return; const teacherId = selectedTeacherId; const newEntry = { period, ...copiedSlot }; const teacherSchedule = schedules[teacherId]; const daySchedule = teacherSchedule[day] ? [...teacherSchedule[day]] : []; daySchedule.push(newEntry); const updateData = { [day]: daySchedule }; try { await updateDoc(doc(db, "schedules", teacherId), updateData); } catch (error) { console.error("Paste failed:", error); } }
     function updatePasteButtonsVisibility(show) { const pasteIndicator = document.getElementById('paste-mode-indicator'); document.querySelectorAll('.add-icon').forEach(icon => icon.classList.toggle('hidden', show)); document.querySelectorAll('.paste-btn').forEach(btn => btn.classList.toggle('hidden', !show)); if(show){ pasteIndicator.classList.remove('hidden'); setTimeout(() => { pasteIndicator.classList.remove('opacity-0', 'translate-y-2'); }, 10); } else { pasteIndicator.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => { pasteIndicator.classList.add('hidden'); }, 300); } }
     function toggleModal(id, show) { const modal = document.getElementById(id); const modalContent = modal.querySelector('.transform'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modal.classList.remove('opacity-0'), 10); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 50); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('opacity-0'), 200); setTimeout(() => modal.classList.add('hidden'), 300); } }

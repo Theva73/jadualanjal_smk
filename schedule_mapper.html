@@ -147,7 +147,29 @@
         document.getElementById('tab-schedule-btn').addEventListener('click', () => switchTab('schedule'));
         document.getElementById('tab-management-btn').addEventListener('click', () => switchTab('management'));
         document.getElementById('teacher-select').addEventListener('change', (e) => renderScheduleForTeacher(e.target.value));
-        document.getElementById('schedule-tbody').addEventListener('click', (e) => { const targetCell = e.target.closest('td'); if (!targetCell || !selectedTeacherId) return; const day = targetCell.closest('tr').dataset.day; const period = getPeriodFromCell(day, targetCell); if (!period) return; if (e.target.closest('.paste-btn')) handlePasteClick(day, period); else if (!targetCell.classList.contains('long-break-cell')) openEditModal(day, period, e.target.closest('.schedule-cell')?.dataset.index); });
+        
+        // --- BUG FIX 2: REVISED CLICK LOGIC ---
+        // This new logic allows clicking on an existing entry even if it's in a break slot (so it can be fixed),
+        // but prevents creating a NEW entry in an empty break slot.
+        document.getElementById('schedule-tbody').addEventListener('click', (e) => {
+            const targetCell = e.target.closest('td');
+            if (!targetCell || !selectedTeacherId) return;
+
+            const day = targetCell.closest('tr').dataset.day;
+            const period = getPeriodFromCell(day, targetCell);
+            if (!period) return;
+
+            const scheduleCell = e.target.closest('.schedule-cell');
+            const isBreakSlot = targetCell.classList.contains('long-break-cell') || targetCell.classList.contains('rehat-slot');
+
+            if (e.target.closest('.paste-btn')) {
+                handlePasteClick(day, period);
+            } else if (scheduleCell || !isBreakSlot) {
+                // Open modal if it's an existing entry OR if it's an empty, non-break slot.
+                openEditModal(day, period, scheduleCell?.dataset.index);
+            }
+        });
+
         document.getElementById('edit-form').addEventListener('submit', handleSave);
         document.getElementById('cancel-edit-btn').addEventListener('click', () => toggleModal('edit-modal', false));
         document.getElementById('delete-entry-btn').addEventListener('click', handleDeleteClick);
@@ -293,7 +315,31 @@
     function handleDeleteClick() { const teacherId = document.getElementById('modal-teacher-id').value; const day = document.getElementById('modal-original-day').value; const index = parseInt(document.getElementById('modal-entry-index').value); pendingConfirmationAction = { action: 'deleteScheduleEntry', payload: { teacherId, day, index } }; document.getElementById('confirm-title').textContent = 'Confirm Deletion'; document.getElementById('confirm-message').textContent = 'Are you sure you want to delete this schedule entry?'; const confirmBtn = document.getElementById('confirm-action-btn'); confirmBtn.textContent = 'Yes, Delete'; confirmBtn.className = 'bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700'; toggleModal('confirm-modal', true); }
     function handleClearScheduleClick() { if (!selectedTeacherId) { alert("Please select a teacher first."); return; } const teacherName = schedules[selectedTeacherId]?.name || 'the selected teacher'; pendingConfirmationAction = { action: 'clearSchedule', payload: { teacherId: selectedTeacherId } }; document.getElementById('confirm-title').textContent = 'Confirm Clear Schedule'; document.getElementById('confirm-message').textContent = `Are you sure you want to permanently delete all schedule entries for ${teacherName}?`; const confirmBtn = document.getElementById('confirm-action-btn'); confirmBtn.textContent = 'Yes, Clear Schedule'; confirmBtn.className = 'bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700'; toggleModal('confirm-modal', true); }
     function openEditModal(day, period, entryIndex) { const isNew = entryIndex === undefined; const teacher = schedules[selectedTeacherId]; const entry = isNew ? null : teacher[day]?.[entryIndex]; document.getElementById('double-slot-container').style.display = isNew ? 'block' : 'none'; document.getElementById('add-double-slot').checked = false; document.getElementById('extend-entry-btn').style.display = isNew ? 'none' : 'inline-block'; document.getElementById('modal-title').textContent = isNew ? `Add Entry for ${day}` : `Edit Entry`; document.getElementById('modal-teacher-id').value = selectedTeacherId; document.getElementById('modal-original-day').value = day; document.getElementById('delete-entry-btn').classList.toggle('hidden', isNew); document.getElementById('copy-entry-btn').classList.toggle('hidden', isNew); if(!isNew) document.getElementById('modal-entry-index').value = entryIndex; else document.getElementById('modal-entry-index').value = ''; populateDayPeriodDropdowns(day, period); populateCheckboxDropdown('subjects', entry?.subjectIds || []); populateCheckboxDropdown('classes', entry?.classIds || []); populateLocationDropdown(entry?.locationId || ''); toggleModal('edit-modal', true); }
-    function populateDayPeriodDropdowns(selectedDay, selectedPeriod) { const daySelect = document.getElementById('modal-day-select'); const periodSelect = document.getElementById('modal-period-select'); daySelect.innerHTML = ''; periodSelect.innerHTML = ''; DAYS.forEach(day => { const option = document.createElement('option'); option.value = day; option.textContent = day; if (day === selectedDay) option.selected = true; daySelect.appendChild(option); }); for(const periodKey in PERIOD_MAP) { if (periodKey === 'P') continue; const option = document.createElement('option'); option.value = periodKey; option.textContent = PERIOD_MAP[periodKey]; if (periodKey == selectedPeriod) option.selected = true; periodSelect.appendChild(option); } }
+    
+    function populateDayPeriodDropdowns(selectedDay, selectedPeriod) {
+        const daySelect = document.getElementById('modal-day-select');
+        const periodSelect = document.getElementById('modal-period-select');
+        daySelect.innerHTML = '';
+        periodSelect.innerHTML = '';
+        DAYS.forEach(day => {
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = day;
+            if (day === selectedDay) option.selected = true;
+            daySelect.appendChild(option);
+        });
+        for (const periodKey in PERIOD_MAP) {
+            // --- BUG FIX 1: PREVENTATIVE ---
+            // This prevents "Rehat" slots from being selected in the dropdown.
+            if (periodKey === 'P' || periodKey.startsWith('R')) continue;
+            const option = document.createElement('option');
+            option.value = periodKey;
+            option.textContent = PERIOD_MAP[periodKey];
+            if (periodKey == selectedPeriod) option.selected = true;
+            periodSelect.appendChild(option);
+        }
+    }
+
     function populateCheckboxDropdown(type, selectedIds) { const container = document.getElementById(`${type}-dropdown-menu`); const data = type === 'subjects' ? subjects : classes; container.innerHTML = ''; Object.values(data).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => { const isChecked = selectedIds.includes(item.id); container.innerHTML += `<label><input type="checkbox" value="${item.id}" ${isChecked ? 'checked' : ''}> ${item.name}</label>`; }); updateDropdownButtonText(type); }
     function populateLocationDropdown(selectedId) { const select = document.getElementById('modal-location-select'); select.innerHTML = '<option value="">-- No Location --</option>'; Object.values(locations).sort((a,b) => a.name.localeCompare(b.name)).forEach(loc => { const option = document.createElement('option'); option.value = loc.id; option.textContent = loc.name; if(loc.id === selectedId) option.selected = true; select.appendChild(option); }); }
     function updateDropdownButtonText(type) { const container = document.getElementById(`${type}-dropdown-menu`); const btn = document.getElementById(`${type}-dropdown-btn`); const selectedElements = Array.from(container.querySelectorAll('input:checked')); const data = type === 'subjects' ? subjects : classes; const selectedNames = selectedElements.map(el => data[el.value]?.name).filter(Boolean); btn.textContent = selectedNames.length ? selectedNames.join(', ') : `Select ${type.charAt(0).toUpperCase() + type.slice(1)}`; }

@@ -194,6 +194,7 @@
     function setupDataListeners() {
         onSnapshot(collection(db, "schedules"), snapshot => { 
             clearTimeout(loadingTimeout); 
+            document.getElementById('loading-status').textContent = 'Database Connected';
             schedules = {}; 
             snapshot.forEach(doc => schedules[doc.id] = { id: doc.id, ...doc.data() }); 
             renderTeacherList();
@@ -1013,4 +1014,5 @@
 </script>
 </body>
 </html>
+
 

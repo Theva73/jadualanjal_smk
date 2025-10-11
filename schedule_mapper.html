@@ -14,11 +14,12 @@
         .sticky-day { position: -webkit-sticky; position: sticky; left: 0; z-index: 10; }
         .day-row { border-bottom: 2px solid #cbd5e1; }
         .day-row:last-child { border-bottom: 1px solid #d1d5db; }
-        tbody td, tbody th { height: 6rem; padding: 0.25rem; vertical-align: middle; font-size: 0.75rem; }
+        /* MODIFIED: Changed fixed height to min-height to allow rows to expand */
+        tbody td, tbody th { min-height: 6rem; padding: 0.25rem; vertical-align: top; font-size: 0.75rem; }
         .schedule-cell { background-color: #e0f2fe; color: #0c4a6e; border-radius: 0.5rem; padding: 0.25rem; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; cursor: pointer; border: 1px solid #bae6fd; transition: background-color 0.2s; gap: 1px; }
         .schedule-cell:hover { background-color: #c0eaff; }
         .schedule-item { word-break: break-word; max-width: 100%; }
-        .empty-cell { cursor: pointer; height: 100%; width: 100%; position: relative; }
+        .empty-cell { cursor: pointer; min-height: 6rem; height: 100%; width: 100%; position: relative; }
         .empty-cell:hover .add-icon { opacity: 1; }
         .add-icon, .paste-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: opacity 0.2s; }
         .add-icon { opacity: 0.15; }
@@ -43,10 +44,24 @@
         input:checked + .slider { background-color: #4f46e5; }
         input:checked + .slider:before { transform: translateX(26px); }
         
-        /* Styles for split cells */
-        .schedule-cell-container { display: flex; height: 100%; width: 100%; padding: 0; margin: 0; }
-        .schedule-sub-cell { flex: 1; border-right: 1px dotted #99cff2; padding: 0.25rem; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1px; }
-        .schedule-sub-cell:last-child { border-right: none; }
+        /* Styles for VERTICAL stacking */
+        .schedule-cell-container-v { display: flex; flex-direction: column; justify-content: flex-start; height: 100%; width: 100%; overflow: hidden; }
+        .schedule-sub-cell-v {
+            border-bottom: 1px dotted #99cff2;
+            padding: 4px 2px; /* Increased padding for more space */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 4px;
+            font-size: 0.7rem; /* Slightly larger font for readability */
+            line-height: 1.2;
+            overflow: hidden;
+            white-space: normal;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .schedule-sub-cell-v:last-child { border-bottom: none; }
+        .schedule-sub-cell-v .details { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -246,30 +261,31 @@
             const day = targetCell.closest('tr').dataset.day;
             const period = getPeriodFromCell(day, targetCell);
             if (!period) return;
-
+            
             const scheduleCell = e.target.closest('.schedule-cell');
             const isBreakSlot = targetCell.classList.contains('long-break-cell') || targetCell.classList.contains('rehat-slot');
 
             if (currentView === 'teacher') {
-                if (!selectedTeacherId) return;
+                if (!selectedTeacherId || isBreakSlot) return;
                 if (e.target.closest('.paste-btn')) {
                     handlePasteClick(day, period);
-                } else if (!isBreakSlot) {
+                } else {
+                    const wrapperCell = e.target.closest('.schedule-cell[data-index]');
                     openEditModal({
                         day, 
                         period, 
-                        entryIndex: scheduleCell?.dataset.index, 
+                        entryIndex: wrapperCell?.dataset.index, 
                         teacherId: selectedTeacherId 
                     });
                 }
             } else { // Class View
-                if (!selectedClassId) return;
-                if (scheduleCell) { // Existing entry clicked
+                if (!selectedClassId || isBreakSlot) return;
+                if (scheduleCell) { 
                     const { teacherId, entryIndex } = scheduleCell.dataset;
                     if (teacherId && day && entryIndex !== undefined) {
                         openEditModal({ day, period, entryIndex, teacherId });
                     }
-                } else if (!isBreakSlot) { // Empty cell clicked
+                } else { 
                     openEditModal({ day, period, teacherId: null, entryIndex: undefined });
                 }
             }
@@ -427,7 +443,7 @@
                     if (scheduleModified) batch.update(scheduleDoc.ref, updatedScheduleData);
                 });
                 await batch.commit();
-                const collectionName = itemType === 'class' ? 'classes' : `${itemType}s`;
+                const collectionName = itemType === 'class' ? 'classes' : `${type}s`;
                 await deleteDoc(doc(db, collectionName, itemId));
             } else if (action === 'clearSchedule') {
                 confirmBtn.textContent = 'Clearing...';
@@ -595,83 +611,59 @@
         selectedClassId = classId;
         buildStaticTable();
         if (!classId || Object.keys(schedules).length === 0) return;
-    
-        const allEntries = [];
+
+        const allEntriesForClass = [];
         Object.values(schedules).forEach(teacher => {
             DAYS.forEach(day => {
                 (teacher[day] || []).forEach((entry, index) => {
                     if (entry.classIds && entry.classIds.includes(classId)) {
-                        allEntries.push({ ...entry, day, teacherId: teacher.id, teacherShortName: teacher.shortName || 'N/A', entryIndex: index });
+                        allEntriesForClass.push({ ...entry, day, teacherId: teacher.id, teacherShortName: teacher.shortName || 'N/A', entryIndex: index });
                     }
                 });
             });
         });
-    
-        const groupedByPeriod = {};
-        allEntries.forEach(entry => {
+
+        const groupedByTimeSlot = {};
+        allEntriesForClass.forEach(entry => {
             const key = `${entry.day}-${entry.period}`;
-            if (!groupedByPeriod[key]) groupedByPeriod[key] = [];
-            groupedByPeriod[key].push(entry);
+            if (!groupedByTimeSlot[key]) groupedByTimeSlot[key] = [];
+            groupedByTimeSlot[key].push(entry);
         });
-        
-        for (const key in groupedByPeriod) {
+
+        for (const key in groupedByTimeSlot) {
             const [day, period] = key.split('-');
-            const entries = groupedByPeriod[key];
+            const entriesInSlot = groupedByTimeSlot[key];
             const row = document.getElementById('schedule-tbody').querySelector(`tr[data-day="${day}"]`);
             if (!row) continue;
             
             const cellIndex = periodToCellIndex[period];
             if (cellIndex === undefined) continue;
-    
+
             const targetCell = getCellFromDisplayIndex(row, day, cellIndex);
             if (!targetCell) continue;
 
-            if (entries.length > 1) { // Multiple teachers, create split view
-                let container = document.createElement('div');
-                container.className = 'schedule-cell-container';
-                entries.forEach(entry => {
-                    const subjectNames = (entry.subjectIds || []).map(id => subjects[id]?.name).filter(Boolean).join(' ');
+            const container = document.createElement('div');
+            container.className = 'schedule-cell-container-v';
+
+            entriesInSlot.forEach(entry => {
+                const subjectIds = entry.subjectIds && entry.subjectIds.length > 0 ? entry.subjectIds : [null]; 
+                subjectIds.forEach(subjectId => {
                     const subCell = document.createElement('div');
-                    subCell.className = 'schedule-sub-cell schedule-cell'; // Add .schedule-cell to make it a clickable target
+                    subCell.className = 'schedule-sub-cell-v schedule-cell'; 
                     subCell.dataset.teacherId = entry.teacherId;
                     subCell.dataset.day = entry.day;
                     subCell.dataset.entryIndex = entry.entryIndex;
-                    subCell.innerHTML = `<div class="font-bold text-sky-900 text-xs leading-tight schedule-item">${subjectNames || '...'}</div><div class="text-gray-800 text-[11px] leading-tight schedule-item">${entry.teacherShortName}</div>`;
+                    
+                    const subjectName = subjectId ? (subjects[subjectId]?.name || '...') : '...';
+                    subCell.innerHTML = `<span class="font-bold text-sky-900">${subjectName}</span><span class="text-gray-700 text-[10px]">${entry.teacherShortName}</span>`;
                     container.appendChild(subCell);
                 });
+            });
+            
+            if (container.hasChildNodes()) {
                 targetCell.innerHTML = '';
                 targetCell.style.padding = '0';
                 targetCell.appendChild(container);
-            } else { // Single entry, check for multiple subjects
-                const entry = entries[0];
-                const subjectIds = entry.subjectIds || [];
-                
-                if (subjectIds.length > 1) { // Single teacher, multiple subjects
-                    const container = document.createElement('div');
-                    container.className = 'schedule-cell-container';
-                    subjectIds.forEach(subjectId => {
-                        const subCell = document.createElement('div');
-                        subCell.className = 'schedule-sub-cell';
-                        const subjectName = subjects[subjectId]?.name || '...';
-                        subCell.innerHTML = `<div class="font-bold text-sky-900 text-xs leading-tight schedule-item">${subjectName}</div><div class="text-gray-800 text-[11px] leading-tight schedule-item">${entry.teacherShortName}</div>`;
-                        container.appendChild(subCell);
-                    });
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'schedule-cell';
-                    wrapper.dataset.teacherId = entry.teacherId;
-                    wrapper.dataset.day = entry.day;
-                    wrapper.dataset.entryIndex = entry.entryIndex;
-                    wrapper.style.padding = '0';
-                    wrapper.style.overflow = 'hidden';
-                    wrapper.appendChild(container);
-                    targetCell.innerHTML = '';
-                    targetCell.style.padding = '0';
-                    targetCell.appendChild(wrapper);
-                } else { // Single teacher, single subject
-                    const subjectNames = subjectIds.map(id => subjects[id]?.name).filter(Boolean).join(' ');
-                    let content = `<div class="font-bold text-sky-900 text-xs leading-tight schedule-item">${subjectNames || '...'}</div><div class="text-gray-800 text-[11px] leading-tight schedule-item">${entry.teacherShortName}</div>`;
-                    targetCell.innerHTML = `<div class="schedule-cell" data-teacher-id="${entry.teacherId}" data-day="${entry.day}" data-entry-index="${entry.entryIndex}">${content}</div>`;
-                }
             }
         }
     }
@@ -681,67 +673,73 @@
         buildStaticTable();
         const teacherData = schedules[teacherId];
         if (!teacherData) return;
+
         DAYS.forEach(day => {
             const daySchedule = (teacherData[day] || []).sort((a, b) => PERIOD_ORDER.indexOf(a.period) - PERIOD_ORDER.indexOf(b.period));
             const row = document.getElementById('schedule-tbody').querySelector(`tr[data-day="${day}"]`);
             if (!row) return;
+
             let i = 0;
             while (i < daySchedule.length) {
-                let item = daySchedule[i];
+                const item = daySchedule[i];
+                const entryIndex = i; 
                 if (item.period === 'P') { i++; continue; }
+
                 let isDouble = false;
                 if (i + 1 < daySchedule.length) {
-                    let nextItem = daySchedule[i + 1];
+                    const nextItem = daySchedule[i + 1];
                     const currentPeriodIndex = PERIOD_ORDER.indexOf(item.period);
                     const nextPeriodIndex = PERIOD_ORDER.indexOf(nextItem.period);
-                    if (nextPeriodIndex === currentPeriodIndex + 1 && JSON.stringify((item.subjectIds || []).sort()) === JSON.stringify((nextItem.subjectIds || []).sort()) && JSON.stringify((item.classIds || []).sort()) === JSON.stringify((nextItem.classIds || []).sort()) && item.locationId === nextItem.locationId) {
+                    const areDetailsSame = JSON.stringify((item.subjectIds || []).sort()) === JSON.stringify((nextItem.subjectIds || []).sort()) &&
+                                        JSON.stringify((item.classIds || []).sort()) === JSON.stringify((nextItem.classIds || []).sort()) &&
+                                        item.locationId === nextItem.locationId;
+                    if (nextPeriodIndex === currentPeriodIndex + 1 && areDetailsSame) {
                         isDouble = true;
                     }
                 }
+
                 const cellIndex = periodToCellIndex[item.period];
                 if (cellIndex === undefined) { i++; continue; }
+
                 const targetCell = getCellFromDisplayIndex(row, day, cellIndex);
                 if (targetCell) {
                     const subjectIds = item.subjectIds || [];
-                    const classNames = (item.classIds || []).map(id => classes[id]?.name).filter(Boolean);
+                    const classNames = (item.classIds || []).map(id => classes[id]?.name).filter(Boolean).join(', ');
                     const locationName = locations[item.locationId]?.name;
 
-                    if(subjectIds.length > 1) { // Split cell for multiple subjects
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'schedule-cell';
+                    wrapper.dataset.index = entryIndex;
+                    wrapper.style.padding = '0';
+                    wrapper.style.overflow = 'hidden';
+
+                    if (subjectIds.length > 1) {
                         const container = document.createElement('div');
-                        container.className = 'schedule-cell-container';
+                        container.className = 'schedule-cell-container-v';
                         subjectIds.forEach(subjectId => {
                             const subCell = document.createElement('div');
-                            subCell.className = 'schedule-sub-cell';
+                            subCell.className = 'schedule-sub-cell-v';
                             const subjectName = subjects[subjectId]?.name || '...';
-                            let content = `<div class="font-bold text-sky-900 text-xs leading-none schedule-item">${subjectName}</div>`;
-                            if (classNames.length > 0) content += `<div class="text-gray-800 text-[10px] leading-none schedule-item">${classNames.join(' ')}</div>`;
-                            if (locationName) content += `<div class="font-semibold text-purple-800 text-[10px] leading-none tracking-tighter schedule-item">${locationName}</div>`;
-                            subCell.innerHTML = content;
+                            subCell.innerHTML = `
+                                <span class="font-bold text-sky-900">${subjectName}</span>
+                                <div class="details">
+                                    <span class="text-gray-800">${classNames}</span>
+                                    ${locationName ? `<span class="font-semibold text-purple-800">${locationName}</span>` : ''}
+                                </div>`;
                             container.appendChild(subCell);
                         });
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'schedule-cell';
-                        wrapper.dataset.index = i;
-                        wrapper.style.padding = '0';
-                        wrapper.style.overflow = 'hidden';
                         wrapper.appendChild(container);
-                        targetCell.innerHTML = '';
-                        targetCell.style.padding = '0';
-                        targetCell.appendChild(wrapper);
-                    } else { // Normal cell for single/no subject
-                        const subjectNames = subjectIds.map(id => subjects[id]?.name).filter(Boolean);
-                        let content = '';
-                        if (subjectNames.length > 0) content += `<div class="font-bold text-sky-900 text-xs leading-none schedule-item">${subjectNames.join(' ')}</div>`;
-                        if (classNames.length > 0) {
-                            for (let j = 0; j < classNames.length; j += 2) {
-                                content += `<div class="text-gray-800 text-[10px] leading-none schedule-item">${classNames.slice(j, j + 2).join(' ')}</div>`;
-                            }
-                        }
-                        if (locationName) content += `<div class="font-semibold text-purple-800 text-[10px] leading-none tracking-tighter schedule-item">${locationName}</div>`;
-                        if (content) {
-                            targetCell.innerHTML = `<div class="schedule-cell" data-index="${i}">${content}</div>`;
-                        }
+                    } else {
+                        wrapper.style.padding = '0.25rem';
+                        const subjectName = subjectIds.length > 0 ? (subjects[subjectIds[0]]?.name || '...') : '...';
+                        let content = `<div class="font-bold text-sky-900 text-xs leading-none">${subjectName}</div>`;
+                        if (classNames) content += `<div class="text-gray-800 text-[10px] leading-none">${classNames}</div>`;
+                        if (locationName) content += `<div class="font-semibold text-purple-800 text-[10px] leading-none">${locationName}</div>`;
+                        wrapper.innerHTML = content;
                     }
+                    
+                    targetCell.innerHTML = '';
+                    targetCell.appendChild(wrapper);
 
                     if (isDouble) {
                         targetCell.colSpan = 2;
@@ -767,28 +765,24 @@
         const teacherSelect = document.getElementById('modal-teacher-select');
         
         let entry = null;
-        // The effectiveTeacherId is the one whose schedule the entry currently belongs to.
         let effectiveTeacherId = teacherId || (currentView === 'teacher' ? selectedTeacherId : null);
 
         if (currentView === 'class') {
-            // In class view, always show the teacher dropdown.
             teacherContainer.classList.remove('hidden');
             teacherSelect.innerHTML = '<option value="">-- Select a Teacher --</option>';
             Object.values(schedules).sort((a,b) => a.name.localeCompare(b.name)).forEach(t => {
                 teacherSelect.appendChild(new Option(t.name, t.id));
             });
-            // If editing an existing entry, pre-select that teacher.
             teacherSelect.value = teacherId || '';
-        } else { // In Teacher View, the context is fixed to the selected teacher.
+        } else {
             teacherContainer.classList.add('hidden');
         }
 
         if (isNew) {
-            // Set title for a new entry
             document.getElementById('modal-title').textContent = (currentView === 'class')
                 ? `Add Entry to ${classes[selectedClassId]?.name || 'Class'}`
                 : `Add Entry`;
-        } else { // Set title for an existing entry
+        } else {
             const teacher = schedules[effectiveTeacherId];
             entry = teacher ? teacher[day]?.[entryIndex] : null;
              document.getElementById('modal-title').textContent = (currentView === 'class' && teacher)
@@ -800,7 +794,6 @@
         document.getElementById('add-double-slot').checked = false;
         document.getElementById('extend-entry-btn').style.display = isNew ? 'none' : 'inline-block';
         
-        // Store the original teacher and day to find and remove the old entry if it's moved.
         document.getElementById('modal-teacher-id').value = effectiveTeacherId || ''; 
         document.getElementById('modal-original-day').value = day;
         document.getElementById('delete-entry-btn').classList.toggle('hidden', isNew);
@@ -809,7 +802,6 @@
         
         populateDayPeriodDropdowns(day, period);
         populateCheckboxDropdown('subjects', entry?.subjectIds || []);
-        // When creating a new entry in class view, pre-select the current class.
         populateCheckboxDropdown('classes', entry?.classIds || (isNew && currentView === 'class' ? [selectedClassId] : []));
         populateLocationDropdown(entry?.locationId || '');
         toggleModal('edit-modal', true);
@@ -850,25 +842,13 @@
         const isNew = !indexStr;
 
         let newTeacherId = originalTeacherId;
-        // Check if the teacher dropdown is visible to determine if a teacher can be selected.
         if (document.getElementById('modal-teacher-container').offsetParent !== null) {
             newTeacherId = document.getElementById('modal-teacher-select').value;
-            if (!newTeacherId) {
-                alert("Please select a teacher.");
-                return;
-            }
+            if (!newTeacherId) { alert("Please select a teacher."); return; }
         }
         
-        // Fallback for teacher view where dropdown is hidden
-        if (!newTeacherId && currentView === 'teacher') {
-            newTeacherId = selectedTeacherId;
-        }
-
-        if (!newTeacherId) {
-            console.error("No teacher ID specified for save operation.");
-            alert("Could not determine the teacher for this operation.");
-            return;
-        }
+        if (!newTeacherId && currentView === 'teacher') { newTeacherId = selectedTeacherId; }
+        if (!newTeacherId) { console.error("No teacher ID for save."); alert("Could not determine teacher."); return; }
 
         const addDouble = document.getElementById('add-double-slot').checked;
         const newDay = document.getElementById('modal-day-select').value;
@@ -881,8 +861,7 @@
 
         try {
             if (isNew) {
-                const teacherSchedule = schedules[newTeacherId];
-                const daySchedule = teacherSchedule[newDay] ? [...teacherSchedule[newDay]] : [];
+                const daySchedule = schedules[newTeacherId][newDay] ? [...schedules[newTeacherId][newDay]] : [];
                 daySchedule.push(newEntry);
                 if (addDouble) {
                     const currentPeriodIndex = PERIOD_ORDER.indexOf(newPeriod);
@@ -895,38 +874,25 @@
                 }
                 await updateDoc(doc(db, "schedules", newTeacherId), { [newDay]: daySchedule });
             } else {
-                // This is an edit of an existing entry.
                 const teacherHasChanged = newTeacherId !== originalTeacherId;
-
                 if (teacherHasChanged) {
                     const batch = writeBatch(db);
-
-                    // 1. Remove from original teacher's schedule
-                    const originalTeacherSchedule = schedules[originalTeacherId];
-                    const originalDaySchedule = [...originalTeacherSchedule[originalDay]];
+                    const originalDaySchedule = [...schedules[originalTeacherId][originalDay]];
                     originalDaySchedule.splice(parseInt(indexStr), 1);
-                    const originalTeacherRef = doc(db, "schedules", originalTeacherId);
-                    batch.update(originalTeacherRef, { [originalDay]: originalDaySchedule.length > 0 ? originalDaySchedule : [] });
+                    batch.update(doc(db, "schedules", originalTeacherId), { [originalDay]: originalDaySchedule });
 
-                    // 2. Add to new teacher's schedule
-                    const newTeacherSchedule = schedules[newTeacherId];
-                    const newDaySchedule = newTeacherSchedule[newDay] ? [...newTeacherSchedule[newDay]] : [];
+                    const newDaySchedule = schedules[newTeacherId][newDay] ? [...schedules[newTeacherId][newDay]] : [];
                     newDaySchedule.push(newEntry);
-                    const newTeacherRef = doc(db, "schedules", newTeacherId);
-                    batch.update(newTeacherRef, { [newDay]: newDaySchedule });
-
+                    batch.update(doc(db, "schedules", newTeacherId), { [newDay]: newDaySchedule });
                     await batch.commit();
                 } else {
-                    // Teacher is the same, so it's a simpler update.
-                    const teacherSchedule = schedules[newTeacherId];
                     const updateData = {};
                     const dayHasChanged = newDay !== originalDay;
-                    const originalDaySchedule = [...teacherSchedule[originalDay]];
-
+                    const originalDaySchedule = [...schedules[newTeacherId][originalDay]];
                     if (dayHasChanged) {
                         originalDaySchedule.splice(parseInt(indexStr), 1);
                         updateData[originalDay] = originalDaySchedule.length > 0 ? originalDaySchedule : [];
-                        const newDaySchedule = teacherSchedule[newDay] ? [...teacherSchedule[newDay]] : [];
+                        const newDaySchedule = schedules[newTeacherId][newDay] ? [...schedules[newTeacherId][newDay]] : [];
                         newDaySchedule.push(newEntry);
                         updateData[newDay] = newDaySchedule;
                     } else {
@@ -950,63 +916,30 @@
         const day = document.getElementById('modal-day-select').value;
         const currentPeriod = document.getElementById('modal-period-select').value;
         const currentPeriodIndex = PERIOD_ORDER.indexOf(currentPeriod);
-        if (currentPeriodIndex === -1 || currentPeriodIndex + 1 >= PERIOD_ORDER.length) {
-            alert("Cannot extend the last slot of the day.");
-            return;
-        }
+        if (currentPeriodIndex === -1 || currentPeriodIndex + 1 >= PERIOD_ORDER.length) { alert("Cannot extend the last slot of the day."); return; }
         const nextPeriod = PERIOD_ORDER[currentPeriodIndex + 1];
-        if (nextPeriod === 'R1' || nextPeriod === 'R2') {
-            alert("Cannot extend into a break time.");
-            return;
-        }
+        if (nextPeriod === 'R1' || nextPeriod === 'R2') { alert("Cannot extend into a break time."); return; }
         const daySchedule = schedules[teacherId][day] ? [...schedules[teacherId][day]] : [];
         const nextSlotEntry = daySchedule.find(entry => entry.period === nextPeriod);
         if (nextSlotEntry) {
-            const hasSubjects = nextSlotEntry.subjectIds && nextSlotEntry.subjectIds.length > 0;
-            const hasClasses = nextSlotEntry.classIds && nextSlotEntry.classIds.length > 0;
-            const hasLocation = !!nextSlotEntry.locationId;
-            if (hasSubjects || hasClasses || hasLocation) {
-                alert("Cannot extend slot, the next time slot is already occupied.");
-                return;
-            }
+            const hasData = (nextSlotEntry.subjectIds && nextSlotEntry.subjectIds.length > 0) || (nextSlotEntry.classIds && nextSlotEntry.classIds.length > 0) || nextSlotEntry.locationId;
+            if (hasData) { alert("Cannot extend slot, the next time slot is already occupied."); return; }
         }
         const subjectIds = Array.from(document.querySelectorAll('#subjects-dropdown-menu input:checked')).map(el => el.value);
         const classIds = Array.from(document.querySelectorAll('#classes-dropdown-menu input:checked')).map(el => el.value);
         const locationId = document.getElementById('modal-location-select').value;
         const newEntryData = { subjectIds, classIds, locationId: locationId || null };
         const existingNextSlotIndex = daySchedule.findIndex(entry => entry.period === nextPeriod);
-        if (existingNextSlotIndex > -1) {
-            daySchedule[existingNextSlotIndex] = { period: nextPeriod, ...newEntryData };
-        } else {
-            daySchedule.push({ period: nextPeriod, ...newEntryData });
-        }
+        if (existingNextSlotIndex > -1) { daySchedule[existingNextSlotIndex] = { period: nextPeriod, ...newEntryData }; } 
+        else { daySchedule.push({ period: nextPeriod, ...newEntryData }); }
         try {
             await updateDoc(doc(db, "schedules", teacherId), { [day]: daySchedule });
             toggleModal('edit-modal', false);
-        } catch (error) {
-            console.error("Failed to extend slot:", error);
-            alert("An error occurred. Could not extend the slot.");
-        }
+        } catch (error) { console.error("Failed to extend slot:", error); alert("An error occurred. Could not extend the slot."); }
     }
 
     async function handlePasteClick(day, period) { if (!copiedSlot) return; const teacherId = selectedTeacherId; const newEntry = { period, ...copiedSlot }; const teacherSchedule = schedules[teacherId]; const daySchedule = teacherSchedule[day] ? [...teacherSchedule[day]] : []; daySchedule.push(newEntry); const updateData = { [day]: daySchedule }; try { await updateDoc(doc(db, "schedules", teacherId), updateData); } catch (error) { console.error("Paste failed:", error); } }
-    function updatePasteButtonsVisibility(show) {
-    // Toggle paste buttons
-    document.querySelectorAll('.paste-btn').forEach(btn => {
-        btn.classList.toggle('hidden', !show);
-    });
-    // Toggle cancel button
-    const c = document.getElementById('cancel-paste-btn');
-    if (c) c.classList.toggle('hidden', !show);
-    // Flash a small indicator if present
-    const pasteIndicator = document.getElementById('paste-indicator');
-    if (pasteIndicator) {
-        pasteIndicator.classList.remove('hidden');
-        setTimeout(() => {
-            pasteIndicator.classList.add('hidden');
-        }, 300);
-    }
-}
+    function updatePasteButtonsVisibility(show) { document.querySelectorAll('.paste-btn').forEach(btn => btn.classList.toggle('hidden', !show)); const c = document.getElementById('cancel-paste-btn'); if (c) c.classList.toggle('hidden', !show); }
     function toggleModal(id, show) { const modal = document.getElementById(id); const modalContent = modal.querySelector('.transform'); if (show) { modal.classList.remove('hidden'); setTimeout(() => modal.classList.remove('opacity-0'), 10); setTimeout(() => modalContent.classList.remove('scale-95', 'opacity-0'), 50); } else { modalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('opacity-0'), 200); setTimeout(() => modal.classList.add('hidden'), 300); } }
     function switchTab(tabName) { document.querySelectorAll('[id$="-content"]').forEach(el => el.classList.add('hidden')); document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tabName}-content`).classList.remove('hidden'); document.getElementById(`tab-${tabName}-btn`).classList.add('active'); }
     
